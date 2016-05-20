@@ -92,4 +92,7 @@ set(${lib_name}_INCLUDE_DIRS
     PARENT_SCOPE
 )
 
-set(${lib_name}_LIBRARIES ${${lib_name}_LOCATION} PARENT_SCOPE)
+set( ${lib_name}_LIBRARIES
+     ${${lib_name}_LOCATION}
+     ${${COMMON_LIB_NAME}_LIBRARIES}
+     PARENT_SCOPE)

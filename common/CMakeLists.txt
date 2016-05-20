@@ -8,11 +8,6 @@ foreach( src_dir ${src_dirs} )
     list(APPEND lib_src ${headers})
 endforeach( )
 
-#include_directories( ${SRPC_INCLUDE_DIR}/vtrc-client )
-
-add_library(${lib_name} ${LINK_TYPE} ${lib_src})
-
-
 include_directories( ${INCLUDE_DIR}/common )
 
 ####################### PROTOCOL BASE #######################
@@ -38,7 +33,7 @@ foreach(next_proto ${protofiles})
     set( OUTPUT_FILES
              ${${lib_name}_PROTOBUF_FILES_OUTPUT}/${out_FILE}.pb.h
              ${${lib_name}_PROTOBUF_FILES_OUTPUT}/${out_FILE}.pb.cc
-             ${VTRC_PROTOCOL_INCLUDE_DIR}/${out_FILE}.pb.h
+             ${PROTOCOL_INCLUDE_DIR}/${out_FILE}.pb.h
        )
 
     add_custom_command(
@@ -53,7 +48,7 @@ foreach(next_proto ${protofiles})
         COMMAND
                 ${CMAKE_COMMAND} -E copy
                     ${${lib_name}_PROTOBUF_FILES_OUTPUT}/${out_FILE}.pb.h
-                    ${VTRC_PROTOCOL_INCLUDE_DIR}/${out_FILE}.pb.h
+                    ${PROTOCOL_INCLUDE_DIR}/${out_FILE}.pb.h
 
         WORKING_DIRECTORY
                 ${GENERATED_FILES_OUTPUT}
@@ -78,7 +73,6 @@ list( APPEND public_proto_files
         #vtrc-rpc-options.proto
         #vtrc-errors.proto
     )
-
 foreach( next_proto ${public_proto_files} )
 
     file(COPY
@@ -89,3 +83,63 @@ foreach( next_proto ${public_proto_files} )
 endforeach( )
 
 ##################################################
+
+add_library(${lib_name} ${LINK_TYPE} ${lib_src})
+
+list(APPEND dependencies
+    PROTOBUF
+    )
+
+message( "-- Seting up dependencies for " ${lib_name} )
+foreach( dep ${dependencies} )
+
+    message( "\tAdd dependence: " ${dep} )
+
+    #add_dependencies(       ${lib_name} ${dep}      )
+    add_definitions(        ${${dep}_DEFINITIONS}   )
+    include_directories(    ${${dep}_INCLUDE_DIRS}  )
+    target_link_libraries(  ${lib_name} ${${dep}_LIBRARIES} )
+
+endforeach(dep)
+
+set_target_properties( ${lib_name}
+                       PROPERTIES
+                       COMPILE_DEFINITIONS "${LINK_TYPE}")
+
+get_target_property(${lib_name}_LOCATION ${lib_name} LOCATION)
+
+set(${lib_name}_DEFINITIONS "-D${LINK_TYPE}" PARENT_SCOPE)
+
+set( ${lib_name}_PROTOBUF_FILES_OUTPUT
+     ${${lib_name}_PROTOBUF_FILES_OUTPUT}
+     PARENT_SCOPE
+)
+
+set( ${lib_name}_PROJECT_SOURCE_DIR
+     ${PROJECT_SOURCE_DIR}
+       PARENT_SCOPE
+)
+
+set( ${lib_name}_POTOBUF_IMPORT_DIR
+     ${${lib_name}_POTOBUF_IMPORT_DIR}
+     PARENT_SCOPE
+)
+
+set( ${lib_name}_INCLUDE_DIRS
+     ${CMAKE_CURRENT_SOURCE_DIR}
+     ${${lib_name}_PROTOBUF_FILES_DIR}
+     ${${lib_name}_PROTOBUF_FILES_OUTPUT}
+     ${CONFIG_FILES_DIRECTORY}
+     ${Boost_INCLUDE_DIRS}
+     ${PROTOBUF_INCLUDE_DIRS}
+     ${OPENSSL_INCLUDE_DIRS}
+     PARENT_SCOPE
+)
+
+set( ${lib_name}_LIBRARY ${${lib_name}_LOCATION} PARENT_SCOPE)
+
+set( ${lib_name}_LIBRARIES
+     ${${lib_name}_LOCATION}
+     ${PROTOBUF_LIBRARIES}
+     PARENT_SCOPE)
+

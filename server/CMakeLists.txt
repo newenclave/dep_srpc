@@ -8,7 +8,7 @@ foreach( src_dir ${src_dirs} )
     list(APPEND lib_src ${headers})
 endforeach( )
 
-#include_directories( ${SRPC_INCLUDE_DIR}/vtrc-client )
+include_directories( ${SRPC_INCLUDE_DIR}/server )
 
 add_library(${lib_name} ${LINK_TYPE} ${lib_src})
 
