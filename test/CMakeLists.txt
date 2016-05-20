@@ -9,7 +9,9 @@ cmake_minimum_required(VERSION 2.8)
 
 set(INTERNAL_PROJECT_NAME test)
 
-project(vtrc-${INTERNAL_PROJECT_NAME})
+project(${INTERNAL_PROJECT_NAME})
+
+find_package( Protobuf REQUIRED)
 
 include_directories( ${INCLUDE_DIRS} )
 
