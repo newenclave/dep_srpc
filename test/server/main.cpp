@@ -504,7 +504,7 @@ struct m_delegate: public common::transport_iface::delegate {
                         cb::post( [this]( ... ) { parent_->close( ); } ) );
         } else {
             std::shared_ptr<std::string> d = std::make_shared<std::string>( );
-            (*d) += (boost::lexical_cast<std::string>(count));
+            (*d) += (boost::lexical_cast<std::string>(count)) + "\n";
             //parent_->write( data, len, cb( ) );
             parent_->write( d->c_str( ), d->length( ),
                             cb::post( [this, d]( ... ) {
@@ -515,7 +515,6 @@ struct m_delegate: public common::transport_iface::delegate {
             parent_->read( );
         }
     }
-
 
     void on_close( )
     {
