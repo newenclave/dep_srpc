@@ -50,6 +50,12 @@ namespace srpc { namespace common {
             res.pre_call.swap( call );
             return res;
         }
+
+        void swap( transport_callbacks &other )
+        {
+            post_call.swap( other.post_call );
+            pre_call.swap(  other.pre_call  );
+        }
     };
 
     using std::enable_shared_from_this;
