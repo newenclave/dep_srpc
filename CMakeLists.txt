@@ -18,6 +18,8 @@ if( NOT DISABLE_CXX11 )
     check_cxx11( CXX11_ENABLED )
 endif( )
 
+add_definitions( -DCXX11_ENABLED=${CXX11_ENABLED} )
+
 get_cmd_cxx11( CXX_CMD )
 get_compiler_thread_local( THREAD_LOCAL )
 set( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${CXX_CMD}")

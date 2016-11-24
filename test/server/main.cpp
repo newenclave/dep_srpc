@@ -15,6 +15,11 @@ namespace bs = boost::system;
 using namespace srpc;
 
 template <typename StreamType>
+class common_transport: public common::transport_iface {
+
+};
+
+template <typename StreamType>
 class stream_transport: public common::transport_iface {
 
     typedef stream_transport<StreamType> this_type;
@@ -263,7 +268,7 @@ public:
     void close( )
     {
         dispatcher_.post( std::bind(&this_type::close_impl, this,
-                            weak_type(this->shared_from_this( ) ) ) );
+                           weak_type(this->shared_from_this( ) ) ) );
     }
 
     void set_delegate( delegate *val )
