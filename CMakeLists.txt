@@ -18,6 +18,10 @@ if( NOT DISABLE_CXX11 )
     check_cxx11( CXX11_ENABLED )
 endif( )
 
+get_cmd_cxx11( CXX_CMD )
+get_compiler_thread_local( THREAD_LOCAL )
+set( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${CXX_CMD}")
+
 set( LINK_TYPE_STATIC STATIC )
 set( LINK_TYPE_SHARED SHARED )
 set( LINK_TYPE_MODULE MODULE )
@@ -27,6 +31,9 @@ if( NOT DEFINED LINK_TYPE )
 endif( )
 
 find_package( Protobuf REQUIRED)
+find_package( Boost 1.53 COMPONENTS
+                system
+              REQUIRED)
 
 set( INCLUDE_DIR ${PROJECT_SOURCE_DIR}/include )
 
@@ -40,6 +47,7 @@ set( INCLUDE_DIRS
      ${INCLUDE_DIR}
      ${PROTOCOL_INCLUDE_DIR}
      ${PROTOBUF_INCLUDE_DIRS}
+     ${Boost_INCLUDE_DIRS}
    )
 
 include_directories( ${PROJECT_SOURCE_DIR} ${INCLUDE_DIRS} )

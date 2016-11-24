@@ -1,5 +1,6 @@
 #include <iostream>
 #include "protocol/t.pb.h"
+#include "boost/asio.hpp"
 
 int main( )
 {

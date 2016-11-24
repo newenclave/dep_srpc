@@ -8,6 +8,7 @@ add_executable(${exe_name} ${src_dir})
 list( APPEND internal
     ${INTERNAL_PROJECT_NAME}_common_s
     srpc_client
+    Boost
     )
 
 include_directories( ${${INTERNAL_PROJECT_NAME}_common_s_INCLUDE_DIRS}  )
