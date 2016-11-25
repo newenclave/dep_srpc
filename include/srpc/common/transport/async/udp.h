@@ -61,10 +61,11 @@ namespace async {
             );
         }
 
-        void write_handle( const error_code &err, size_t /*len*/,
+        void write_handle( const error_code &err, size_t len,
                            write_callbacks cbacks,
                            shared_type )
         {
+            //std::cerr << "Write " << len << "bytes\n";
             if( err ) {
                 get_delegate( )->on_write_error( err );
             } else {
