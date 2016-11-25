@@ -231,11 +231,8 @@ namespace async {
 
     public:
 
-        typedef StreamType stream_type;
-
-        stream( io_service &ios, srpc::uint32_t buflen, srpc::uint32_t opts)
-            :parent_type(ios, buflen, opts)
-        { }
+        typedef StreamType                      stream_type;
+        typedef typename parent_type::delegate  delegate;
 
         stream( io_service &ios, srpc::uint32_t buflen )
             :parent_type(ios, buflen)

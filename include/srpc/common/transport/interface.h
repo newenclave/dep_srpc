@@ -77,11 +77,12 @@ namespace srpc { namespace common { namespace transport {
             return srpc::weak_ptr<interface const>( shared_from_this( ));
         }
 
-        virtual void open( ) = 0;
+        virtual void open( )  = 0;
         virtual void close( ) = 0;
+
+        virtual void write( const char *data, size_t len ) = 0;
         virtual void write( const char *data, size_t len,
                             write_callbacks cback ) = 0;
-        virtual void write( const char *data, size_t len ) = 0;
 
         virtual void read( ) = 0;
         virtual void set_delegate( delegate *val ) = 0;

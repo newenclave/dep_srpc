@@ -24,20 +24,17 @@ namespace async {
     public:
 
         typedef asio_tcp::endpoint endpoint;
-
-        tcp(io_service &ios, srpc::uint32_t buflen, srpc::uint32_t opts )
-            :parent_type(ios, buflen, opts)
-        { }
-
-        void open( )
-        {
-            ep_.address( ).is_v6( ) ? get_socket( ).open( asio_tcp::v6( ) )
-                                    : get_socket( ).open( asio_tcp::v4( ) );
-        }
+        typedef parent_type::delegate delegate;
 
         tcp(io_service &ios, srpc::uint32_t buflen )
             :parent_type(ios, buflen)
         { }
+
+        void open( )
+        {
+            ep_.address( ).is_v6( ) ? get_socket( ).open( asio_tcp::v4( ) )
+                                    : get_socket( ).open( asio_tcp::v6( ) );
+        }
 
         void set_endpoint( const endpoint &val )
         {

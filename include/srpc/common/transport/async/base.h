@@ -11,22 +11,8 @@ namespace async {
     template <typename SocketType>
     class base: public interface {
 
-        typedef interface::delegate        delegate;
         typedef base<SocketType>           this_type;
         typedef interface::write_callbacks write_callbacks;
-
-        typedef void (this_type::*call_impl)( );
-
-        static
-        call_impl get_read_dispatch( srpc::uint32_t opts )
-        {
-            return ( opts & OPT_DISPATCH_READ )
-                   ? &this_type::start_read_impl_wrap
-                   : &this_type::start_read_impl;
-        }
-
-        virtual void start_read_impl_wrap(  )
-        { }
 
         virtual void start_read_impl(  )
         { }
@@ -37,14 +23,21 @@ namespace async {
         void close_impl( weak_type inst )
         {
             shared_type lck(inst.lock( ));
-            if( lck && active_ ) {
-                delegate_->on_close( );
-                socket_.close( );
-                active_ = false;
+            if( lck ) {
+                close_unsafe( );
             }
         }
 
     protected:
+
+        void close_unsafe( )
+        {
+            if( active_ ) {
+                get_delegate( )->on_close( );
+                socket_.close( );
+                active_ = false;
+            }
+        }
 
         void read_handler( const error_code &error,
                            size_t const bytes, weak_type inst )
@@ -52,21 +45,16 @@ namespace async {
             shared_type lck(inst.lock( ));
             if( lck ) {
                 if( !error ) {
-                    delegate_->on_data( &read_buffer_[0], bytes );
+                    get_delegate( )->on_data( &read_buffer_[0], bytes );
                 } else {
-                    delegate_->on_read_error( error );
+                    get_delegate( )->on_read_error( error );
                 }
             }
         }
 
         void call_reader( )
         {
-            (this->*read_impl_)( );
-        }
-
-        std::vector<char> &get_read_buffer( )
-        {
-            return read_buffer_;
+            start_read_impl( );
         }
 
         delegate* get_delegate(  )
@@ -76,26 +64,13 @@ namespace async {
 
     public:
 
-        typedef SocketType socket_type;
-
-        enum options {
-            OPT_NONE          = 0x00,
-            OPT_DISPATCH_READ = 0x01,
-        };
+        typedef SocketType          socket_type;
+        typedef interface::delegate delegate;
 
         base( io_service &ios, srpc::uint32_t buf_len )
             :socket_(ios)
             ,dispatcher_(ios)
             ,read_buffer_(buf_len)
-            ,read_impl_(get_read_dispatch(OPT_DISPATCH_READ))
-            ,active_(true)
-        { }
-
-        base( io_service &ios, srpc::uint32_t buf_len, srpc::uint32_t opts )
-            :socket_(ios)
-            ,dispatcher_(ios)
-            ,read_buffer_(buf_len)
-            ,read_impl_(get_read_dispatch(opts))
             ,active_(true)
         { }
 
@@ -105,6 +80,16 @@ namespace async {
         {
             read_buffer_.resize( len );
             set_buffers( len );
+        }
+
+        std::vector<char> &get_read_buffer( )
+        {
+            return read_buffer_;
+        }
+
+        const std::vector<char> &get_read_buffer( ) const
+        {
+            return read_buffer_;
         }
 
         void close( )
@@ -139,7 +124,6 @@ namespace async {
         io_service::strand   dispatcher_;
         delegate            *delegate_;
         std::vector<char>    read_buffer_;
-        call_impl            read_impl_;
         bool                 active_;
     };
 

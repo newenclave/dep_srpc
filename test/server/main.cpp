@@ -26,12 +26,14 @@ using stream_transport = common::transport::async::stream<StreamType>;
 using tcp_transport = common::transport::async::tcp;
 using udp_transport = common::transport::async::udp;
 
+
+template <typename ParentType>
 struct m_delegate: public common::transport::interface::delegate {
 
-    common::transport::interface::shared_type parent_;
+    std::shared_ptr<ParentType> parent_;
     int count = 0;
 
-    m_delegate(common::transport::interface::shared_type parent)
+    m_delegate(std::shared_ptr<ParentType> parent)
         :parent_(parent)
     { }
 
@@ -51,7 +53,7 @@ struct m_delegate: public common::transport::interface::delegate {
 
         //std::cout << "data: " << std::string(data, len) << std::endl;
 
-        if( count++ > 1000000 ) {
+        if( count++ > 10000 ) {
             parent_->write( data, len,
                         cb::post( [this]( ... ) { parent_->close( ); } ) );
         } else {
@@ -61,7 +63,7 @@ struct m_delegate: public common::transport::interface::delegate {
             parent_->write( d->c_str( ), d->length( ),
                             cb::post( [this, d]( ... ) {
                                 if( count % 10000 == 0 ) {
-                                    std::cout << d->c_str() << "\n";
+                                    std::cout << d->c_str( ) << "\n";
                                 }
                             } ) );
             parent_->read( );
@@ -74,29 +76,102 @@ struct m_delegate: public common::transport::interface::delegate {
     }
 };
 
+struct tcp_echo_delegate final: public common::transport::interface::delegate {
+    using cb = common::transport::interface::write_callbacks;
 
+    std::shared_ptr<tcp_transport> parent_;
+
+    void on_read_error( const bs::error_code & )
+    {
+
+    }
+
+    void on_write_error( const bs::error_code &)
+    {
+
+    }
+
+    void on_data( const char *data, size_t len )
+    {
+        std::shared_ptr<std::string> echo
+                = std::make_shared<std::string>( data, len );
+        parent_->write( echo->c_str( ), echo->size( ),
+                        cb::post([echo](...){ }) );
+    }
+
+    void on_close( )
+    {
+
+    }
+
+    void start_read( )
+    {
+        parent_->read( );
+    }
+
+};
+
+struct udp_echo_delegate final: public common::transport::async::udp::delegate {
+
+    std::shared_ptr<udp_transport> parent_;
+    using cb = common::transport::interface::write_callbacks;
+
+    void on_read_error( const bs::error_code & )
+    {
+
+    }
+
+    void on_write_error( const bs::error_code &)
+    {
+
+    }
+
+    void on_data( const char *data, size_t len )
+    {
+        std::shared_ptr<std::string> echo
+                = std::make_shared<std::string>( data, len );
+
+        parent_->write_to( parent_->get_endpoint( ),
+                           echo->c_str( ), echo->size( ),
+                           cb::post([echo](...){ }) );
+        start_read( );
+    }
+
+    void on_close( )
+    {
+        std::cout << "close\n";
+    }
+
+    void start_read( )
+    {
+        namespace ph = std::placeholders;
+        ba::ip::udp::endpoint ep ;
+        parent_->read_from( ep );
+    }
+};
 
 int main( )
 {
     try {
 
-        std::cout << sizeof(std::function<void( )>) << "\n\n";
+        using transtort_type      = udp_transport;
+        using transtort_delegate  = udp_echo_delegate;
 
         ba::io_service ios;
-        ba::ip::udp::endpoint ep(ba::ip::address::from_string("127.0.0.1"), 2356);
+        transtort_type::endpoint ep(ba::ip::address::from_string("0.0.0.0"), 2356);
 
-        auto t = std::make_shared<udp_transport>(std::ref(ios), 4096, 0);
+        auto t = std::make_shared<transtort_type>(std::ref(ios), 4096);
 
         t->set_endpoint( ep );
         t->open( );
 
         t->resize_buffer( 44000 );
-        t->get_socket( ).connect( t->get_endpoint( ) );
+        t->get_socket( ).bind(ep);
 
-        m_delegate del( t );
+        transtort_delegate del;
+        del.parent_ = t;
         t->set_delegate( &del );
-        t->write( "Hello!\n", 7 );
-        t->read( );
+        del.start_read( );
 
         ios.run( );
 

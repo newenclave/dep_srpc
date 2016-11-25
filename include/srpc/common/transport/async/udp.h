@@ -48,6 +48,19 @@ namespace async {
             );
         }
 
+        void start_read_from_impl( )
+        {
+            namespace ph = srpc::placeholders;
+            get_socket( ).async_receive_from(
+                SRPC_ASIO::buffer( &get_read_buffer( )[0],
+                                    get_read_buffer( ).size( )),
+                    ep_, 0,
+                    srpc::bind( &this_type::read_handler, this,
+                                 ph::_1, ph::_2,
+                                 this->weak_from_this( ) )
+            );
+        }
+
         void write_handle( const error_code &err, size_t /*len*/,
                            write_callbacks cbacks,
                            shared_type )
@@ -69,14 +82,11 @@ namespace async {
 
     public:
 
-        typedef asio_udp::endpoint endpoint;
+        typedef asio_udp::endpoint      endpoint;
+        typedef parent_type::delegate   delegate;
 
         udp( io_service &ios, std::uint32_t buflen )
             :parent_type(ios, buflen)
-        { }
-
-        udp( io_service &ios, std::uint32_t buflen, std::uint32_t opts )
-            :parent_type(ios, buflen, opts)
         { }
 
         void open( )
@@ -110,6 +120,35 @@ namespace async {
             );
         }
 
+        void write_to( const endpoint &ep,
+                       const char *data, size_t len,
+                       write_callbacks cback )
+        {
+            namespace ph = srpc::placeholders;
+            cback.pre_call( );
+            get_socket( ).async_send_to( SRPC_ASIO::buffer(data, len),
+                        ep, 0,
+                        get_dispatcher( ).wrap(
+                            srpc::bind( &this_type::write_handle, this,
+                                         ph::_1, ph::_2, cback,
+                                         this->shared_from_this( ) )
+                        )
+            );
+        }
+
+        void write_to( const endpoint &ep, const char *data, size_t len )
+        {
+            namespace ph = srpc::placeholders;
+            get_socket( ).async_send_to( SRPC_ASIO::buffer(data, len),
+                        ep, 0,
+                        get_dispatcher( ).wrap(
+                            srpc::bind( &this_type::write_handle_empty, this,
+                                         ph::_1, ph::_2,
+                                         this->shared_from_this( ) )
+                        )
+            );
+        }
+
         void set_endpoint( const endpoint &val )
         {
             ep_ = val;
@@ -128,6 +167,12 @@ namespace async {
         void read( )
         {
             call_reader( );
+        }
+
+        void read_from( const endpoint &ep )
+        {
+            ep_ = ep;
+            start_read_from_impl( );
         }
 
     private:
