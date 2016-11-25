@@ -3,6 +3,8 @@ set( lib_name ${COMMON_LIB_NAME} )
 list( APPEND src_dirs
       .
       ${INCLUDE_DIR}/srpc/common
+      ${INCLUDE_DIR}/srpc/common/transport
+      ${INCLUDE_DIR}/srpc/common/transport/async
       ${INCLUDE_DIR}/srpc/common/config
       )
 
@@ -12,7 +14,7 @@ foreach( src_dir ${src_dirs} )
     list(APPEND lib_src ${headers})
 endforeach( )
 
-include_directories( ${INCLUDE_DIR}/common )
+include_directories( ${INCLUDE_DIR}/srpc/common )
 
 ####################### PROTOCOL BASE #######################
 

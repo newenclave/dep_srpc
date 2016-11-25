@@ -41,7 +41,7 @@ find_package( Boost 1.53 COMPONENTS
 set( INCLUDE_DIR ${PROJECT_SOURCE_DIR}/include )
 
 if( NOT DEFINED PROTOCOL_DIR )
-    set( PROTOCOL_INCLUDE_DIR ${INCLUDE_DIR}/common/protocol )
+    set( PROTOCOL_INCLUDE_DIR ${INCLUDE_DIR}/srpc/common/protocol )
 else( )
     set( PROTOCOL_INCLUDE_DIR ${PROTOCOL_DIR} )
 endif( )

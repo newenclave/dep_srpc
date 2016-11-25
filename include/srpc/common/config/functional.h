@@ -2,7 +2,7 @@
 #define CONFIG_FUNCTIONAL_H
 
 
-#if !CXX11_ENABLED
+#if CXX11_ENABLED == 0
 
 #include "boost/function.hpp"
 #include "boost/bind.hpp"
@@ -10,6 +10,8 @@
 namespace CONFIG_TOPNAMESPACE {
     using boost::function;
     using boost::bind;
+    using boost::ref;
+    using boost::cref;
 
     namespace placeholders {
         namespace {

@@ -1,9 +1,8 @@
-include/vtrc-common/protocol
-include/vtrc-common/config/vtrc-general-config.h
+include/srpc/common/protocol
 *.user
 *.autosave
 *.user.*
 \#*
-vtrc-import.cmake
+srpc-import.cmake
 *~
 

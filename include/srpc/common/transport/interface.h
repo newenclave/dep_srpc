@@ -1,19 +1,18 @@
 #ifndef TRANSPORT_IFACE_H
 #define TRANSPORT_IFACE_H
 
-
 #include "boost/system/error_code.hpp"
 #include "srpc/common/buffer.h"
 #include "srpc/common/config/memory.h"
 #include "srpc/common/config/functional.h"
+#include "srpc/common/config/stdint.h"
 
-namespace srpc { namespace common {
+namespace srpc { namespace common { namespace transport {
 
-    using srpc::enable_shared_from_this;
-    struct transport_iface: public enable_shared_from_this<transport_iface> {
+    struct interface: public srpc::enable_shared_from_this<interface> {
 
-        typedef srpc::shared_ptr<transport_iface> shared_type;
-        typedef srpc::weak_ptr<transport_iface>   weak_type;
+        typedef srpc::shared_ptr<interface> shared_type;
+        typedef srpc::weak_ptr<interface>   weak_type;
 
         typedef boost::system::error_code         error_code;
 
@@ -73,21 +72,23 @@ namespace srpc { namespace common {
             return weak_type( shared_from_this( ) );
         }
 
-        std::weak_ptr<transport_iface const> weak_from_this( ) const
+        std::weak_ptr<interface const> weak_from_this( ) const
         {
-            return srpc::weak_ptr<transport_iface const>( shared_from_this( ));
+            return srpc::weak_ptr<interface const>( shared_from_this( ));
         }
 
         virtual void open( ) = 0;
         virtual void close( ) = 0;
         virtual void write( const char *data, size_t len,
                             write_callbacks cback ) = 0;
+        virtual void write( const char *data, size_t len ) = 0;
 
         virtual void read( ) = 0;
         virtual void set_delegate( delegate *val ) = 0;
 
-        virtual ~transport_iface( ) { }
+        virtual ~interface( ) { }
     };
-}}
+
+}}}
 
 #endif // TRANSPORT_IFACE_H
