@@ -1,6 +1,9 @@
 set( lib_name ${SERVER_LIB_NAME} )
 
-list(APPEND src_dirs .)
+list( APPEND src_dirs
+      .
+      ${INCLUDE_DIR}/srpc/server
+     )
 
 foreach( src_dir ${src_dirs} )
     aux_source_directory(${src_dir} lib_src)

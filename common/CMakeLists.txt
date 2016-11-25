@@ -1,6 +1,10 @@
 set( lib_name ${COMMON_LIB_NAME} )
 
-list(APPEND src_dirs .)
+list( APPEND src_dirs
+      .
+      ${INCLUDE_DIR}/srpc/common
+      ${INCLUDE_DIR}/srpc/common/config
+      )
 
 foreach( src_dir ${src_dirs} )
     aux_source_directory(${src_dir} lib_src)

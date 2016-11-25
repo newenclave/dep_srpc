@@ -1,7 +1,7 @@
-#ifndef BUFFER_HPP
-#define BUFFER_HPP
+#ifndef SRPC_BUFFER_H
+#define SRPC_BUFFER_H
 
-#include <stdint.h>
+#include "srpc/common/config/stdint.h"
 
 namespace srpc { namespace common {
 
@@ -68,4 +68,4 @@ namespace srpc { namespace common {
     };
 }}
 
-#endif // BUFFER_HPP
+#endif // SRPC_BUFFER_H

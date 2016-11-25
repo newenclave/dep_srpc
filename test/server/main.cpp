@@ -4,7 +4,7 @@
 #include "boost/asio.hpp"
 #include "boost/lexical_cast.hpp"
 
-#include "transport-iface.h"
+#include "srpc/common/transport-iface.h"
 
 #include <memory>
 #include <queue>
@@ -19,6 +19,7 @@ class common_transport: public common::transport_iface {
 
     typedef common_transport<StreamType> this_type;
     typedef void (this_type::*call_impl)( );
+    typedef common::transport_iface::write_callbacks write_callbacks;
 
     static
     call_impl get_read_dispatch( std::uint32_t opts )
@@ -145,6 +146,7 @@ class stream_transport: public common_transport<StreamType> {
 
     typedef common_transport<StreamType> parent_type;
     typedef stream_transport<StreamType> this_type;
+    typedef common::transport_iface::write_callbacks write_callbacks;
 
     typedef common::const_buffer<char>   message_type;
 
@@ -155,8 +157,8 @@ class stream_transport: public common_transport<StreamType> {
 
         typedef std::shared_ptr<queue_value> shared_type;
 
-        message_type                message_;
-        common::transport_callbacks cbacks_;
+        message_type    message_;
+        write_callbacks cbacks_;
 
         queue_value( const char *data, size_t length )
             :message_(data, length)
@@ -206,7 +208,7 @@ class stream_transport: public common_transport<StreamType> {
             this->get_dispatcher( ).wrap(
                 std::bind( &this_type::read_handler, this,
                     ph::_1, ph::_2,
-                    weak_type(this->shared_from_this( )) )
+                    this->weak_from_this( ) )
             )
          );
     }
@@ -218,8 +220,7 @@ class stream_transport: public common_transport<StreamType> {
             boost::asio::buffer(&this->get_read_buffer( )[0],
                                  this->get_read_buffer( ).size( )),
             std::bind( &this_type::read_handler, this,
-                ph::_1, ph::_2,
-                weak_type(this->shared_from_this( ))
+                ph::_1, ph::_2, this->weak_from_this( )
             )
         );
     }
@@ -307,7 +308,7 @@ class stream_transport: public common_transport<StreamType> {
     }
 
     void post_write( const char *data, size_t len,
-                     const common::transport_callbacks &cback )
+                     const write_callbacks &cback )
     {
         queue_value_sptr inst(queue_value::create( data, len ));
         inst->cbacks_ = cback;
@@ -339,14 +340,14 @@ public:
     }
 
     void write( const char *data, size_t len,
-                common::transport_callbacks cback )
+                write_callbacks cback )
     {
         post_write( data, len, cback );
     }
 
     void write( const char *data, size_t len )
     {
-        write( data, len, common::transport_callbacks( ) );
+        write( data, len, write_callbacks( ) );
     }
 
     void read( )
@@ -367,8 +368,9 @@ class udp_transport: public common_transport<ba::ip::udp::socket> {
     typedef common_transport<ba::ip::udp::socket> parent_type;
     typedef udp_transport this_type;
 
-    typedef common::transport_iface::shared_type shared_type;
-    typedef common::transport_iface::weak_type   weak_type;
+    typedef common::transport_iface::shared_type     shared_type;
+    typedef common::transport_iface::weak_type       weak_type;
+    typedef common::transport_iface::write_callbacks write_callbacks;
 
     void read_handler0( const bs::error_code &error,
                         size_t const bytes, weak_type inst )
@@ -394,8 +396,8 @@ class udp_transport: public common_transport<ba::ip::udp::socket> {
             get_dispatcher( ).wrap(
                 std::bind( &this_type::read_handler, this,
                             ph::_1, ph::_2,
-                            weak_type(this->shared_from_this( )) )
-            )
+                            this->weak_from_this( ) )
+            ) // dispatcher
          );
     }
 
@@ -407,13 +409,13 @@ class udp_transport: public common_transport<ba::ip::udp::socket> {
                                  get_read_buffer( ).size( )),
             std::bind( &this_type::read_handler, this,
                         ph::_1, ph::_2,
-                        weak_type(this->shared_from_this( ))
+                        this->weak_from_this( )
             )
         );
     }
 
     void write_handle( const bs::error_code &err, size_t len,
-                       common::transport_callbacks cbacks,
+                       write_callbacks cbacks,
                        shared_type )
     {
         //std::cout << "Udp write: " << len << "bytes\n";
@@ -444,8 +446,7 @@ public:
         ep_ = get_stream( ).local_endpoint( );
     }
 
-    void write( const char *data, size_t len,
-                common::transport_callbacks cback )
+    void write( const char *data, size_t len, write_callbacks cback )
     {
         namespace ph = std::placeholders;
         //std::cout << "Udp send: " << len << "bytes\n";
@@ -461,7 +462,7 @@ public:
 
     void write( const char *data, size_t len )
     {
-        write( data, len, common::transport_callbacks( ) );
+        write( data, len, write_callbacks( ) );
     }
 
     void read( )
@@ -495,7 +496,7 @@ struct m_delegate: public common::transport_iface::delegate {
 
     void on_data( const char *data, size_t len )
     {
-        using cb = common::transport_callbacks;
+        typedef common::transport_iface::write_callbacks cb;
 
         //std::cout << "data: " << std::string(data, len) << std::endl;
 

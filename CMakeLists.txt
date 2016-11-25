@@ -19,6 +19,7 @@ if( NOT DISABLE_CXX11 )
 endif( )
 
 add_definitions( -DCXX11_ENABLED=${CXX11_ENABLED} )
+add_definitions( -DCONFIG_TOPNAMESPACE=srpc )
 
 get_cmd_cxx11( CXX_CMD )
 get_compiler_thread_local( THREAD_LOCAL )

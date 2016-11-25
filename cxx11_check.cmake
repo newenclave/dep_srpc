@@ -1,3 +1,4 @@
+
 macro( check_cxx11 VAR_ENABLED )
 
     #-std=c++11 by default
