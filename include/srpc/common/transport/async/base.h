@@ -14,8 +14,7 @@ namespace async {
         typedef base<SocketType>           this_type;
         typedef interface::write_callbacks write_callbacks;
 
-        virtual void start_read_impl(  )
-        { }
+        virtual void start_read_impl(  ) { }
 
         virtual void set_buffers( size_t )
         { }
@@ -30,10 +29,15 @@ namespace async {
 
     protected:
 
+        virtual void on_read_error( const error_code & ) { }
+        virtual void on_write_error( const error_code & ) { }
+        virtual void on_close( ) { }
+
         void close_unsafe( )
         {
             if( active_ ) {
                 get_delegate( )->on_close( );
+                on_close( );
                 socket_.close( );
                 active_ = false;
             }
@@ -48,6 +52,7 @@ namespace async {
                     get_delegate( )->on_data( &read_buffer_[0], bytes );
                 } else {
                     get_delegate( )->on_read_error( error );
+                    on_read_error( error );
                 }
             }
         }

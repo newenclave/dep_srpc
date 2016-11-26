@@ -70,6 +70,7 @@ namespace async {
                 get_delegate( )->on_write_error( err );
             } else {
                 cbacks.post_call( err );
+                on_write_error( err );
             }
         }
 
@@ -78,8 +79,40 @@ namespace async {
         {
             if( err ) {
                 get_delegate( )->on_write_error( err );
+                on_write_error( err );
             }
         }
+
+        void write_to_handle( const error_code &err,
+                              asio_udp::endpoint to,
+                              size_t /*len*/,
+                              write_callbacks cbacks,
+                              shared_type )
+        {
+            //std::cerr << "Write " << len << "bytes\n";
+            if( err ) {
+                get_delegate( )->on_write_error( err );
+            } else {
+                cbacks.post_call( err );
+                on_write_to_error( err, to );
+            }
+        }
+
+        void write_to_handle_empty( const error_code &err,
+                                    asio_udp::endpoint to,
+                                    size_t /*len*/,
+                                    shared_type )
+        {
+            if( err ) {
+                get_delegate( )->on_write_error( err );
+                on_write_to_error( err, to );
+            }
+        }
+
+    protected:
+        virtual void on_read_from_error( const error_code & ) { }
+        virtual void on_write_to_error( const error_code &,
+                                        const asio_udp::endpoint & ) { }
 
     public:
 
@@ -130,8 +163,8 @@ namespace async {
             get_socket( ).async_send_to( SRPC_ASIO::buffer(data, len),
                         ep, 0,
                         get_dispatcher( ).wrap(
-                            srpc::bind( &this_type::write_handle, this,
-                                         ph::_1, ph::_2, cback,
+                            srpc::bind( &this_type::write_to_handle, this,
+                                         ph::_1, ep, ph::_2, cback,
                                          this->shared_from_this( ) )
                         )
             );
@@ -143,8 +176,8 @@ namespace async {
             get_socket( ).async_send_to( SRPC_ASIO::buffer(data, len),
                         ep, 0,
                         get_dispatcher( ).wrap(
-                            srpc::bind( &this_type::write_handle_empty, this,
-                                         ph::_1, ph::_2,
+                            srpc::bind( &this_type::write_to_handle_empty, this,
+                                         ph::_1, ep, ph::_2,
                                          this->shared_from_this( ) )
                         )
             );

@@ -27,14 +27,16 @@ using tcp_transport = common::transport::async::tcp;
 using udp_transport = common::transport::async::udp;
 
 
+std::set< std::shared_ptr<common::transport::interface> > gclients;
+
 struct tcp_echo_delegate final: public common::transport::interface::delegate {
     using cb = common::transport::interface::write_callbacks;
 
-    std::shared_ptr<tcp_transport> parent_;
+    std::shared_ptr<common::transport::interface> parent_;
 
     void on_read_error( const bs::error_code & )
     {
-
+        gclients.erase( parent_ );
     }
 
     void on_write_error( const bs::error_code &)
@@ -48,11 +50,12 @@ struct tcp_echo_delegate final: public common::transport::interface::delegate {
                 = std::make_shared<std::string>( data, len );
         parent_->write( echo->c_str( ), echo->size( ),
                         cb::post([echo](...){ }) );
+        start_read( );
     }
 
     void on_close( )
     {
-
+        std::cout << "Close client\n";
     }
 
     void start_read( )
@@ -101,29 +104,133 @@ struct udp_echo_delegate final: public common::transport::async::udp::delegate {
     }
 };
 
+struct acceptor: public srpc::enable_shared_from_this<acceptor> {
+    struct delegate {
+        virtual void on_accept( common::transport::interface * ) = 0;
+        virtual void on_accept_error( const bs::error_code & ) = 0;
+        //virtual void on_disconnect( common::transport::interface * ) = 0;
+        virtual void on_close( ) = 0;
+    };
+    virtual void open( ) = 0;
+    virtual void close( ) = 0;
+    virtual void start_accept( ) = 0;
+    virtual void set_delegate(delegate *) = 0;
+};
+
+class tcp_acceptor: public acceptor {
+
+    class tcp_client: public tcp_transport {
+    public:
+        tcp_client( ba::io_service &ios, size_t bufsize )
+            :tcp_transport(ios, bufsize)
+        { }
+    };
+
+    public:
+
+        tcp_acceptor( ba::io_service &ios,
+                      size_t bufsize, const ba::ip::tcp::endpoint &ep )
+            :ios_(ios)
+            ,acceptor_(ios_)
+            ,bufsize_(bufsize)
+            ,delegate_(NULL)
+            ,ep_(ep)
+        { }
+
+        void open( )
+        {
+            ep_.address( ).is_v6( ) ? acceptor_.open( ba::ip::tcp::v6( ) )
+                                    : acceptor_.open( ba::ip::tcp::v4( ) );
+            acceptor_.set_option( ba::socket_base::reuse_address(true) );
+            acceptor_.bind( ep_ );
+            acceptor_.listen( 5 );
+        }
+
+        void close( )
+        {
+            delegate_->on_close(  );
+            acceptor_.close( );
+        }
+
+        void handle_accept( const bs::error_code &err,
+                            srpc::shared_ptr<tcp_client> client,
+                            srpc::weak_ptr<acceptor> inst)
+        {
+            srpc::shared_ptr<acceptor> lck(inst.lock( ));
+            if( lck ) {
+                if( !err ) {
+                    delegate_->on_accept( client.get( ) );
+                } else {
+                    delegate_->on_accept_error( err );
+                }
+            }
+        }
+
+        void start_accept( )
+        {
+            namespace ph = srpc::placeholders;
+            srpc::shared_ptr<tcp_client> next
+                    = srpc::make_shared<tcp_client>(srpc::ref(ios_), bufsize_);
+
+            acceptor_.async_accept( next->get_socket( ),
+                    srpc::bind(&tcp_acceptor::handle_accept, this,
+                               ph::_1, next,
+                               srpc::weak_ptr<acceptor>(shared_from_this())) );
+        }
+
+        void set_delegate(delegate *val)
+        {
+            delegate_ = val;
+        }
+
+    private:
+        ba::io_service &ios_;
+        ba::ip::tcp::acceptor acceptor_;
+        size_t          bufsize_;
+        delegate       *delegate_;
+        ba::ip::tcp::endpoint ep_;
+};
+
+struct acceptor_del: public acceptor::delegate {
+
+    tcp_echo_delegate               delegate_;
+    std::shared_ptr<tcp_acceptor>   acceptor_;
+
+    void on_accept( common::transport::interface *c )
+    {
+        gclients.insert( c->shared_from_this( ) );
+        c->set_delegate( &delegate_ );
+        delegate_.parent_ = c->shared_from_this( );
+        c->read( );
+        acceptor_->start_accept( );
+    }
+
+    void on_accept_error( const bs::error_code &ex )
+    {
+        std::cout << "Error accept " << ex.message( ) << "\n";
+    }
+
+    void on_close( )
+    {
+        std::cout << "Acceptor closed\n";
+    }
+};
+
 int main( )
 {
     try {
 
-        using transtort_type      = udp_transport;
+        using transtort_type      = tcp_transport;
         using transtort_delegate  = udp_echo_delegate;
 
         ba::io_service ios;
         transtort_type::endpoint ep(ba::ip::address::from_string("0.0.0.0"), 2356);
-
-        auto t = std::make_shared<transtort_type>(std::ref(ios), 4096);
-
-        t->set_endpoint( ep );
+        acceptor_del deleg;
+        auto t = std::make_shared<tcp_acceptor>(std::ref(ios), 4096, ep);
+        t->set_delegate( &deleg );
+        deleg.acceptor_ = t;
         t->open( );
-
-        t->resize_buffer( 44000 );
-        t->get_socket( ).bind(ep);
-
-        transtort_delegate del;
-        del.parent_ = t;
-        t->set_delegate( &del );
-        del.start_read( );
-
+        t->start_accept( );
         ios.run( );
 
     } catch( const std::exception &ex ) {

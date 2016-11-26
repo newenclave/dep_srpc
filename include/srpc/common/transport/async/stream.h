@@ -186,6 +186,7 @@ namespace async {
                 top.postcall( error );
 
                 this->get_delegate( )->on_write_error( error );
+                this->on_write_error( error );
 
                 /// pop queue
                 queue_pop( );
