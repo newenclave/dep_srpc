@@ -9,6 +9,8 @@
 #include "srpc/common/transport/async/tcp.h"
 #include "srpc/common/transport/async/udp.h"
 
+#include "srpc/client/connector/async/tcp.h"
+
 #include <memory>
 #include <queue>
 
