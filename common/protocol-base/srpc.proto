@@ -1,0 +1,6 @@
+package srpc.rpc;
+option cc_generic_services = true;
+
+message empty { }
+
+message test { }
