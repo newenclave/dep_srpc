@@ -11,6 +11,10 @@
 #include "srpc/server/acceptor/interface.h"
 #include "srpc/server/acceptor/async/tcp.h"
 
+#include "srpc/common/sizepack/varint.h"
+#include "srpc/common/sizepack/fixint.h"
+
+
 #include <memory>
 #include <queue>
 
@@ -27,7 +31,6 @@ using stream_transport = common::transport::async::stream<StreamType>;
 
 using tcp_transport = common::transport::async::tcp;
 using udp_transport = common::transport::async::udp;
-
 
 std::set< std::shared_ptr<common::transport::interface> > gclients;
 
@@ -145,6 +148,11 @@ struct acceptor_del: public acceptor::delegate {
 int main( )
 {
     try {
+
+        common::sizepack::varint<unsigned> pak;
+        auto p = pak.pack( 123445 );
+
+        std::cout << p << "\n";
 
         using transtort_type      = tcp_transport;
         using transtort_delegate  = udp_echo_delegate;
