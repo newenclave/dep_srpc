@@ -152,7 +152,7 @@ int main( )
         common::sizepack::varint<unsigned> pak;
         auto p = pak.pack( 123445 );
 
-        std::cout << p << "\n";
+        std::cout << pak.unpack(p.begin( ), p.end( )) << "\n";
 
         using transtort_type      = tcp_transport;
         using transtort_delegate  = udp_echo_delegate;
