@@ -131,7 +131,6 @@ int main( )
 {
     try {
 
-
         std::cout << sizeof(std::function<void( )>) << "\n\n";
         using transtort_type      = tcp_transport;
         using transtort_delegate  = udp_echo_delegate;
