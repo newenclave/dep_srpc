@@ -115,6 +115,58 @@ struct udp_echo_delegate final: public common::transport::async::udp::delegate {
 using acceptor = server::acceptor::interface;
 using tcp_acceptor = server::acceptor::async::tcp;
 
+class udp_acceptor: public server::acceptor::interface {
+
+    typedef ba::ip::udp::endpoint endpoint;
+    class client_type: public common::transport::interface {
+    public:
+        virtual void open( )  = 0;
+        virtual void close( ) = 0;
+
+        virtual void write( const char *data, size_t len ) = 0;
+        virtual void write( const char *data, size_t len,
+                            write_callbacks cback ) = 0;
+
+        virtual void read( )
+        {
+
+        }
+
+        virtual void set_delegate( delegate *val ) = 0;
+
+    private:
+        srpc::shared_ptr<udp_acceptor> parent_;
+        endpoint ep_;
+    };
+
+public:
+
+    udp_acceptor( ba::io_service &ios )
+    {  }
+
+    virtual void open( )
+    {
+
+    }
+
+    virtual void close( )
+    {
+
+    }
+
+    virtual void start_accept( )
+    {
+
+    }
+
+    virtual void set_delegate( delegate * )
+    {
+
+    }
+private:
+    srpc::shared_ptr<common::transport::async::udp> acceptor_;
+};
+
 struct acceptor_del: public acceptor::delegate {
 
     tcp_echo_delegate               delegate_;
