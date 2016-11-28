@@ -10,6 +10,9 @@ list( APPEND src_dirs
       ${INCLUDE_DIR}/srpc/server
       ${INCLUDE_DIR}/srpc/server/acceptor
       ${INCLUDE_DIR}/srpc/server/acceptor/async
+      ${INCLUDE_DIR}/srpc/client
+      ${INCLUDE_DIR}/srpc/client/connector
+      ${INCLUDE_DIR}/srpc/client/connector/async
       )
 
 foreach( src_dir ${src_dirs} )

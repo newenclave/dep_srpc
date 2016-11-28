@@ -1,5 +1,5 @@
-#ifndef SEPC_ACCEPTOR_INTERFACE_H
-#define SEPC_ACCEPTOR_INTERFACE_H
+#ifndef SRPC_ACCEPTOR_INTERFACE_H
+#define SRPC_ACCEPTOR_INTERFACE_H
 
 #include "srpc/common/config/memory.h"
 #include "srpc/common/config/system.h"
@@ -12,12 +12,16 @@ namespace srpc { namespace server { namespace acceptor {
 
         typedef SRPC_SYSTEM::error_code  error_code;
 
+        virtual ~interface( ) { }
+
         struct delegate {
+            virtual ~delegate( ) { }
             virtual void on_accept_client( common::transport::interface * ) = 0;
             //virtual void on_close_client( common::transport::interface * ) = 0;
             virtual void on_accept_error( const error_code & ) = 0;
             virtual void on_close( ) = 0;
         };
+
         virtual void open( ) = 0;
         virtual void close( ) = 0;
         virtual void start_accept( ) = 0;

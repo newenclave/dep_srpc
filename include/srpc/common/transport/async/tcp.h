@@ -32,8 +32,8 @@ namespace async {
 
         void open( )
         {
-            ep_.address( ).is_v6( ) ? get_socket( ).open( asio_tcp::v4( ) )
-                                    : get_socket( ).open( asio_tcp::v6( ) );
+            ep_.address( ).is_v6( ) ? get_socket( ).open( asio_tcp::v6( ) )
+                                    : get_socket( ).open( asio_tcp::v4( ) );
         }
 
         void set_endpoint( const endpoint &val )

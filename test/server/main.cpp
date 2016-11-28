@@ -9,6 +9,7 @@
 #include "srpc/common/transport/async/tcp.h"
 #include "srpc/common/transport/async/udp.h"
 #include "srpc/server/acceptor/interface.h"
+#include "srpc/server/acceptor/async/tcp.h"
 
 #include <memory>
 #include <queue>
@@ -37,7 +38,10 @@ struct tcp_echo_delegate final: public common::transport::interface::delegate {
 
     void on_read_error( const bs::error_code & )
     {
+        std::cout << "Read error!\n";
         gclients.erase( parent_ );
+        parent_->close( );
+        parent_.reset( );
     }
 
     void on_write_error( const bs::error_code &)
@@ -106,80 +110,7 @@ struct udp_echo_delegate final: public common::transport::async::udp::delegate {
 };
 
 using acceptor = server::acceptor::interface;
-
-class tcp_acceptor: public acceptor {
-
-    class tcp_client: public tcp_transport {
-    public:
-        tcp_client( ba::io_service &ios, size_t bufsize )
-            :tcp_transport(ios, bufsize)
-        { }
-    };
-
-    public:
-
-        tcp_acceptor( ba::io_service &ios,
-                      size_t bufsize, const ba::ip::tcp::endpoint &ep )
-            :ios_(ios)
-            ,acceptor_(ios_)
-            ,bufsize_(bufsize)
-            ,delegate_(NULL)
-            ,ep_(ep)
-        { }
-
-        void open( )
-        {
-            ep_.address( ).is_v6( ) ? acceptor_.open( ba::ip::tcp::v6( ) )
-                                    : acceptor_.open( ba::ip::tcp::v4( ) );
-            acceptor_.set_option( ba::socket_base::reuse_address(true) );
-            acceptor_.bind( ep_ );
-            acceptor_.listen( 5 );
-        }
-
-        void close( )
-        {
-            delegate_->on_close(  );
-            acceptor_.close( );
-        }
-
-        void handle_accept( const bs::error_code &err,
-                            srpc::shared_ptr<tcp_client> client,
-                            srpc::weak_ptr<acceptor> inst)
-        {
-            srpc::shared_ptr<acceptor> lck(inst.lock( ));
-            if( lck ) {
-                if( !err ) {
-                    delegate_->on_accept_client( client.get( ) );
-                } else {
-                    delegate_->on_accept_error( err );
-                }
-            }
-        }
-
-        void start_accept( )
-        {
-            namespace ph = srpc::placeholders;
-            srpc::shared_ptr<tcp_client> next
-                    = srpc::make_shared<tcp_client>(srpc::ref(ios_), bufsize_);
-
-            acceptor_.async_accept( next->get_socket( ),
-                    srpc::bind(&tcp_acceptor::handle_accept, this,
-                               ph::_1, next,
-                               srpc::weak_ptr<acceptor>(shared_from_this())) );
-        }
-
-        void set_delegate(delegate *val)
-        {
-            delegate_ = val;
-        }
-
-    private:
-        ba::io_service &ios_;
-        ba::ip::tcp::acceptor acceptor_;
-        size_t          bufsize_;
-        delegate       *delegate_;
-        ba::ip::tcp::endpoint ep_;
-};
+using tcp_acceptor = server::acceptor::async::tcp;
 
 struct acceptor_del: public acceptor::delegate {
 
@@ -221,10 +152,12 @@ int main( )
         ba::io_service ios;
         transtort_type::endpoint ep(ba::ip::address::from_string("0.0.0.0"), 2356);
         acceptor_del deleg;
-        auto t = std::make_shared<tcp_acceptor>(std::ref(ios), 4096, ep);
+        auto t = std::make_shared<tcp_acceptor>(std::ref(ios), 4096);
         t->set_delegate( &deleg );
         deleg.acceptor_ = t;
         t->open( );
+        t->bind( ep, true );
+        t->listen( 5 );
         t->start_accept( );
         ios.run( );
 
