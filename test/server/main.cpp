@@ -8,6 +8,7 @@
 #include "srpc/common/transport/async/stream.h"
 #include "srpc/common/transport/async/tcp.h"
 #include "srpc/common/transport/async/udp.h"
+#include "srpc/server/acceptor/interface.h"
 
 #include <memory>
 #include <queue>
@@ -104,18 +105,7 @@ struct udp_echo_delegate final: public common::transport::async::udp::delegate {
     }
 };
 
-struct acceptor: public srpc::enable_shared_from_this<acceptor> {
-    struct delegate {
-        virtual void on_accept( common::transport::interface * ) = 0;
-        virtual void on_accept_error( const bs::error_code & ) = 0;
-        //virtual void on_disconnect( common::transport::interface * ) = 0;
-        virtual void on_close( ) = 0;
-    };
-    virtual void open( ) = 0;
-    virtual void close( ) = 0;
-    virtual void start_accept( ) = 0;
-    virtual void set_delegate(delegate *) = 0;
-};
+using acceptor = server::acceptor::interface;
 
 class tcp_acceptor: public acceptor {
 
@@ -159,7 +149,7 @@ class tcp_acceptor: public acceptor {
             srpc::shared_ptr<acceptor> lck(inst.lock( ));
             if( lck ) {
                 if( !err ) {
-                    delegate_->on_accept( client.get( ) );
+                    delegate_->on_accept_client( client.get( ) );
                 } else {
                     delegate_->on_accept_error( err );
                 }
@@ -196,7 +186,12 @@ struct acceptor_del: public acceptor::delegate {
     tcp_echo_delegate               delegate_;
     std::shared_ptr<tcp_acceptor>   acceptor_;
 
-    void on_accept( common::transport::interface *c )
+    void on_disconnect_client( common::transport::interface * )
+    {
+
+    }
+
+    void on_accept_client( common::transport::interface *c )
     {
         gclients.insert( c->shared_from_this( ) );
         c->set_delegate( &delegate_ );

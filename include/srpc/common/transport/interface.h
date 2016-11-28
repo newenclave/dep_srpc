@@ -1,11 +1,11 @@
 #ifndef TRANSPORT_IFACE_H
 #define TRANSPORT_IFACE_H
 
-#include "boost/system/error_code.hpp"
 #include "srpc/common/buffer.h"
 #include "srpc/common/config/memory.h"
 #include "srpc/common/config/functional.h"
 #include "srpc/common/config/stdint.h"
+#include "srpc/common/config/system.h"
 
 namespace srpc { namespace common { namespace transport {
 
@@ -14,7 +14,7 @@ namespace srpc { namespace common { namespace transport {
         typedef srpc::shared_ptr<interface> shared_type;
         typedef srpc::weak_ptr<interface>   weak_type;
 
-        typedef boost::system::error_code         error_code;
+        typedef SRPC_SYSTEM::error_code  error_code;
 
         struct delegate {
             virtual void on_read_error( const error_code & ) = 0;

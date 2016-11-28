@@ -1,34 +1,29 @@
-#ifndef SRPC_BUFFER_H
-#define SRPC_BUFFER_H
+#ifndef SRPC_CONST_BUFFER_H
+#define SRPC_CONST_BUFFER_H
 
 #include "srpc/common/config/stdint.h"
 
 namespace srpc { namespace common {
 
     template <typename T>
-    class buffer {
+    class const_buffer {
 
-        T       *data_;
+        const T *data_;
         size_t   length_;
 
     public:
 
         typedef T value_type;
 
-        buffer( value_type *val, size_t len )
+        const_buffer( const value_type *val, size_t len )
             :data_(val)
             ,length_(len)
         { }
 
-        buffer( const buffer &other )
+        const_buffer( const const_buffer &other )
             :data_(other.data_)
             ,length_(other.length_)
         { }
-
-        value_type *data( )
-        {
-            return data_;
-        }
 
         const value_type *data( ) const
         {
@@ -42,4 +37,4 @@ namespace srpc { namespace common {
     };
 }}
 
-#endif // SRPC_BUFFER_H
+#endif // CONST_BUFFER_H

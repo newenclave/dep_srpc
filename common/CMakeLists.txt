@@ -2,10 +2,14 @@ set( lib_name ${COMMON_LIB_NAME} )
 
 list( APPEND src_dirs
       .
+      ${INCLUDE_DIR}/srpc/server
       ${INCLUDE_DIR}/srpc/common
       ${INCLUDE_DIR}/srpc/common/transport
       ${INCLUDE_DIR}/srpc/common/transport/async
       ${INCLUDE_DIR}/srpc/common/config
+      ${INCLUDE_DIR}/srpc/server
+      ${INCLUDE_DIR}/srpc/server/acceptor
+      ${INCLUDE_DIR}/srpc/server/acceptor/async
       )
 
 foreach( src_dir ${src_dirs} )

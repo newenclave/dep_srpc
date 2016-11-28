@@ -125,8 +125,8 @@ namespace async {
 
         void open( )
         {
-            ep_.address( ).is_v4( ) ? get_socket( ).open( asio_udp::v4( ) )
-                                    : get_socket( ).open( asio_udp::v6( ) );
+            ep_.address( ).is_v6( ) ? get_socket( ).open( asio_udp::v6( ) )
+                                    : get_socket( ).open( asio_udp::v4( ) );
         }
 
         void write( const char *data, size_t len, write_callbacks cback )
