@@ -72,6 +72,13 @@ struct udp_echo_delegate final: public common::transport::async::udp::delegate {
 
     std::shared_ptr<udp_transport> parent_;
     using cb = common::transport::interface::write_callbacks;
+    int cnt = 0;
+
+    udp_echo_delegate( int count )
+        :cnt(count)
+    {
+
+    }
 
     void on_read_error( const bs::error_code &ex )
     {
@@ -86,12 +93,20 @@ struct udp_echo_delegate final: public common::transport::async::udp::delegate {
 
     void on_data( const char *data, size_t len )
     {
-        std::cout << std::string(data, len);
-        std::shared_ptr<std::string> echo = std::make_shared<std::string>( );
-        std::cin >> *echo;
-        parent_->write( echo->c_str( ), echo->size( ),
+        // std::cout << std::string(data, len);
+        std::shared_ptr<std::string> echo
+                = std::make_shared<std::string>(data, len);
+        //std::cin >> *echo;
+        if( cnt-- > 0 ) {
+            if( 0 == cnt % 10000 ) {
+                std::cout << cnt << std::endl;
+            }
+            parent_->write( echo->c_str( ), echo->size( ),
                         cb::post([echo](...){ }) );
-        parent_->read( );
+            parent_->read( );
+        } else {
+            parent_->close( );
+        }
     }
 
     void on_close( )
@@ -132,18 +147,28 @@ int main( )
     try {
 
         std::cout << sizeof(std::function<void( )>) << "\n\n";
-        using transtort_type      = tcp_transport;
+        using transtort_type      = udp_transport;
         using transtort_delegate  = udp_echo_delegate;
 
         ba::io_service ios;
         transtort_type::endpoint ep(ba::ip::address::from_string("127.0.0.1"), 2356);
 
-        connector_delegate deleg;
-
-        auto t = std::make_shared<tcp_connector>(std::ref(ios), 4096);
-        t->set_delegate( &deleg );
+        std::shared_ptr<udp_transport> t(std::make_shared<udp_transport>(std::ref(ios), 4096));
+        udp_echo_delegate eho(10000000);
+        eho.parent_ = t;
+        t->set_delegate( &eho );
         t->set_endpoint( ep );
-        t->connect( );
+        t->open( );
+        t->get_socket( ).connect( ep );
+        t->write( "!", 1 );
+        t->read( );
+
+//        connector_delegate deleg;
+
+//        auto t = std::make_shared<tcp_connector>(std::ref(ios), 4096);
+//        t->set_delegate( &deleg );
+//        t->set_endpoint( ep );
+//        t->connect( );
 
         ios.run( );
 

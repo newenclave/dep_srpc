@@ -17,6 +17,33 @@
 
 #include <memory>
 #include <queue>
+#include <chrono>
+#include <thread>
+#include <atomic>
+
+#include <stdlib.h>
+
+std::atomic<std::uint64_t> messages {0};
+
+std::uint64_t ticks_now( )
+{
+    using std::chrono::duration_cast;
+    using microsec = std::chrono::microseconds;
+    auto n = std::chrono::high_resolution_clock::now( );
+    return duration_cast<microsec>(n.time_since_epoch( )).count( );
+}
+
+boost::asio::io_service test_io;
+
+void show_messages(  )
+{
+    while( 1 ) {
+        std::cout << messages << std::endl;
+        messages = 0;
+        sleep( 1 );
+    }
+}
+
 
 namespace ba = boost::asio;
 namespace bs = boost::system;
@@ -75,7 +102,7 @@ struct tcp_echo_delegate final: public common::transport::interface::delegate {
 
 struct udp_echo_delegate final: public common::transport::async::udp::delegate {
 
-    std::shared_ptr<udp_transport> parent_;
+    std::shared_ptr<common::transport::interface> parent_;
     using cb = common::transport::interface::write_callbacks;
 
     void on_read_error( const bs::error_code & )
@@ -90,12 +117,12 @@ struct udp_echo_delegate final: public common::transport::async::udp::delegate {
 
     void on_data( const char *data, size_t len )
     {
+        ++messages;
         std::shared_ptr<std::string> echo
                 = std::make_shared<std::string>( data, len );
 
-        parent_->write_to( parent_->get_endpoint( ),
-                           echo->c_str( ), echo->size( ),
-                           cb::post([echo](...){ }) );
+        parent_->write( echo->c_str( ), echo->size( ),
+                        cb::post([echo](...){ }) );
         start_read( );
     }
 
@@ -106,9 +133,7 @@ struct udp_echo_delegate final: public common::transport::async::udp::delegate {
 
     void start_read( )
     {
-        namespace ph = std::placeholders;
-        ba::ip::udp::endpoint ep ;
-        parent_->read_from( ep );
+        parent_->read( );
     }
 };
 
@@ -118,53 +143,265 @@ using tcp_acceptor = server::acceptor::async::tcp;
 class udp_acceptor: public server::acceptor::interface {
 
     typedef ba::ip::udp::endpoint endpoint;
+
     class client_type: public common::transport::interface {
+
     public:
-        virtual void open( )  = 0;
-        virtual void close( ) = 0;
 
-        virtual void write( const char *data, size_t len ) = 0;
-        virtual void write( const char *data, size_t len,
-                            write_callbacks cback ) = 0;
-
-        virtual void read( )
+        client_type( udp_acceptor *parent, endpoint ep )
+            :parent_(parent)
+            ,dispatcher_(parent_->acceptor_->get_io_service( ))
+            ,read_(false)
+            ,ep_(ep)
+            ,delegate_(NULL)
         {
 
         }
 
-        virtual void set_delegate( delegate *val ) = 0;
+        void open( )
+        {
 
-    private:
-        srpc::shared_ptr<udp_acceptor> parent_;
-        endpoint ep_;
+        }
+
+        void close( )
+        {
+            parent_->client_close( ep_ );
+        }
+
+        void write( const char *data, size_t len )
+        {
+            parent_->write( ep_, data, len );
+        }
+
+        void write( const char *data, size_t len,
+                            write_callbacks cback )
+        {
+            parent_->write( ep_, data, len, cback );
+        }
+
+        srpc::weak_ptr<common::transport::interface> weak_from_this( )
+        {
+            typedef common::transport::interface iface;
+            return srpc::weak_ptr<iface>(shared_from_this( ));
+        }
+
+        void set_read_impl( srpc::weak_ptr<common::transport::interface> inst )
+        {
+
+            srpc::shared_ptr<common::transport::interface> lck(inst.lock( ));
+            if( lck ) {
+                if( !read_ ) {
+                    read_ = true;
+                    if( !read_queue_.empty( ) ) {
+                        std::string &data(*read_queue_.front( ));
+                        delegate_->on_data( data.c_str( ), data.size( ) );
+                        read_queue_.pop( );
+                        read_ = false;
+                    }
+                }
+            }
+        }
+
+        void read( )
+        {
+            dispatcher_.post( srpc::bind( &client_type::set_read_impl, this,
+                                          weak_from_this( ) ) );
+        }
+
+        void set_delegate( delegate *val )
+        {
+            delegate_ = val;
+        }
+
+        void push_data_impl( srpc::weak_ptr<common::transport::interface> inst,
+                             srpc::shared_ptr<std::string> data )
+        {
+            srpc::shared_ptr<common::transport::interface> lck(inst.lock( ));
+            if( lck ) {
+                if( read_ ) {
+                    delegate_->on_data( data->c_str( ), data->size( ) );
+                } else {
+                    read_queue_.push( data );
+                }
+            }
+        }
+
+        void push_data( const char *data, size_t len )
+        {
+            dispatcher_.post(
+                        srpc::bind( &client_type::push_data_impl, this,
+                              weak_from_this( ),
+                              srpc::make_shared<std::string>(data, len) ) );
+        }
+
+        udp_acceptor            *parent_;
+        ba::io_service::strand  dispatcher_;
+        bool read_;
+        std::queue<srpc::shared_ptr<std::string> >  read_queue_;
+        endpoint                 ep_;
+        delegate                *delegate_;
     };
+
+    typedef std::map<endpoint, srpc::shared_ptr<client_type> > client_map;
+
+    struct my_delegate: public common::transport::interface::delegate {
+
+        udp_acceptor *parent_;
+
+        void on_read_error( const error_code &err )
+        {
+            endpoint &ep(parent_->acceptor_->get_endpoint( ));
+            client_map::iterator f = parent_->clients_.find( ep );
+            if( f != parent_->clients_.end( ) ) {
+                f->second->delegate_->on_write_error( err );
+            }
+        }
+
+        void on_close( )
+        {
+            endpoint &ep(parent_->acceptor_->get_endpoint( ));
+            client_map::iterator f = parent_->clients_.find( ep );
+            if( f != parent_->clients_.end( ) ) {
+                f->second->delegate_->on_close( );
+            }
+        }
+
+        void on_write_error( const error_code &err )
+        {
+            endpoint &ep(parent_->acceptor_->get_endpoint( ));
+            client_map::iterator f = parent_->clients_.find( ep );
+            if( f != parent_->clients_.end( ) ) {
+                f->second->delegate_->on_read_error( err );
+            }
+        }
+
+        /// dispatcher
+        void on_data( const char *data, size_t len )
+        {
+            endpoint &ep(parent_->acceptor_->get_endpoint( ));
+
+//            std::cout << "delegate_data "
+//                      << ep.address( ).to_string( )
+//                      << ":" << ep.port( )
+//                      << std::endl;
+
+            client_map::iterator f = parent_->clients_.find( ep );
+            if( f != parent_->clients_.end( ) ) {
+                f->second->push_data( data, len );
+            } else {
+                if( parent_->accept_ ) {
+                    srpc::shared_ptr<client_type> next
+                            = std::make_shared<client_type>(parent_, ep);
+                    parent_->clients_[ep] = next;
+                    next->read_queue_.push(
+                            srpc::make_shared<std::string>(data, len) );
+                    parent_->delegate_->on_accept_client( next.get( ) );
+                }
+            }
+            parent_->acceptor_->read_from( endpoint( ) );
+        }
+
+    };
+
+    friend class client_type;
+    friend class my_delegate;
+
+    void write( const endpoint &ep,
+                const char *data, size_t len )
+    {
+        acceptor_->write_to( ep, data, len );
+    }
+
+    void write( const endpoint &ep,
+                const char *data, size_t len,
+                common::transport::interface::write_callbacks cback )
+    {
+        acceptor_->write_to( ep, data, len, cback );
+    }
+
+    void close_impl( const endpoint &ep,
+                     srpc::weak_ptr<server::acceptor::interface> inst )
+    {
+        srpc::shared_ptr<server::acceptor::interface> lck(inst.lock( ));
+        if( lck ) {
+            typedef client_map::iterator itr;
+            itr f = clients_.find( ep );
+            if( f != clients_.end( ) ) {
+                f->second->delegate_->on_close( );
+                clients_.erase( f );
+            }
+        }
+    }
+
+    void client_close( const endpoint &ep )
+    {
+        namespace ph = srpc::placeholders;
+        acceptor_->get_dispatcher( ).post(
+            srpc::bind( &udp_acceptor::close_impl, this,
+            ep,
+            srpc::weak_ptr<server::acceptor::interface>(shared_from_this( ) ) )
+        );
+    }
+
+    typedef common::transport::async::udp parent_transport;
+    srpc::shared_ptr<parent_transport> create_acceptor( ba::io_service &ios,
+                                                        size_t bs )
+    {
+        srpc::shared_ptr<parent_transport> res
+                = srpc::make_shared<parent_transport>( srpc::ref(ios), bs );
+
+        return res;
+    }
 
 public:
 
-    udp_acceptor( ba::io_service &ios )
-    {  }
-
-    virtual void open( )
+    udp_acceptor( ba::io_service &ios, size_t bufsize )
+        :delegate_(NULL)
     {
-
+        accept_delegate_.parent_ = this;
+        acceptor_ = create_acceptor( ios, bufsize );
+        acceptor_->set_delegate( &accept_delegate_ );
     }
 
-    virtual void close( )
-    {
+    void open( )
+    { }
 
+    void bind( const endpoint &ep, bool reuse = true )
+    {
+        ep.address( ).is_v6( )
+                ? acceptor_->get_socket( ).open( SRPC_ASIO::ip::udp::v6( ) )
+                : acceptor_->get_socket( ).open( SRPC_ASIO::ip::udp::v4( ) );
+
+        if( reuse ) {
+            SRPC_ASIO::socket_base::reuse_address opt(true);
+            acceptor_->get_socket( ).set_option( opt );
+        }
+        acceptor_->get_socket( ).bind( ep );
+        acceptor_->read_from( endpoint( ) );
     }
 
-    virtual void start_accept( )
+    void close( )
     {
-
+        acceptor_->close( );
     }
 
-    virtual void set_delegate( delegate * )
+    void start_accept( )
     {
-
+        accept_ = true;
     }
+
+    void set_delegate( delegate *val )
+    {
+        delegate_ = val;
+    }
+
 private:
+
+    delegate    *delegate_;
+    my_delegate  accept_delegate_;
     srpc::shared_ptr<common::transport::async::udp> acceptor_;
+    bool accept_;
+    client_map  clients_;
 };
 
 struct acceptor_del: public acceptor::delegate {
@@ -197,19 +434,71 @@ struct acceptor_del: public acceptor::delegate {
     }
 };
 
+struct udp_acceptor_del: public acceptor::delegate {
+
+    udp_echo_delegate               delegate_;
+    std::shared_ptr<udp_acceptor>   acceptor_;
+
+    void on_disconnect_client( common::transport::interface * )
+    {
+
+    }
+
+    void on_accept_client( common::transport::interface *c )
+    {
+        std::cout << "New client!!!\n";
+        gclients.insert( c->shared_from_this( ) );
+        udp_echo_delegate *deleg = new udp_echo_delegate;
+        c->set_delegate( deleg );
+        deleg->parent_ = c->shared_from_this( );
+        c->read( );
+        acceptor_->start_accept( );
+    }
+
+    void on_accept_error( const bs::error_code &ex )
+    {
+        std::cout << "Error accept " << ex.message( ) << "\n";
+    }
+
+    void on_close( )
+    {
+        std::cout << "Acceptor closed\n";
+    }
+};
+
+
 int main( )
 {
     try {
+        ba::io_service ios;
+        ba::io_service::work wrk(test_io);
 
-        common::sizepack::varint<unsigned> pak;
-        auto p = pak.pack( 123445 );
+        udp_transport::endpoint uep(ba::ip::address::from_string("0.0.0.0"), 2356);
+        auto acc = srpc::make_shared<udp_acceptor>( srpc::ref(ios), 4096 );
+        udp_acceptor_del udeleg;
 
-        std::cout << pak.unpack(p.begin( ), p.end( )) << "\n";
+        acc->set_delegate( &udeleg );
+        udeleg.acceptor_ = acc;
+
+        acc->bind(uep);
+        acc->start_accept( );
+
+        std::thread( show_messages ).detach( );
+
+        //        std::thread([&ios]( ){ test_io.run( ); }).detach( );
+        //        std::thread([&ios]( ){ test_io.run( ); }).detach( );
+        //        std::thread([&ios]( ){ test_io.run( ); }).detach( );
+        std::thread([&ios]( ){ ios.run( ); }).detach( );
+        std::thread([&ios]( ){ ios.run( ); }).detach( );
+        std::thread([&ios]( ){ ios.run( ); }).detach( );
+
+        ios.run( );
+
+        return 0;
 
         using transtort_type      = tcp_transport;
         using transtort_delegate  = udp_echo_delegate;
 
-        ba::io_service ios;
         transtort_type::endpoint ep(ba::ip::address::from_string("0.0.0.0"), 2356);
         acceptor_del deleg;
         auto t = std::make_shared<tcp_acceptor>(std::ref(ios), 4096);

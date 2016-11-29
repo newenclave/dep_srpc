@@ -20,7 +20,8 @@ namespace async {
         typedef common::transport::interface::weak_type       weak_type;
         typedef common::transport::interface::write_callbacks write_callbacks;
 
-        void start_read_impl_wrap(  )
+        //void start_read_impl_wrap(  )
+        void start_read_impl( )
         {
             namespace ph = srpc::placeholders;
 
@@ -36,7 +37,7 @@ namespace async {
              );
         }
 
-        void start_read_impl(  )
+        void start_read_impl_(  )
         {
             namespace ph = srpc::placeholders;
             get_socket( ).async_receive(
@@ -55,9 +56,10 @@ namespace async {
                 SRPC_ASIO::buffer( &get_read_buffer( )[0],
                                     get_read_buffer( ).size( )),
                     ep_, 0,
-                    srpc::bind( &this_type::read_handler, this,
+                    get_dispatcher( ).wrap(
+                        srpc::bind( &this_type::read_handler, this,
                                  ph::_1, ph::_2,
-                                 this->weak_from_this( ) )
+                                 this->weak_from_this( ) ) )
             );
         }
 
