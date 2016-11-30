@@ -37,13 +37,18 @@ std::uint64_t ticks_now( )
 }
 
 boost::asio::io_service test_io;
+boost::asio::io_service ios;
 
 void show_messages(  )
 {
+    auto start = ticks_now( );
     while( 1 ) {
         std::cout << messages << std::endl;
         messages = 0;
         sleep( 1 );
+//        if( ticks_now( ) - start >= 1e7 ) {
+//            ios.stop( );
+//        }
     }
 }
 
@@ -154,8 +159,8 @@ class udp_acceptor: public server::acceptor::interface {
 
         client_type( udp_acceptor *parent, endpoint ep )
             :parent_(parent)
-            //,dispatcher_(parent_->acceptor_->get_io_service( ))
-            ,dispatcher_(gios[ep.port( ) % 4])
+            ,dispatcher_(parent_->acceptor_->get_io_service( ))
+            //,dispatcher_(gios[ep.port( ) % 4])
             ,read_(false)
             ,ep_(ep)
             ,delegate_(NULL)
@@ -192,7 +197,6 @@ class udp_acceptor: public server::acceptor::interface {
 
         void set_read_impl( srpc::weak_ptr<common::transport::interface> inst )
         {
-
             srpc::shared_ptr<common::transport::interface> lck(inst.lock( ));
             if( lck ) {
                 if( !read_ ) {
@@ -209,7 +213,7 @@ class udp_acceptor: public server::acceptor::interface {
 
         void read( )
         {
-            dispatcher_.post(
+            parent_->acceptor_->get_dispatcher( ).post(
                 srpc::bind( &client_type::set_read_impl, this,
                                           weak_from_this( ) ) );
         }
@@ -234,12 +238,14 @@ class udp_acceptor: public server::acceptor::interface {
 
         void push_data( srpc::shared_ptr<std::string> data )
         {
-            dispatcher_.post( srpc::bind( &client_type::push_data_impl, this,
-                                           weak_from_this( ), data ) );
+            parent_->acceptor_->get_dispatcher( ).post(
+                        srpc::bind( &client_type::push_data_impl, this,
+                                     weak_from_this( ), data ) );
         }
 
         udp_acceptor            *parent_;
-        ba::io_service  &dispatcher_;
+        ba::io_service::strand   dispatcher_;
+        //ba::io_service  &dispatcher_;
         bool read_;
         std::deque<srpc::shared_ptr<std::string> >  read_queue_;
         endpoint                 ep_;
@@ -479,7 +485,8 @@ struct udp_acceptor_del: public acceptor::delegate {
 int main( )
 {
     try {
-        ba::io_service ios;
+        //ba::io_service::work wrk(ios);
+
         ba::io_service::work wrk0(gios[0]);
         ba::io_service::work wrk1(gios[1]);
         ba::io_service::work wrk2(gios[2]);
@@ -497,15 +504,15 @@ int main( )
 
         std::thread( show_messages ).detach( );
 
-        std::thread([]( ){ gios[0].run( ); }).detach( );
-        std::thread([]( ){ gios[1].run( ); }).detach( );
-        std::thread([]( ){ gios[2].run( ); }).detach( );
-        std::thread([]( ){ gios[3].run( ); }).detach( );
+//        std::thread([]( ){ gios[0].run( ); }).detach( );
+//        std::thread([]( ){ gios[1].run( ); }).detach( );
+//        std::thread([]( ){ gios[2].run( ); }).detach( );
+//        std::thread([]( ){ gios[3].run( ); }).detach( );
 
-//        std::thread([&ios]( ){ ios.run( ); }).detach( );
-//        std::thread([&ios]( ){ ios.run( ); }).detach( );
-//        std::thread([&ios]( ){ ios.run( ); }).detach( );
-//        std::thread([&ios]( ){ ios.run( ); }).detach( );
+        std::thread([]( ){ ios.run( ); }).detach( );
+        std::thread([]( ){ ios.run( ); }).detach( );
+        std::thread([]( ){ ios.run( ); }).detach( );
+        std::thread([]( ){ ios.run( ); }).detach( );
 
         ios.run( );
 
