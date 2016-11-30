@@ -102,7 +102,7 @@ struct udp_echo_delegate final: public common::transport::async::udp::delegate {
                 std::cout << cnt << std::endl;
             }
             parent_->write( echo->c_str( ), echo->size( ),
-                        cb::post([echo](...){ }) );
+                            cb::post([echo](...){ }) );
             parent_->read( );
         } else {
             parent_->close( );

@@ -20,10 +20,13 @@
 #include <chrono>
 #include <thread>
 #include <atomic>
+#include <mutex>
 
 #include <stdlib.h>
 
 std::atomic<std::uint64_t> messages {0};
+
+boost::asio::io_service gios[4];
 
 std::uint64_t ticks_now( )
 {
@@ -144,13 +147,15 @@ class udp_acceptor: public server::acceptor::interface {
 
     typedef ba::ip::udp::endpoint endpoint;
 
+
     class client_type: public common::transport::interface {
 
     public:
 
         client_type( udp_acceptor *parent, endpoint ep )
             :parent_(parent)
-            ,dispatcher_(parent_->acceptor_->get_io_service( ))
+            //,dispatcher_(parent_->acceptor_->get_io_service( ))
+            ,dispatcher_(gios[ep.port( ) % 4])
             ,read_(false)
             ,ep_(ep)
             ,delegate_(NULL)
@@ -195,7 +200,7 @@ class udp_acceptor: public server::acceptor::interface {
                     if( !read_queue_.empty( ) ) {
                         std::string &data(*read_queue_.front( ));
                         delegate_->on_data( data.c_str( ), data.size( ) );
-                        read_queue_.pop( );
+                        read_queue_.pop_front( );
                         read_ = false;
                     }
                 }
@@ -204,7 +209,8 @@ class udp_acceptor: public server::acceptor::interface {
 
         void read( )
         {
-            dispatcher_.post( srpc::bind( &client_type::set_read_impl, this,
+            dispatcher_.post(
+                srpc::bind( &client_type::set_read_impl, this,
                                           weak_from_this( ) ) );
         }
 
@@ -221,23 +227,21 @@ class udp_acceptor: public server::acceptor::interface {
                 if( read_ ) {
                     delegate_->on_data( data->c_str( ), data->size( ) );
                 } else {
-                    read_queue_.push( data );
+                    read_queue_.push_back( data );
                 }
             }
         }
 
-        void push_data( const char *data, size_t len )
+        void push_data( srpc::shared_ptr<std::string> data )
         {
-            dispatcher_.post(
-                        srpc::bind( &client_type::push_data_impl, this,
-                              weak_from_this( ),
-                              srpc::make_shared<std::string>(data, len) ) );
+            dispatcher_.post( srpc::bind( &client_type::push_data_impl, this,
+                                           weak_from_this( ), data ) );
         }
 
         udp_acceptor            *parent_;
-        ba::io_service::strand  dispatcher_;
+        ba::io_service  &dispatcher_;
         bool read_;
-        std::queue<srpc::shared_ptr<std::string> >  read_queue_;
+        std::deque<srpc::shared_ptr<std::string> >  read_queue_;
         endpoint                 ep_;
         delegate                *delegate_;
     };
@@ -279,6 +283,8 @@ class udp_acceptor: public server::acceptor::interface {
         void on_data( const char *data, size_t len )
         {
             endpoint &ep(parent_->acceptor_->get_endpoint( ));
+            srpc::shared_ptr<std::string> dat
+                    = srpc::make_shared<std::string>(data, len);
 
 //            std::cout << "delegate_data "
 //                      << ep.address( ).to_string( )
@@ -287,14 +293,17 @@ class udp_acceptor: public server::acceptor::interface {
 
             client_map::iterator f = parent_->clients_.find( ep );
             if( f != parent_->clients_.end( ) ) {
-                f->second->push_data( data, len );
+                auto c = f->second;
+                parent_->acceptor_->get_io_service( ).post( [c, dat]( ) {
+                    c->push_data( dat );
+                } );
+                //f->second->push_data( dat );
             } else {
                 if( parent_->accept_ ) {
                     srpc::shared_ptr<client_type> next
                             = std::make_shared<client_type>(parent_, ep);
                     parent_->clients_[ep] = next;
-                    next->read_queue_.push(
-                            srpc::make_shared<std::string>(data, len) );
+                    next->read_queue_.push_back( dat );
                     parent_->delegate_->on_accept_client( next.get( ) );
                 }
             }
@@ -471,7 +480,10 @@ int main( )
 {
     try {
         ba::io_service ios;
-        ba::io_service::work wrk(test_io);
+        ba::io_service::work wrk0(gios[0]);
+        ba::io_service::work wrk1(gios[1]);
+        ba::io_service::work wrk2(gios[2]);
+        ba::io_service::work wrk3(gios[3]);
 
         udp_transport::endpoint uep(ba::ip::address::from_string("0.0.0.0"), 2356);
         auto acc = srpc::make_shared<udp_acceptor>( srpc::ref(ios), 4096 );
@@ -485,12 +497,15 @@ int main( )
 
         std::thread( show_messages ).detach( );
 
-        //        std::thread([&ios]( ){ test_io.run( ); }).detach( );
-        //        std::thread([&ios]( ){ test_io.run( ); }).detach( );
-        //        std::thread([&ios]( ){ test_io.run( ); }).detach( );
-        std::thread([&ios]( ){ ios.run( ); }).detach( );
-        std::thread([&ios]( ){ ios.run( ); }).detach( );
-        std::thread([&ios]( ){ ios.run( ); }).detach( );
+        std::thread([]( ){ gios[0].run( ); }).detach( );
+        std::thread([]( ){ gios[1].run( ); }).detach( );
+        std::thread([]( ){ gios[2].run( ); }).detach( );
+        std::thread([]( ){ gios[3].run( ); }).detach( );
+
+//        std::thread([&ios]( ){ ios.run( ); }).detach( );
+//        std::thread([&ios]( ){ ios.run( ); }).detach( );
+//        std::thread([&ios]( ){ ios.run( ); }).detach( );
+//        std::thread([&ios]( ){ ios.run( ); }).detach( );
 
         ios.run( );
 
@@ -517,3 +532,100 @@ int main( )
     return 0;
 }
 
+//class client_type: public common::transport::interface {
+
+//public:
+
+//    client_type( udp_acceptor *parent, endpoint ep )
+//        :parent_(parent)
+//        ,dispatcher_(parent_->acceptor_->get_io_service( ))
+//        //,dispatcher_(gios[ep.port( ) % 4])
+//        ,read_(false)
+//        ,ep_(ep)
+//        ,delegate_(NULL)
+//    {
+
+//    }
+
+//    void open( )
+//    {
+
+//    }
+
+//    void close( )
+//    {
+//        parent_->client_close( ep_ );
+//    }
+
+//    void write( const char *data, size_t len )
+//    {
+//        parent_->write( ep_, data, len );
+//    }
+
+//    void write( const char *data, size_t len,
+//                        write_callbacks cback )
+//    {
+//        parent_->write( ep_, data, len, cback );
+//    }
+
+//    srpc::weak_ptr<common::transport::interface> weak_from_this( )
+//    {
+//        typedef common::transport::interface iface;
+//        return srpc::weak_ptr<iface>(shared_from_this( ));
+//    }
+
+//    void set_read_impl( srpc::weak_ptr<common::transport::interface> inst )
+//    {
+
+//        srpc::shared_ptr<common::transport::interface> lck(inst.lock( ));
+//        if( lck ) {
+//            if( !read_ ) {
+//                read_ = true;
+//                if( !read_queue_.empty( ) ) {
+//                    std::string &data(*read_queue_.front( ));
+//                    delegate_->on_data( data.c_str( ), data.size( ) );
+//                    read_queue_.pop_front( );
+//                    read_ = false;
+//                }
+//            }
+//        }
+//    }
+
+//    void read( )
+//    {
+//        dispatcher_.post(
+//            srpc::bind( &client_type::set_read_impl, this,
+//                                      weak_from_this( ) ) );
+//    }
+
+//    void set_delegate( delegate *val )
+//    {
+//        delegate_ = val;
+//    }
+
+//    void push_data_impl( srpc::weak_ptr<common::transport::interface> inst,
+//                         srpc::shared_ptr<std::string> data )
+//    {
+//        srpc::shared_ptr<common::transport::interface> lck(inst.lock( ));
+//        if( lck ) {
+//            if( read_ ) {
+//                delegate_->on_data( data->c_str( ), data->size( ) );
+//            } else {
+//                read_queue_.push_back( data );
+//            }
+//        }
+//    }
+
+//    void push_data( srpc::shared_ptr<std::string> data )
+//    {
+//        dispatcher_.post( srpc::bind( &client_type::push_data_impl, this,
+//                                       weak_from_this( ), data ) );
+//    }
+
+//    udp_acceptor            *parent_;
+//    ba::io_service::strand  dispatcher_;
+//    bool read_;
+//    std::deque<srpc::shared_ptr<std::string> >  read_queue_;
+//    endpoint                 ep_;
+//    delegate                *delegate_;
+//};
