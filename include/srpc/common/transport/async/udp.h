@@ -3,7 +3,9 @@
 
 #include "srpc/common/transport/async/base.h"
 #include "srpc/common/config/asio.h"
+#include "srpc/common/const_buffer.h"
 
+#include <queue>
 
 namespace srpc { namespace common { namespace transport {
 
@@ -20,6 +22,80 @@ namespace async {
         typedef common::transport::interface::weak_type       weak_type;
         typedef common::transport::interface::write_callbacks write_callbacks;
 
+        typedef common::const_buffer<char> message_type;
+
+        struct queue_value {
+            message_type        message_;
+            asio_udp::endpoint  to_;
+            bool                send_to_;
+
+            queue_value( const char *data, size_t length )
+                :message_(data, length)
+                ,send_to_(false)
+            { }
+
+            typedef srpc::shared_ptr<queue_value> shared_type;
+            virtual void precall( ) { }
+            virtual void postcall(const error_code &) { }
+            virtual ~queue_value( ) { }
+            static
+            shared_type create( const char *data, size_t length )
+            {
+                return srpc::make_shared<queue_value>( data, length );
+            }
+        };
+
+        struct queue_callback: public queue_value {
+
+            write_callbacks     cbacks_;
+
+            typedef srpc::shared_ptr<queue_callback> shared_type;
+
+            queue_callback( const char *data, size_t length )
+                :queue_value(data, length)
+            { }
+
+            void precall( )
+            {
+                cbacks_.pre_call( );
+            }
+            void postcall( const error_code &err )
+            {
+                cbacks_.post_call( err );
+            }
+
+            static
+            shared_type create( const char *data, size_t length )
+            {
+                return srpc::make_shared<queue_callback>( data, length );
+            }
+
+        };
+
+        typedef typename queue_value::shared_type  queue_value_sptr;
+
+        typedef std::queue<queue_value_sptr> message_queue_type;
+
+        void queue_push( const queue_value_sptr &new_mess )
+        {
+            write_queue_.push( new_mess );
+        }
+
+        const queue_value_sptr &queue_top( ) const
+        {
+            return write_queue_.front( );
+        }
+
+        void queue_pop( )
+        {
+            write_queue_.pop( );
+        }
+
+        bool queue_empty( ) const
+        {
+            return write_queue_.empty( );
+        }
+
         //void start_read_impl_wrap(  )
         void start_read_impl( )
         {
@@ -29,11 +105,11 @@ namespace async {
             get_socket( ).async_receive(
                 SRPC_ASIO::buffer( &get_read_buffer( )[0],
                                     get_read_buffer( ).size( )),
-                get_dispatcher( ).wrap(
+                //get_dispatcher( ).wrap(
                     srpc::bind( &this_type::read_handler, this,
                                  ph::_1, ph::_2,
                                  this->weak_from_this( ) )
-                ) // dispatcher
+                //) // dispatcher
              );
         }
 
@@ -64,51 +140,79 @@ namespace async {
         }
 
         void write_handle( const error_code &err, size_t len,
-                           write_callbacks cbacks,
                            shared_type )
         {
-            //std::cerr << "Write " << len << "bytes\n";
+            queue_value_sptr &top(write_queue_.front( ));
             if( err ) {
                 get_delegate( )->on_write_error( err );
-            } else {
-                cbacks.post_call( err );
                 on_write_error( err );
             }
-        }
-
-        void write_handle_empty( const error_code &err, size_t /*len*/,
-                                 shared_type )
-        {
-            if( err ) {
-                get_delegate( )->on_write_error( err );
-                on_write_error( err );
+            top->postcall( err );
+            write_queue_.pop( );
+            if( !write_queue_.empty( ) ) {
+                async_write( );
             }
         }
 
         void write_to_handle( const error_code &err,
-                              asio_udp::endpoint to,
                               size_t /*len*/,
-                              write_callbacks cbacks,
                               shared_type )
         {
-            //std::cerr << "Write " << len << "bytes\n";
+            queue_value_sptr &top(write_queue_.front( ));
             if( err ) {
                 get_delegate( )->on_write_error( err );
-            } else {
-                cbacks.post_call( err );
-                on_write_to_error( err, to );
+                on_write_to_error( err, top->to_ );
+            }
+            top->postcall( err );
+
+            write_queue_.pop( );
+            if( !write_queue_.empty( ) ) {
+                async_write( );
             }
         }
 
-        void write_to_handle_empty( const error_code &err,
-                                    asio_udp::endpoint to,
-                                    size_t /*len*/,
-                                    shared_type )
+        void async_write(  )
         {
-            if( err ) {
-                get_delegate( )->on_write_error( err );
-                on_write_to_error( err, to );
+            queue_value  &top(*write_queue_.front( ));
+            message_type &m(top.message_);
+            namespace ph = srpc::placeholders;
+            top.precall( );
+            if( top.send_to_ ) {
+                get_socket( ).async_send_to(
+                    SRPC_ASIO::buffer(m.data( ), m.size( )),
+                    top.to_, 0,
+                    get_dispatcher( ).wrap(
+                        srpc::bind( &this_type::write_to_handle, this,
+                                     ph::_1, ph::_2,
+                                     this->shared_from_this( ) )
+                    )
+                );
+            } else {
+                get_socket( ).async_send(
+                    SRPC_ASIO::buffer(m.data( ), m.size( )),
+                    0,
+                    get_dispatcher( ).wrap(
+                        srpc::bind( &this_type::write_handle, this,
+                                     ph::_1, ph::_2,
+                                     this->shared_from_this( ) )
+                    )
+                );
             }
+        }
+
+        void write_to_queue( queue_value_sptr val )
+        {
+            bool empty = write_queue_.empty( );
+            write_queue_.push( val );
+            if( empty ) {
+                async_write( );
+            }
+        }
+
+        void push_to_queue( queue_value_sptr val )
+        {
+            get_dispatcher( ).post(
+                        srpc::bind( &udp::write_to_queue, this, val ) );
         }
 
     protected:
@@ -133,56 +237,36 @@ namespace async {
 
         void write( const char *data, size_t len, write_callbacks cback )
         {
-            namespace ph = srpc::placeholders;
-            cback.pre_call( );
-            get_socket( ).async_send( SRPC_ASIO::buffer(data, len), 0,
-                get_dispatcher( ).wrap(
-                    srpc::bind( &this_type::write_handle, this,
-                                 ph::_1, ph::_2, cback,
-                                 this->shared_from_this( ) )
-                )
-            );
+            queue_callback::shared_type t
+                    = queue_callback::create( data, len );
+            t->cbacks_  = cback;
+            push_to_queue( t );
         }
 
         void write( const char *data, size_t len )
         {
-            namespace ph = srpc::placeholders;
-            get_socket( ).async_send( SRPC_ASIO::buffer(data, len), 0,
-                get_dispatcher( ).wrap(
-                    srpc::bind( &this_type::write_handle_empty, this,
-                                 ph::_1, ph::_2,
-                                 this->shared_from_this( ) )
-                )
-            );
+            queue_value::shared_type t = queue_value::create( data, len );
+            push_to_queue( t );
         }
 
         void write_to( const endpoint &ep,
                        const char *data, size_t len,
                        write_callbacks cback )
         {
-            namespace ph = srpc::placeholders;
-            cback.pre_call( );
-            get_socket( ).async_send_to( SRPC_ASIO::buffer(data, len),
-                        ep, 0,
-                        get_dispatcher( ).wrap(
-                            srpc::bind( &this_type::write_to_handle, this,
-                                         ph::_1, ep, ph::_2, cback,
-                                         this->shared_from_this( ) )
-                        )
-            );
+            queue_callback::shared_type t
+                    = queue_callback::create( data, len );
+            t->cbacks_  = cback;
+            t->send_to_ = true;
+            t->to_ = ep;
+            push_to_queue( t );
         }
 
         void write_to( const endpoint &ep, const char *data, size_t len )
         {
-            namespace ph = srpc::placeholders;
-            get_socket( ).async_send_to( SRPC_ASIO::buffer(data, len),
-                        ep, 0,
-                        get_dispatcher( ).wrap(
-                            srpc::bind( &this_type::write_to_handle_empty, this,
-                                         ph::_1, ep, ph::_2,
-                                         this->shared_from_this( ) )
-                        )
-            );
+            queue_value::shared_type t = queue_value::create( data, len );
+            t->send_to_ = true;
+            t->to_ = ep;
+            push_to_queue( t );
         }
 
         void set_endpoint( const endpoint &val )
@@ -212,8 +296,9 @@ namespace async {
         }
 
     private:
-
         asio_udp::endpoint ep_;
+        message_queue_type write_queue_;
+
     };
 }
 

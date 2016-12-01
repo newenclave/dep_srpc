@@ -22,6 +22,7 @@
 #include <atomic>
 #include <mutex>
 
+#include <unistd.h>
 #include <stdlib.h>
 
 std::atomic<std::uint64_t> messages {0};
@@ -180,13 +181,13 @@ class udp_acceptor: public server::acceptor::interface {
 
         void write( const char *data, size_t len )
         {
-            parent_->write( ep_, data, len );
+            parent_->write( ep_, id, data, len );
         }
 
         void write( const char *data, size_t len,
                             write_callbacks cback )
         {
-            parent_->write( ep_, data, len, cback );
+            parent_->write( ep_, id, data, len, cback );
         }
 
         srpc::weak_ptr<common::transport::interface> weak_from_this( )
@@ -244,12 +245,13 @@ class udp_acceptor: public server::acceptor::interface {
         }
 
         udp_acceptor            *parent_;
-        ba::io_service::strand   dispatcher_;
+        ba::io_service::strand  dispatcher_;
         //ba::io_service  &dispatcher_;
         bool read_;
         std::deque<srpc::shared_ptr<std::string> >  read_queue_;
         endpoint                 ep_;
         delegate                *delegate_;
+        int id;
     };
 
     typedef std::map<endpoint, srpc::shared_ptr<client_type> > client_map;
@@ -257,6 +259,7 @@ class udp_acceptor: public server::acceptor::interface {
     struct my_delegate: public common::transport::interface::delegate {
 
         udp_acceptor *parent_;
+        int id;
 
         void on_read_error( const error_code &err )
         {
@@ -288,7 +291,9 @@ class udp_acceptor: public server::acceptor::interface {
         /// dispatcher
         void on_data( const char *data, size_t len )
         {
-            endpoint &ep(parent_->acceptor_->get_endpoint( ));
+            auto acc = id ? parent_->acceptor2_ : parent_->acceptor_;
+
+            endpoint &ep(acc->get_endpoint( ));
             srpc::shared_ptr<std::string> dat
                     = srpc::make_shared<std::string>(data, len);
 
@@ -299,21 +304,19 @@ class udp_acceptor: public server::acceptor::interface {
 
             client_map::iterator f = parent_->clients_.find( ep );
             if( f != parent_->clients_.end( ) ) {
-                auto c = f->second;
-                parent_->acceptor_->get_io_service( ).post( [c, dat]( ) {
-                    c->push_data( dat );
-                } );
-                //f->second->push_data( dat );
+                f->second->push_data( dat );
             } else {
                 if( parent_->accept_ ) {
                     srpc::shared_ptr<client_type> next
                             = std::make_shared<client_type>(parent_, ep);
+                    next->id = id;
                     parent_->clients_[ep] = next;
                     next->read_queue_.push_back( dat );
                     parent_->delegate_->on_accept_client( next.get( ) );
                 }
             }
-            parent_->acceptor_->read_from( endpoint( ) );
+
+            acc->read_from( endpoint( ) );
         }
 
     };
@@ -321,17 +324,25 @@ class udp_acceptor: public server::acceptor::interface {
     friend class client_type;
     friend class my_delegate;
 
-    void write( const endpoint &ep,
+    void write( const endpoint &ep, int id,
                 const char *data, size_t len )
     {
-        acceptor_->write_to( ep, data, len );
+        if( id ) {
+            acceptor_->write_to( ep, data, len );
+        } else {
+            acceptor2_->write_to( ep, data, len );
+        }
     }
 
-    void write( const endpoint &ep,
+    void write( const endpoint &ep, int id,
                 const char *data, size_t len,
                 common::transport::interface::write_callbacks cback )
     {
-        acceptor_->write_to( ep, data, len, cback );
+        if( id ) {
+            acceptor2_->write_to( ep, data, len, cback );
+        } else {
+            acceptor_->write_to( ep, data, len, cback );
+        }
     }
 
     void close_impl( const endpoint &ep,
@@ -374,8 +385,14 @@ public:
         :delegate_(NULL)
     {
         accept_delegate_.parent_ = this;
+        accept_delegate_.id = 0;
         acceptor_ = create_acceptor( ios, bufsize );
         acceptor_->set_delegate( &accept_delegate_ );
+
+        accept_delegate2_.id = 1;
+        accept_delegate2_.parent_ = this;
+        acceptor2_ = create_acceptor( ios, bufsize );
+        acceptor2_->set_delegate( &accept_delegate2_ );
     }
 
     void open( )
@@ -387,12 +404,27 @@ public:
                 ? acceptor_->get_socket( ).open( SRPC_ASIO::ip::udp::v6( ) )
                 : acceptor_->get_socket( ).open( SRPC_ASIO::ip::udp::v4( ) );
 
+        ep.address( ).is_v6( )
+                ? acceptor2_->get_socket( ).open( SRPC_ASIO::ip::udp::v6( ) )
+                : acceptor2_->get_socket( ).open( SRPC_ASIO::ip::udp::v4( ) );
+
         if( reuse ) {
             SRPC_ASIO::socket_base::reuse_address opt(true);
             acceptor_->get_socket( ).set_option( opt );
+            acceptor2_->get_socket( ).set_option( opt );
         }
+
+        int opt = 1;
+        setsockopt( acceptor_->get_socket( ).native_handle( ),
+                    SOL_SOCKET, SO_REUSEPORT, &opt, sizeof(opt) );
+        setsockopt( acceptor2_->get_socket( ).native_handle( ),
+                    SOL_SOCKET, SO_REUSEPORT, &opt, sizeof(opt) );
+
         acceptor_->get_socket( ).bind( ep );
         acceptor_->read_from( endpoint( ) );
+
+        acceptor2_->get_socket( ).bind( ep );
+        acceptor2_->read_from( endpoint( ) );
     }
 
     void close( )
@@ -414,7 +446,9 @@ private:
 
     delegate    *delegate_;
     my_delegate  accept_delegate_;
+    my_delegate  accept_delegate2_;
     srpc::shared_ptr<common::transport::async::udp> acceptor_;
+    srpc::shared_ptr<common::transport::async::udp> acceptor2_;
     bool accept_;
     client_map  clients_;
 };
@@ -487,6 +521,8 @@ int main( )
     try {
         //ba::io_service::work wrk(ios);
 
+        std::cout << getpid( ) << "\n";
+
         ba::io_service::work wrk0(gios[0]);
         ba::io_service::work wrk1(gios[1]);
         ba::io_service::work wrk2(gios[2]);
@@ -509,10 +545,10 @@ int main( )
 //        std::thread([]( ){ gios[2].run( ); }).detach( );
 //        std::thread([]( ){ gios[3].run( ); }).detach( );
 
-        std::thread([]( ){ ios.run( ); }).detach( );
-        std::thread([]( ){ ios.run( ); }).detach( );
-        std::thread([]( ){ ios.run( ); }).detach( );
-        std::thread([]( ){ ios.run( ); }).detach( );
+//        std::thread([]( ){ ios.run( ); }).detach( );
+//        std::thread([]( ){ ios.run( ); }).detach( );
+//        std::thread([]( ){ ios.run( ); }).detach( );
+//        std::thread([]( ){ ios.run( ); }).detach( );
 
         ios.run( );
 

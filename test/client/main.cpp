@@ -13,6 +13,10 @@
 
 #include <memory>
 #include <queue>
+#include <thread>
+#include <functional>
+#include <mutex>
+#include <condition_variable>
 
 namespace ba = boost::asio;
 namespace bs = boost::system;
@@ -141,6 +145,52 @@ struct connector_delegate: public connector::delegate {
         std::cerr << "Close\n";
     }
 };
+
+std::atomic<std::uint64_t> gdata {0};
+
+void call( )
+{
+    gdata++;
+}
+
+
+int main_( )
+{
+    static const size_t threads = 5;
+    ba::io_service         *ioss[threads];
+    ba::io_service::work   *wrk[threads];
+    ba::io_service::strand *dispatchers[threads];
+    std::thread            *thrds[threads];
+
+    for( auto d = 0; d < threads; d++ ) {
+        ioss[d] = new ba::io_service;
+        wrk[d]  = new ba::io_service::work(*ioss[d]);
+        dispatchers[d] = new ba::io_service::strand(*ioss[0]);
+    }
+
+    for( auto d = 0; d < threads; d++ ) {
+        thrds[d] = new std::thread( [&ioss, d]( ) { ioss[0]->run( ); } );
+    }
+
+    for( size_t i=0; i<2000000; i++ ) {
+        dispatchers[0]->post( call );
+        //dispatchers[i % threads]->post( call );
+        //dispatcher.post( call );
+    }
+
+    for( auto d = 0; d < threads; d++ ) {
+        delete wrk[d];
+    }
+
+    for( auto d = 0; d < threads; d++ ) {
+        if(thrds[d]->joinable( )) {
+            thrds[d]->join( );
+        }
+    }
+    std::cout << gdata << std::endl;
+
+    return 0;
+}
 
 int main( )
 {

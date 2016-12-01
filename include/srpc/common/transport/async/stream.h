@@ -35,6 +35,8 @@ namespace async {
                 :message_(data, length)
             { }
 
+            virtual ~queue_value( ) { }
+
             virtual void precall( ) { }
             virtual void postcall(const error_code &) { }
 
