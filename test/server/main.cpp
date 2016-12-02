@@ -111,6 +111,61 @@ struct tcp_echo_delegate final: public common::transport::interface::delegate {
 
 };
 
+template <typename SizePack>
+struct message_delegate final: public common::transport::interface::delegate {
+
+    typedef SizePack size_packer;
+    typedef typename size_packer::size_type size_type;
+
+    message_delegate( )
+        :fill(0)
+    { }
+
+    void check_fill( size_t &val )
+    {
+        if( val ) {
+            if( tmp.size( ) >= val ) {
+                on_message( tmp.c_str( ), val );
+                tmp.erase( tmp.begin( ), tmp.begin( ) + val );
+                val = 0;
+            }
+        }
+    }
+
+    void on_data( const char *data, size_t len )
+    {
+        tmp.insert( tmp.end( ), &data[0], &data[len] );
+
+        check_fill( fill );
+
+        do {
+            size_t len = size_packer::size_length( tmp.begin( ), tmp.end( ) );
+            if( len >= size_packer::min_length ) {
+                size_type res = size_packer::unpack( tmp.begin( ), tmp.end( ) );
+                tmp.erase( tmp.begin( ), tmp.begin( ) + len );
+                if( res >= tmp.size( ) ) {
+                    check_fill
+                }
+            }
+        } while( true );
+        //size_packer::
+    }
+
+    void pack( const char *data, size_t len )
+    {
+        size_packer::pack( len, buffer );
+        buffer.insert( buffer.end( ), &data[0], &data[len] );
+    }
+
+    virtual void on_message( const char *message, size_t len ) = 0;
+
+protected:
+
+    std::string buffer;
+    std::string tmp;
+    size_t      fill;
+};
+
 struct udp_echo_delegate final: public common::transport::async::udp::delegate {
 
     std::shared_ptr<common::transport::interface> parent_;
@@ -236,16 +291,6 @@ int main( )
         auto acc2 = udp_acceptor::create( ios2, 4096, uep );
         auto acc3 = udp_acceptor::create( gios[0], 4096, uep );
 
-//#if defined(SO_REUSEPORT) && (SO_REUSEPORT != 0)
-//        int opt = 1;
-//        std::cout << setsockopt( acc->native_handle( ),
-//                    SOL_SOCKET, SO_REUSEPORT, &opt, sizeof(opt) );
-//        std::cout << setsockopt( acc2->native_handle( ),
-//                    SOL_SOCKET, SO_REUSEPORT, &opt, sizeof(opt) );
-//        std::cout << setsockopt( acc3->native_handle( ),
-//                    SOL_SOCKET, SO_REUSEPORT, &opt, sizeof(opt) );
-//        std::cout << std::endl;
-//#endif
 
         udp_acceptor_del udeleg;
         udp_acceptor_del udeleg2;
@@ -262,6 +307,18 @@ int main( )
         acc->open( );
         acc2->open( );
         acc3->open( );
+
+#if defined(SO_REUSEPORT) && (SO_REUSEPORT != 0)
+        int opt = 1;
+        std::cout << setsockopt( acc->native_handle( ),
+                    SOL_SOCKET, SO_REUSEPORT, &opt, sizeof(opt) );
+        std::cout << setsockopt( acc2->native_handle( ),
+                    SOL_SOCKET, SO_REUSEPORT, &opt, sizeof(opt) );
+        std::cout << setsockopt( acc3->native_handle( ),
+                    SOL_SOCKET, SO_REUSEPORT, &opt, sizeof(opt) );
+        std::cout << std::endl;
+#endif
+
 
         acc->bind( );
         acc->start_accept( );

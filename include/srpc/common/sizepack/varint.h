@@ -50,7 +50,7 @@ namespace srpc { namespace common { namespace sizepack {
         static void pack( size_type size, std::string &res )
         {
             std::string tmp;
-            tmp.reserve(sizeof(size_type));
+            tmp.reserve(max_length);
             for( ; size > 0x7F; size >>= 7 ) {
                 tmp.push_back(static_cast<char>(size & 0x7F) | 0x80);
             }
