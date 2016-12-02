@@ -10,6 +10,7 @@
 #include "srpc/common/transport/async/udp.h"
 
 #include "srpc/client/connector/async/tcp.h"
+#include "srpc/client/connector/async/udp.h"
 
 #include <memory>
 #include <queue>
@@ -74,7 +75,7 @@ struct tcp_echo_delegate final: public common::transport::interface::delegate {
 
 struct udp_echo_delegate final: public common::transport::async::udp::delegate {
 
-    std::shared_ptr<udp_transport> parent_;
+    std::shared_ptr<common::transport::interface> parent_;
     using cb = common::transport::interface::write_callbacks;
     int cnt = 0;
 
@@ -124,7 +125,11 @@ using tcp_connector = client::connector::async::tcp;
 
 struct connector_delegate: public connector::delegate {
 
-    tcp_echo_delegate echo_;
+    udp_echo_delegate echo_;
+
+    connector_delegate( )
+        :echo_(1000000)
+    { }
 
     void on_connect( common::transport::interface *c )
     {
@@ -203,22 +208,12 @@ int main( )
         ba::io_service ios;
         transtort_type::endpoint ep(ba::ip::address::from_string("127.0.0.1"), 2356);
 
-        std::shared_ptr<udp_transport> t(std::make_shared<udp_transport>(std::ref(ios), 4096));
-        udp_echo_delegate eho(10000000);
-        eho.parent_ = t;
-        t->set_delegate( &eho );
-        t->set_endpoint( ep );
-        t->open( );
-        t->get_socket( ).connect( ep );
-        t->write( "!", 1 );
-        t->read( );
+        connector_delegate deleg;
+        auto uc = std::make_shared<client::connector::async::udp>(std::ref(ios), 4096);
 
-//        connector_delegate deleg;
-
-//        auto t = std::make_shared<tcp_connector>(std::ref(ios), 4096);
-//        t->set_delegate( &deleg );
-//        t->set_endpoint( ep );
-//        t->connect( );
+        uc->set_endpoint( ep );
+        uc->set_delegate( &deleg );
+        uc->connect( );
 
         ios.run( );
 

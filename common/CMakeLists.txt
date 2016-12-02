@@ -14,6 +14,7 @@ list( APPEND src_dirs
       ${INCLUDE_DIR}/srpc/client
       ${INCLUDE_DIR}/srpc/client/connector
       ${INCLUDE_DIR}/srpc/client/connector/async
+      ${INCLUDE_DIR}/srpc/client/connector/async/impl
       )
 
 foreach( src_dir ${src_dirs} )
