@@ -121,15 +121,17 @@ struct message_delegate final: public common::transport::interface::delegate {
         :fill(0)
     { }
 
-    void check_fill( size_t &val )
+    bool check_fill( size_t &val )
     {
         if( val ) {
             if( tmp.size( ) >= val ) {
                 on_message( tmp.c_str( ), val );
                 tmp.erase( tmp.begin( ), tmp.begin( ) + val );
                 val = 0;
+                return true;
             }
         }
+        return false;
     }
 
     void on_data( const char *data, size_t len )
@@ -144,7 +146,7 @@ struct message_delegate final: public common::transport::interface::delegate {
                 size_type res = size_packer::unpack( tmp.begin( ), tmp.end( ) );
                 tmp.erase( tmp.begin( ), tmp.begin( ) + len );
                 if( res >= tmp.size( ) ) {
-                    check_fill
+                    //check_fill
                 }
             }
         } while( true );
