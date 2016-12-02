@@ -79,7 +79,7 @@ namespace async {
             namespace ph = srpc::placeholders;
             {
                 srpc::shared_ptr<client_type> tmp =
-                                client_type::create( ios_, buflen_ );
+                                 client_type::create( ios_, buflen_ );
                 tmp->set_endpoint( ep_ );
                 tmp->open( );
                 client_.swap( tmp );

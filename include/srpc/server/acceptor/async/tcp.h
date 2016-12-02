@@ -40,12 +40,20 @@ namespace async {
             srpc::shared_ptr<interface> lck(inst.lock( ));
             if( lck ) {
                 if( !err ) {
-                    delegate_->on_accept_client( client.get( ) );
+                    common::transport::async::tcp::endpoint ep
+                                = client->get_socket( ).remote_endpoint( );
+                    delegate_->on_accept_client( client.get( ),
+                                                 ep.address( ).to_string( ),
+                                                 ep.port( ) );
                 } else {
                     delegate_->on_accept_error( err );
                 }
             }
         }
+
+    protected:
+
+        struct key { };
 
     public:
 
@@ -54,12 +62,22 @@ namespace async {
         typedef SRPC_ASIO::io_service        io_service;
         typedef SRPC_ASIO::ip::tcp::acceptor io_acceptor_type;
 
-        tcp( io_service &ios, size_t bufsize )
+        typedef io_acceptor_type::native_handle_type native_handle_type;
+
+        tcp( io_service &ios, size_t bufsize, key & )
             :ios_(ios)
             ,acceptor_(ios)
             ,bufsize_(bufsize)
             ,delegate_(NULL)
         { }
+
+        static
+        srpc::shared_ptr<tcp> create( io_service &ios, size_t bufsize )
+        {
+            static key k;
+            return srpc::make_shared<tcp>( srpc::ref(ios), bufsize,
+                                           srpc::ref(k) );
+        }
 
         srpc::weak_ptr<interface> weak_from_this( )
         {
@@ -111,6 +129,11 @@ namespace async {
         void set_delegate( delegate *val )
         {
             delegate_ = val;
+        }
+
+        native_handle_type native_handle( )
+        {
+            return acceptor_.native_handle( );
         }
 
     private:

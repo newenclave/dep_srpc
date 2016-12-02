@@ -29,10 +29,10 @@ namespace async {
 
             typedef srpc::shared_ptr<queue_value> shared_type;
 
-            message_type    message_;
+            message_type    message;
 
             queue_value( const char *data, size_t length )
-                :message_(data, length)
+                :message(data, length)
             { }
 
             virtual ~queue_value( ) { }
@@ -49,7 +49,7 @@ namespace async {
 
         struct queue_callback: public queue_value {
 
-            write_callbacks cbacks_;
+            write_callbacks cbacks;
 
             typedef srpc::shared_ptr<queue_callback> shared_type;
 
@@ -59,11 +59,11 @@ namespace async {
 
             void precall( )
             {
-                cbacks_.pre_call( );
+                cbacks.pre_call( );
             }
             void postcall(const error_code &err)
             {
-                cbacks_.post_call( err );
+                cbacks.post_call( err );
             }
 
             static
@@ -100,7 +100,8 @@ namespace async {
 
     /////////////////////////////////// READ
 
-        void start_read_impl_wrap(  )
+        //void start_read_impl_wrap(  )
+        void start_read_impl( )
         {
             namespace ph = srpc::placeholders;
 
@@ -116,7 +117,7 @@ namespace async {
              );
         }
 
-        void start_read_impl(  )
+        void start_read_impl_(  )
         {
             namespace ph = srpc::placeholders;
             this->get_socket( ).async_read_some(
@@ -136,22 +137,24 @@ namespace async {
 
         void async_write(  )
         {
-            const message_type &top( queue_top( )->message_ );
+            const message_type &top( queue_top( )->message );
             async_write( top.data( ), top.size( ), 0);
         }
 
         void async_write( const char *data, size_t length, size_t total )
         {
             namespace ph = srpc::placeholders;
-            this->get_socket( ).async_write_some(
-                    SRPC_ASIO::buffer(data, length),
-                    this->get_dispatcher( ).wrap(
-                        srpc::bind( &this_type::write_handler, this,
-                                     ph::_1, ph::_2,
-                                     length, total,
-                                     this->shared_from_this( ))
-                    )
-            );
+            if( this->active( ) ) {
+                this->get_socket( ).async_write_some(
+                        SRPC_ASIO::buffer(data, length),
+                        this->get_dispatcher( ).wrap(
+                            srpc::bind( &this_type::write_handler, this,
+                                         ph::_1, ph::_2,
+                                         length, total,
+                                         this->shared_from_this( ))
+                        )
+                );
+            }
         }
 
         void write_handler( const error_code &error,
@@ -168,7 +171,7 @@ namespace async {
 
                     total += bytes;
 
-                    const message_type &top_mess( top.message_ );
+                    const message_type &top_mess( top.message );
                     async_write( top_mess.data( ) + total,
                                  top_mess.size( ) - total, total );
 
@@ -218,7 +221,7 @@ namespace async {
             typename queue_callback::shared_type inst
                                     = queue_callback::create( data, len );
 
-            inst->cbacks_ = cback;
+            inst->cbacks = cback;
 
             this->get_dispatcher( ).post(
                         srpc::bind( &this_type::write_impl, this,

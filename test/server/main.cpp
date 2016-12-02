@@ -10,6 +10,7 @@
 #include "srpc/common/transport/async/udp.h"
 #include "srpc/server/acceptor/interface.h"
 #include "srpc/server/acceptor/async/tcp.h"
+#include "srpc/server/acceptor/async/udp.h"
 
 #include "srpc/common/sizepack/varint.h"
 #include "srpc/common/sizepack/fixint.h"
@@ -39,6 +40,7 @@ std::uint64_t ticks_now( )
 
 boost::asio::io_service test_io;
 boost::asio::io_service ios;
+boost::asio::io_service ios2;
 
 void show_messages(  )
 {
@@ -149,309 +151,7 @@ struct udp_echo_delegate final: public common::transport::async::udp::delegate {
 using acceptor = server::acceptor::interface;
 using tcp_acceptor = server::acceptor::async::tcp;
 
-class udp_acceptor: public server::acceptor::interface {
-
-    typedef ba::ip::udp::endpoint endpoint;
-
-
-    class client_type: public common::transport::interface {
-
-    public:
-
-        client_type( udp_acceptor *parent, endpoint ep )
-            :parent_(parent)
-            ,dispatcher_(parent_->acceptor_->get_io_service( ))
-            //,dispatcher_(gios[ep.port( ) % 4])
-            ,read_(false)
-            ,ep_(ep)
-            ,delegate_(NULL)
-        {
-
-        }
-
-        void open( )
-        {
-
-        }
-
-        void close( )
-        {
-            parent_->client_close( ep_ );
-        }
-
-        void write( const char *data, size_t len )
-        {
-            parent_->write( ep_, id, data, len );
-        }
-
-        void write( const char *data, size_t len,
-                            write_callbacks cback )
-        {
-            parent_->write( ep_, id, data, len, cback );
-        }
-
-        srpc::weak_ptr<common::transport::interface> weak_from_this( )
-        {
-            typedef common::transport::interface iface;
-            return srpc::weak_ptr<iface>(shared_from_this( ));
-        }
-
-        void set_read_impl( srpc::weak_ptr<common::transport::interface> inst )
-        {
-            srpc::shared_ptr<common::transport::interface> lck(inst.lock( ));
-            if( lck ) {
-                if( !read_ ) {
-                    read_ = true;
-                    if( !read_queue_.empty( ) ) {
-                        std::string &data(*read_queue_.front( ));
-                        delegate_->on_data( data.c_str( ), data.size( ) );
-                        read_queue_.pop_front( );
-                        read_ = false;
-                    }
-                }
-            }
-        }
-
-        void read( )
-        {
-            parent_->acceptor_->get_dispatcher( ).post(
-                srpc::bind( &client_type::set_read_impl, this,
-                                          weak_from_this( ) ) );
-        }
-
-        void set_delegate( delegate *val )
-        {
-            delegate_ = val;
-        }
-
-        void push_data_impl( srpc::weak_ptr<common::transport::interface> inst,
-                             srpc::shared_ptr<std::string> data )
-        {
-            srpc::shared_ptr<common::transport::interface> lck(inst.lock( ));
-            if( lck ) {
-                if( read_ ) {
-                    delegate_->on_data( data->c_str( ), data->size( ) );
-                } else {
-                    read_queue_.push_back( data );
-                }
-            }
-        }
-
-        void push_data( srpc::shared_ptr<std::string> data )
-        {
-            parent_->acceptor_->get_dispatcher( ).post(
-                        srpc::bind( &client_type::push_data_impl, this,
-                                     weak_from_this( ), data ) );
-        }
-
-        udp_acceptor            *parent_;
-        ba::io_service::strand  dispatcher_;
-        //ba::io_service  &dispatcher_;
-        bool read_;
-        std::deque<srpc::shared_ptr<std::string> >  read_queue_;
-        endpoint                 ep_;
-        delegate                *delegate_;
-        int id;
-    };
-
-    typedef std::map<endpoint, srpc::shared_ptr<client_type> > client_map;
-
-    struct my_delegate: public common::transport::interface::delegate {
-
-        udp_acceptor *parent_;
-        int id;
-
-        void on_read_error( const error_code &err )
-        {
-            endpoint &ep(parent_->acceptor_->get_endpoint( ));
-            client_map::iterator f = parent_->clients_.find( ep );
-            if( f != parent_->clients_.end( ) ) {
-                f->second->delegate_->on_write_error( err );
-            }
-        }
-
-        void on_close( )
-        {
-            endpoint &ep(parent_->acceptor_->get_endpoint( ));
-            client_map::iterator f = parent_->clients_.find( ep );
-            if( f != parent_->clients_.end( ) ) {
-                f->second->delegate_->on_close( );
-            }
-        }
-
-        void on_write_error( const error_code &err )
-        {
-            endpoint &ep(parent_->acceptor_->get_endpoint( ));
-            client_map::iterator f = parent_->clients_.find( ep );
-            if( f != parent_->clients_.end( ) ) {
-                f->second->delegate_->on_read_error( err );
-            }
-        }
-
-        /// dispatcher
-        void on_data( const char *data, size_t len )
-        {
-            auto acc = id ? parent_->acceptor2_ : parent_->acceptor_;
-
-            endpoint &ep(acc->get_endpoint( ));
-            srpc::shared_ptr<std::string> dat
-                    = srpc::make_shared<std::string>(data, len);
-
-//            std::cout << "delegate_data "
-//                      << ep.address( ).to_string( )
-//                      << ":" << ep.port( )
-//                      << std::endl;
-
-            client_map::iterator f = parent_->clients_.find( ep );
-            if( f != parent_->clients_.end( ) ) {
-                f->second->push_data( dat );
-            } else {
-                if( parent_->accept_ ) {
-                    srpc::shared_ptr<client_type> next
-                            = std::make_shared<client_type>(parent_, ep);
-                    next->id = id;
-                    parent_->clients_[ep] = next;
-                    next->read_queue_.push_back( dat );
-                    parent_->delegate_->on_accept_client( next.get( ) );
-                }
-            }
-
-            acc->read_from( endpoint( ) );
-        }
-
-    };
-
-    friend class client_type;
-    friend class my_delegate;
-
-    void write( const endpoint &ep, int id,
-                const char *data, size_t len )
-    {
-        if( id ) {
-            acceptor_->write_to( ep, data, len );
-        } else {
-            acceptor2_->write_to( ep, data, len );
-        }
-    }
-
-    void write( const endpoint &ep, int id,
-                const char *data, size_t len,
-                common::transport::interface::write_callbacks cback )
-    {
-        if( id ) {
-            acceptor2_->write_to( ep, data, len, cback );
-        } else {
-            acceptor_->write_to( ep, data, len, cback );
-        }
-    }
-
-    void close_impl( const endpoint &ep,
-                     srpc::weak_ptr<server::acceptor::interface> inst )
-    {
-        srpc::shared_ptr<server::acceptor::interface> lck(inst.lock( ));
-        if( lck ) {
-            typedef client_map::iterator itr;
-            itr f = clients_.find( ep );
-            if( f != clients_.end( ) ) {
-                f->second->delegate_->on_close( );
-                clients_.erase( f );
-            }
-        }
-    }
-
-    void client_close( const endpoint &ep )
-    {
-        namespace ph = srpc::placeholders;
-        acceptor_->get_dispatcher( ).post(
-            srpc::bind( &udp_acceptor::close_impl, this,
-            ep,
-            srpc::weak_ptr<server::acceptor::interface>(shared_from_this( ) ) )
-        );
-    }
-
-    typedef common::transport::async::udp parent_transport;
-    srpc::shared_ptr<parent_transport> create_acceptor( ba::io_service &ios,
-                                                        size_t bs )
-    {
-        srpc::shared_ptr<parent_transport> res
-                = srpc::make_shared<parent_transport>( srpc::ref(ios), bs );
-
-        return res;
-    }
-
-public:
-
-    udp_acceptor( ba::io_service &ios, size_t bufsize )
-        :delegate_(NULL)
-    {
-        accept_delegate_.parent_ = this;
-        accept_delegate_.id = 0;
-        acceptor_ = create_acceptor( ios, bufsize );
-        acceptor_->set_delegate( &accept_delegate_ );
-
-        accept_delegate2_.id = 1;
-        accept_delegate2_.parent_ = this;
-        acceptor2_ = create_acceptor( ios, bufsize );
-        acceptor2_->set_delegate( &accept_delegate2_ );
-    }
-
-    void open( )
-    { }
-
-    void bind( const endpoint &ep, bool reuse = true )
-    {
-        ep.address( ).is_v6( )
-                ? acceptor_->get_socket( ).open( SRPC_ASIO::ip::udp::v6( ) )
-                : acceptor_->get_socket( ).open( SRPC_ASIO::ip::udp::v4( ) );
-
-        ep.address( ).is_v6( )
-                ? acceptor2_->get_socket( ).open( SRPC_ASIO::ip::udp::v6( ) )
-                : acceptor2_->get_socket( ).open( SRPC_ASIO::ip::udp::v4( ) );
-
-        if( reuse ) {
-            SRPC_ASIO::socket_base::reuse_address opt(true);
-            acceptor_->get_socket( ).set_option( opt );
-            acceptor2_->get_socket( ).set_option( opt );
-        }
-
-        int opt = 1;
-        setsockopt( acceptor_->get_socket( ).native_handle( ),
-                    SOL_SOCKET, SO_REUSEPORT, &opt, sizeof(opt) );
-        setsockopt( acceptor2_->get_socket( ).native_handle( ),
-                    SOL_SOCKET, SO_REUSEPORT, &opt, sizeof(opt) );
-
-        acceptor_->get_socket( ).bind( ep );
-        acceptor_->read_from( endpoint( ) );
-
-        acceptor2_->get_socket( ).bind( ep );
-        acceptor2_->read_from( endpoint( ) );
-    }
-
-    void close( )
-    {
-        acceptor_->close( );
-    }
-
-    void start_accept( )
-    {
-        accept_ = true;
-    }
-
-    void set_delegate( delegate *val )
-    {
-        delegate_ = val;
-    }
-
-private:
-
-    delegate    *delegate_;
-    my_delegate  accept_delegate_;
-    my_delegate  accept_delegate2_;
-    srpc::shared_ptr<common::transport::async::udp> acceptor_;
-    srpc::shared_ptr<common::transport::async::udp> acceptor2_;
-    bool accept_;
-    client_map  clients_;
-};
+using udp_acceptor = server::acceptor::async::udp;
 
 struct acceptor_del: public acceptor::delegate {
 
@@ -463,7 +163,8 @@ struct acceptor_del: public acceptor::delegate {
 
     }
 
-    void on_accept_client( common::transport::interface *c )
+    void on_accept_client( common::transport::interface *c,
+                           const std::string& ip, std::uint16_t port )
     {
         gclients.insert( c->shared_from_this( ) );
         c->set_delegate( &delegate_ );
@@ -493,7 +194,8 @@ struct udp_acceptor_del: public acceptor::delegate {
 
     }
 
-    void on_accept_client( common::transport::interface *c )
+    void on_accept_client( common::transport::interface *c,
+                           const std::string& ip, std::uint16_t port )
     {
         std::cout << "New client!!!\n";
         gclients.insert( c->shared_from_this( ) );
@@ -529,14 +231,42 @@ int main( )
         ba::io_service::work wrk3(gios[3]);
 
         udp_transport::endpoint uep(ba::ip::address::from_string("0.0.0.0"), 2356);
-        auto acc = srpc::make_shared<udp_acceptor>( srpc::ref(ios), 4096 );
+
+        auto acc =  udp_acceptor::create( ios, 4096 );
+        auto acc2 = udp_acceptor::create( ios2, 4096 );
+        auto acc3 = udp_acceptor::create( gios[0], 4096 );
+
+//#if defined(SO_REUSEPORT) && (SO_REUSEPORT != 0)
+//        int opt = 1;
+//        std::cout << setsockopt( acc->native_handle( ),
+//                    SOL_SOCKET, SO_REUSEPORT, &opt, sizeof(opt) );
+//        std::cout << setsockopt( acc2->native_handle( ),
+//                    SOL_SOCKET, SO_REUSEPORT, &opt, sizeof(opt) );
+//        std::cout << setsockopt( acc3->native_handle( ),
+//                    SOL_SOCKET, SO_REUSEPORT, &opt, sizeof(opt) );
+//        std::cout << std::endl;
+//#endif
+
         udp_acceptor_del udeleg;
+        udp_acceptor_del udeleg2;
+        udp_acceptor_del udeleg3;
 
         acc->set_delegate( &udeleg );
+        acc2->set_delegate( &udeleg );
+        acc3->set_delegate( &udeleg );
+
         udeleg.acceptor_ = acc;
+        udeleg2.acceptor_ = acc2;
+        udeleg3.acceptor_ = acc3;
 
         acc->bind(uep);
         acc->start_accept( );
+
+        acc2->bind(uep);
+        acc2->start_accept( );
+
+        acc3->bind(uep);
+        acc3->start_accept( );
 
         std::thread( show_messages ).detach( );
 
@@ -545,8 +275,8 @@ int main( )
 //        std::thread([]( ){ gios[2].run( ); }).detach( );
 //        std::thread([]( ){ gios[3].run( ); }).detach( );
 
-//        std::thread([]( ){ ios.run( ); }).detach( );
-//        std::thread([]( ){ ios.run( ); }).detach( );
+        std::thread([]( ){ ios2.run( ); }).detach( );
+        std::thread([]( ){ gios[0].run( ); }).detach( );
 //        std::thread([]( ){ ios.run( ); }).detach( );
 //        std::thread([]( ){ ios.run( ); }).detach( );
 
@@ -559,7 +289,7 @@ int main( )
 
         transtort_type::endpoint ep(ba::ip::address::from_string("0.0.0.0"), 2356);
         acceptor_del deleg;
-        auto t = std::make_shared<tcp_acceptor>(std::ref(ios), 4096);
+        auto t = tcp_acceptor::create( ios, 4096 );
         t->set_delegate( &deleg );
         deleg.acceptor_ = t;
         t->open( );

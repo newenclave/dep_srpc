@@ -25,13 +25,11 @@ namespace async {
         typedef common::const_buffer<char> message_type;
 
         struct queue_value {
-            message_type        message_;
-            asio_udp::endpoint  to_;
-            bool                send_to_;
+            message_type        message;
+            asio_udp::endpoint  to;
 
             queue_value( const char *data, size_t length )
-                :message_(data, length)
-                ,send_to_(false)
+                :message(data, length)
             { }
 
             typedef srpc::shared_ptr<queue_value> shared_type;
@@ -47,7 +45,7 @@ namespace async {
 
         struct queue_callback: public queue_value {
 
-            write_callbacks     cbacks_;
+            write_callbacks cbacks;
 
             typedef srpc::shared_ptr<queue_callback> shared_type;
 
@@ -57,11 +55,11 @@ namespace async {
 
             void precall( )
             {
-                cbacks_.pre_call( );
+                cbacks.pre_call( );
             }
             void postcall( const error_code &err )
             {
-                cbacks_.post_call( err );
+                cbacks.post_call( err );
             }
 
             static
@@ -105,11 +103,11 @@ namespace async {
             get_socket( ).async_receive(
                 SRPC_ASIO::buffer( &get_read_buffer( )[0],
                                     get_read_buffer( ).size( )),
-                //get_dispatcher( ).wrap(
+                get_dispatcher( ).wrap(
                     srpc::bind( &this_type::read_handler, this,
                                  ph::_1, ph::_2,
                                  this->weak_from_this( ) )
-                //) // dispatcher
+                ) // dispatcher
              );
         }
 
@@ -135,7 +133,8 @@ namespace async {
                     get_dispatcher( ).wrap(
                         srpc::bind( &this_type::read_handler, this,
                                  ph::_1, ph::_2,
-                                 this->weak_from_this( ) ) )
+                                 this->weak_from_this( ) )
+                    ) // dispatcher
             );
         }
 
@@ -161,7 +160,7 @@ namespace async {
             queue_value_sptr &top(write_queue_.front( ));
             if( err ) {
                 get_delegate( )->on_write_error( err );
-                on_write_to_error( err, top->to_ );
+                on_write_to_error( err, top->to );
             }
             top->postcall( err );
 
@@ -174,13 +173,13 @@ namespace async {
         void async_write(  )
         {
             queue_value  &top(*write_queue_.front( ));
-            message_type &m(top.message_);
+            message_type &m(top.message);
             namespace ph = srpc::placeholders;
             top.precall( );
-            if( top.send_to_ ) {
+            if( top.to.port( ) != 0 ) {
                 get_socket( ).async_send_to(
                     SRPC_ASIO::buffer(m.data( ), m.size( )),
-                    top.to_, 0,
+                    top.to, 0,
                     get_dispatcher( ).wrap(
                         srpc::bind( &this_type::write_to_handle, this,
                                      ph::_1, ph::_2,
@@ -239,7 +238,7 @@ namespace async {
         {
             queue_callback::shared_type t
                     = queue_callback::create( data, len );
-            t->cbacks_  = cback;
+            t->cbacks  = cback;
             push_to_queue( t );
         }
 
@@ -255,17 +254,15 @@ namespace async {
         {
             queue_callback::shared_type t
                     = queue_callback::create( data, len );
-            t->cbacks_  = cback;
-            t->send_to_ = true;
-            t->to_ = ep;
+            t->cbacks = cback;
+            t->to     = ep;
             push_to_queue( t );
         }
 
         void write_to( const endpoint &ep, const char *data, size_t len )
         {
             queue_value::shared_type t = queue_value::create( data, len );
-            t->send_to_ = true;
-            t->to_ = ep;
+            t->to = ep;
             push_to_queue( t );
         }
 
