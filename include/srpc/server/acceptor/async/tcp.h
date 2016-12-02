@@ -64,18 +64,20 @@ namespace async {
 
         typedef io_acceptor_type::native_handle_type native_handle_type;
 
-        tcp( io_service &ios, size_t bufsize, key & )
+        tcp( io_service &ios, size_t bufsize, const endpoint &ep, key & )
             :ios_(ios)
             ,acceptor_(ios)
             ,bufsize_(bufsize)
             ,delegate_(NULL)
+            ,ep_(ep)
         { }
 
         static
-        srpc::shared_ptr<tcp> create( io_service &ios, size_t bufsize )
+        srpc::shared_ptr<tcp> create( io_service &ios, size_t bufsize,
+                                      const endpoint &ep )
         {
             static key k;
-            return srpc::make_shared<tcp>( srpc::ref(ios), bufsize,
+            return srpc::make_shared<tcp>( srpc::ref(ios), bufsize, ep,
                                            srpc::ref(k) );
         }
 
@@ -85,27 +87,27 @@ namespace async {
         }
 
         void open( )
-        { }
+        {
+            typedef SRPC_ASIO::ip::tcp asio_tcp;
+
+            ep_.address( ).is_v6( )
+                    ? acceptor_.open( asio_tcp::v6( ) )
+                    : acceptor_.open( asio_tcp::v4( ) );
+        }
 
         void listen( int backlog )
         {
             acceptor_.listen( backlog );
         }
 
-        void bind( const endpoint &ep, bool reuseaddr = false )
+        void bind( bool reuseaddr = false )
         {
-            typedef SRPC_ASIO::ip::tcp asio_tcp;
             typedef SRPC_ASIO::socket_base socket_base;
-
-            ep.address( ).is_v6( )
-                    ? acceptor_.open( asio_tcp::v6( ) )
-                    : acceptor_.open( asio_tcp::v4( ) );
-
             if( reuseaddr ) {
                 acceptor_.set_option( socket_base::reuse_address(true) );
             }
 
-            acceptor_.bind( ep );
+            acceptor_.bind( ep_ );
         }
 
         void close( )
@@ -142,6 +144,7 @@ namespace async {
         io_acceptor_type  acceptor_;
         size_t            bufsize_;
         delegate         *delegate_;
+        endpoint          ep_;
         //endpoint          ep_;
     };
 }

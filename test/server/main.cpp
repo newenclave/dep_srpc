@@ -232,9 +232,9 @@ int main( )
 
         udp_transport::endpoint uep(ba::ip::address::from_string("0.0.0.0"), 2356);
 
-        auto acc =  udp_acceptor::create( ios, 4096 );
-        auto acc2 = udp_acceptor::create( ios2, 4096 );
-        auto acc3 = udp_acceptor::create( gios[0], 4096 );
+        auto acc =  udp_acceptor::create( ios, 4096, uep );
+        auto acc2 = udp_acceptor::create( ios2, 4096, uep );
+        auto acc3 = udp_acceptor::create( gios[0], 4096, uep );
 
 //#if defined(SO_REUSEPORT) && (SO_REUSEPORT != 0)
 //        int opt = 1;
@@ -259,13 +259,17 @@ int main( )
         udeleg2.acceptor_ = acc2;
         udeleg3.acceptor_ = acc3;
 
-        acc->bind(uep);
+        acc->open( );
+        acc2->open( );
+        acc3->open( );
+
+        acc->bind( );
         acc->start_accept( );
 
-        acc2->bind(uep);
+        acc2->bind( );
         acc2->start_accept( );
 
-        acc3->bind(uep);
+        acc3->bind( );
         acc3->start_accept( );
 
         std::thread( show_messages ).detach( );
@@ -289,11 +293,11 @@ int main( )
 
         transtort_type::endpoint ep(ba::ip::address::from_string("0.0.0.0"), 2356);
         acceptor_del deleg;
-        auto t = tcp_acceptor::create( ios, 4096 );
+        auto t = tcp_acceptor::create( ios, 4096, ep );
         t->set_delegate( &deleg );
         deleg.acceptor_ = t;
         t->open( );
-        t->bind( ep, true );
+        t->bind( true );
         t->listen( 5 );
         t->start_accept( );
         ios.run( );

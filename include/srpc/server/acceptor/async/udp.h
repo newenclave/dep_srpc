@@ -14,10 +14,13 @@ namespace async {
 
     class udp: public server::acceptor::interface {
 
-        typedef SRPC_ASIO::ip::udp::endpoint    endpoint;
         typedef common::transport::async::udp   parent_transport;
         typedef server::acceptor::interface     parent_acceptor;
         typedef SRPC_ASIO::io_service           io_service;
+
+    public:
+        typedef parent_transport::endpoint endpoint;
+    private:
 
         class client_type: public common::transport::interface {
 
@@ -237,8 +240,9 @@ namespace async {
 
         typedef parent_transport::native_handle_type native_handle_type;
 
-        udp( io_service &ios, size_t bufsize, key & )
+        udp( io_service &ios, size_t bufsize, const endpoint &ep, key & )
             :delegate_(NULL)
+            ,ep_(ep)
         {
             accept_delegate_.parent_ = this;
             acceptor_ = create_acceptor( ios, bufsize );
@@ -246,27 +250,29 @@ namespace async {
         }
 
         static
-        srpc::shared_ptr<udp> create( io_service &ios, size_t bufsize )
+        srpc::shared_ptr<udp> create( io_service &ios, size_t bufsize,
+                                      const endpoint &ep )
         {   key k;
             return srpc::make_shared<udp>( srpc::ref(ios),
-                                           bufsize, std::ref( k ) );
+                                           bufsize, ep, std::ref( k ) );
         }
 
         void open( )
-        { }
-
-        void bind( const endpoint &ep, bool reuse = true )
         {
-            ep.address( ).is_v6( )
+            ep_.address( ).is_v6( )
                 ? acceptor_->get_socket( ).open( SRPC_ASIO::ip::udp::v6( ) )
                 : acceptor_->get_socket( ).open( SRPC_ASIO::ip::udp::v4( ) );
+        }
+
+        void bind( bool reuse = true )
+        {
 
             if( reuse ) {
                 SRPC_ASIO::socket_base::reuse_address opt(true);
                 acceptor_->get_socket( ).set_option( opt );
             }
 
-            acceptor_->get_socket( ).bind( ep );
+            acceptor_->get_socket( ).bind( ep_ );
             acceptor_->read_from( endpoint( ) );
         }
 
@@ -297,6 +303,7 @@ namespace async {
         srpc::shared_ptr<parent_transport> acceptor_;
         bool                               accept_;
         client_map                         clients_;
+        endpoint                           ep_;
     };
 
 

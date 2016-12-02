@@ -54,13 +54,13 @@ namespace async { namespace impl {
         typedef typename transport_type::native_handle_type native_handle_type;
         typedef SRPC_ASIO::io_service                       io_service;
 
-        templ( io_service &ios, size_t buflen )
+        templ( io_service &ios, size_t buflen, const endpoint &ep )
             :ios_(ios)
             ,buflen_(buflen)
             ,client_(client_type::create( ios_, buflen_ ))
-        {
-
-        }
+            ,ep_(ep)
+            ,delegate_(NULL)
+        { }
 
         void open( )
         { }
