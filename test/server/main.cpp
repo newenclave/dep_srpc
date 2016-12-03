@@ -275,8 +275,13 @@ struct udp_acceptor_del: public acceptor::delegate {
 };
 
 
+using varint = common::sizepack::varint;
+
+std::vector<char> packed_data;
+
 int main( )
 {
+
     try {
         //ba::io_service::work wrk(ios);
 
