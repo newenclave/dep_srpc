@@ -140,6 +140,10 @@ public:
 
     bool validate_length( size_t len )
     {
+        if( len >= 10000 ) {
+            parent_->close( );
+            return false;
+        }
         return true;
     }
 
