@@ -59,9 +59,9 @@ set( COMMON_LIB_NAME srpc_common )
 set( SERVER_LIB_NAME srpc_server )
 set( CLIENT_LIB_NAME srpc_client )
 
-add_subdirectory( common )
-add_subdirectory( server )
-add_subdirectory( client )
+add_subdirectory( lib/common )
+add_subdirectory( lib/server )
+add_subdirectory( lib/client )
 
 add_subdirectory( test )
 
