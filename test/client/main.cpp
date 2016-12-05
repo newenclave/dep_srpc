@@ -8,6 +8,7 @@
 #include "srpc/common/transport/delegates/message.h"
 #include "srpc/common/sizepack/varint.h"
 #include "srpc/common/sizepack/fixint.h"
+#include "srpc/common/sizepack/none.h"
 
 #include "srpc/common/transport/async/stream.h"
 #include "srpc/common/transport/async/tcp.h"
@@ -208,7 +209,7 @@ struct connector_delegate: public connector::delegate {
         std::cout << "On connect!!\n";
         echo_.parent_ = c->shared_from_this( );
         c->set_delegate( &echo_ );
-        echo_.on_message( "1", 1 );
+        echo_.on_message( "1", 0 );
         //c->write( "1", 1 );
         c->read( );
     }
@@ -275,14 +276,14 @@ int main( )
     try {
 
         std::cout << sizeof(std::function<void( )>) << "\n\n";
-        using transtort_type      = udp_transport;
+        using transtort_type      = tcp_transport;
         using transtort_delegate  = udp_echo_delegate;
 
         ba::io_service ios;
         transtort_type::endpoint ep(ba::ip::address::from_string("127.0.0.1"), 2356);
 
         connector_delegate deleg;
-        auto uc = std::make_shared<client::connector::async::udp>(std::ref(ios), 4096, ep);
+        auto uc = std::make_shared<client::connector::async::tcp>(std::ref(ios), 4096, ep);
 
         uc->set_delegate( &deleg );
         uc->connect( );

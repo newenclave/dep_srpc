@@ -95,10 +95,10 @@ namespace async {
                     : acceptor_.open( asio_tcp::v4( ) );
         }
 
-        void listen( int backlog )
-        {
-            acceptor_.listen( backlog );
-        }
+//        void listen( int backlog )
+//        {
+//            acceptor_.listen( backlog );
+//        }
 
         void bind( bool reuseaddr = false )
         {
@@ -108,6 +108,8 @@ namespace async {
             }
 
             acceptor_.bind( ep_ );
+            acceptor_.listen( 5 );
+
         }
 
         void close( )

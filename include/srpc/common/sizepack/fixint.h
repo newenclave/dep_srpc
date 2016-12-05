@@ -2,6 +2,7 @@
 #define SRPC_COMMON_SIZEPACK_FIXINT_H
 
 #include "srpc/common/config/stdint.h"
+#include <algorithm>
 
 namespace srpc { namespace common { namespace sizepack {
 

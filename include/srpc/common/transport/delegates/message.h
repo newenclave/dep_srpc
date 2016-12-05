@@ -36,10 +36,13 @@ namespace delegates {
         void pack_begin( pack_context &ctx, size_t len )
         {
             static const size_t max = size_policy::max_length;
-            size_t old_size = ctx.data_.size( );
-            ctx.data_.resize( old_size + max + 1 );
-            size_t pack_size = size_policy::pack( len, &ctx.data_[old_size] );
-            ctx.data_.resize( old_size + pack_size );
+            if( max > 0 ) {
+                size_t old_size = ctx.data_.size( );
+                ctx.data_.resize( old_size + max + 1 );
+                size_t pack_size = size_policy::pack( len,
+                                                      &ctx.data_[old_size] );
+                ctx.data_.resize( old_size + pack_size );
+            }
         }
 
         void pack_update( pack_context &ctx, const char *data, size_t len )
@@ -70,7 +73,10 @@ namespace delegates {
             size_t pack_len = size_policy::size_length( unpacked_.begin( ),
                                                         unpacked_.end( ) );
 
-            while( chck( pack_len ) && (pack_len >= size_policy::min_length) ) {
+            while( !unpacked_.empty( )
+                   && chck( pack_len )
+                   && (pack_len >= size_policy::min_length) )
+            {
 
                 size_t unpacked = size_policy::unpack( unpacked_.begin( ),
                                                        unpacked_.end( ) );
