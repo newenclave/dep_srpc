@@ -38,7 +38,7 @@ namespace async {
             virtual ~queue_value( ) { }
 
             virtual void precall( ) { }
-            virtual void postcall(const error_code &) { }
+            virtual void postcall(const error_code &, size_t) { }
 
             static
             shared_type create( const char *data, size_t length )
@@ -61,9 +61,9 @@ namespace async {
             {
                 cbacks.pre_call( );
             }
-            void postcall(const error_code &err)
+            void postcall(const error_code &err, size_t len)
             {
-                cbacks.post_call( err );
+                cbacks.post_call( err, len );
             }
 
             static
@@ -177,7 +177,7 @@ namespace async {
 
                 } else {
 
-                    top.postcall( error );
+                    top.postcall( error, bytes );
 
                     queue_pop( );
 
@@ -189,7 +189,7 @@ namespace async {
 
             } else {
 
-                top.postcall( error );
+                top.postcall( error, bytes );
 
                 this->get_delegate( )->on_write_error( error );
                 this->on_write_error( error );

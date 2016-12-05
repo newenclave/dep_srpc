@@ -5,6 +5,10 @@
 #include "boost/lexical_cast.hpp"
 
 #include "srpc/common/transport/interface.h"
+#include "srpc/common/transport/delegates/message.h"
+#include "srpc/common/sizepack/varint.h"
+#include "srpc/common/sizepack/fixint.h"
+
 #include "srpc/common/transport/async/stream.h"
 #include "srpc/common/transport/async/tcp.h"
 #include "srpc/common/transport/async/udp.h"
@@ -73,6 +77,73 @@ struct tcp_echo_delegate final: public common::transport::interface::delegate {
 
 };
 
+template <typename SizePack>
+using delegate_message = common::transport::delegates::message<SizePack>;
+
+class mess_delegate: public delegate_message<common::sizepack::varint<std::uint16_t> > {
+
+public:
+
+    std::shared_ptr<common::transport::interface> parent_;
+    using cb = common::transport::interface::write_callbacks;
+    int cnt = 0;
+
+    mess_delegate::pack_context ctx;
+
+    mess_delegate( int c )
+        :cnt(c)
+    { }
+
+    void on_message( const char *message, size_t len )
+    {
+        if( cnt-- > 0 ) {
+
+            if( 0 == cnt % 10000 ) {
+                std::cout << cnt << std::endl;
+            }
+
+            ctx.clear( );
+            pack_begin( ctx, len );
+            pack_update( ctx, message, len );
+            pack_end( ctx );
+            parent_->write( ctx.data( ).c_str( ), ctx.data( ).size( ) );
+
+            //std::cout << "sent " <<  packed( ).size( ) << " bytes\n";
+
+            parent_->read( );
+        } else {
+            parent_->close( );
+        }
+    }
+
+    bool validate_length( size_t len )
+    {
+        return true;
+    }
+
+    void on_error( const char *message )
+    {
+        std::cout << "on error: " << message << "\n";
+    }
+
+    void on_read_error( const bs::error_code &err )
+    {
+        std::cout << "on read error: " << err.message( ) << "\n";
+    }
+
+    void on_write_error( const bs::error_code &err)
+    {
+        std::cout << "on write error: " << err.message( ) << "\n";
+    }
+
+    void on_close( )
+    {
+
+    }
+
+
+};
+
 struct udp_echo_delegate final: public common::transport::async::udp::delegate {
 
     std::shared_ptr<common::transport::interface> parent_;
@@ -125,7 +196,8 @@ using tcp_connector = client::connector::async::tcp;
 
 struct connector_delegate: public connector::delegate {
 
-    udp_echo_delegate echo_;
+    //udp_echo_delegate echo_;
+    mess_delegate echo_;
 
     connector_delegate( )
         :echo_(1000000)
@@ -136,7 +208,8 @@ struct connector_delegate: public connector::delegate {
         std::cout << "On connect!!\n";
         echo_.parent_ = c->shared_from_this( );
         c->set_delegate( &echo_ );
-        c->write( "1", 1 );
+        echo_.on_message( "1", 1 );
+        //c->write( "1", 1 );
         c->read( );
     }
 

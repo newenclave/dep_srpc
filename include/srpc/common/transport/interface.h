@@ -28,10 +28,11 @@ namespace srpc { namespace common { namespace transport {
 
             typedef boost::system::error_code error_code;
             typedef srpc::function<void ( )> pre_call_type;
-            typedef srpc::function<void (const error_code &)> post_call_type;
+            typedef srpc::function<void (const error_code &,
+                                         size_t)> post_call_type;
 
             static void empty_pre_callback( ) { }
-            static void empty_post_callback(const error_code &) { }
+            static void empty_post_callback(const error_code &, size_t) { }
 
             pre_call_type   pre_call;
             post_call_type  post_call;

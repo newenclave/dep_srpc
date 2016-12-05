@@ -5,6 +5,7 @@
 #include "boost/lexical_cast.hpp"
 
 #include "srpc/common/transport/interface.h"
+#include "srpc/common/transport/delegates/message.h"
 #include "srpc/common/transport/async/stream.h"
 #include "srpc/common/transport/async/tcp.h"
 #include "srpc/common/transport/async/udp.h"
@@ -112,76 +113,56 @@ struct tcp_echo_delegate final: public common::transport::interface::delegate {
 };
 
 template <typename SizePack>
-struct message_delegate: public common::transport::interface::delegate {
+using delegate_message = common::transport::delegates::message<SizePack>;
 
-    typedef SizePack size_packer;
-    typedef typename size_packer::size_type size_type;
 
-    void on_data( const char *data, size_t len )
+class mess_delegate: public delegate_message<common::sizepack::varint<std::uint16_t> > {
+
+public:
+
+    std::shared_ptr<common::transport::interface> parent_;
+    using cb = common::transport::interface::write_callbacks;
+    mess_delegate::pack_context ctx;
+
+    void on_message( const char *message, size_t len )
     {
-        unpacked_.insert( unpacked_.end( ), data, data + len );
+        //std::cout << "Message " << std::string(message, len) << "\n";
+        ++messages;
 
-        size_t pack_len = size_packer::size_length( unpacked_.begin( ),
-                                                    unpacked_.end( ) );
+        ctx.clear( );
 
-        while( pack_len >= size_packer::min_length ) {
-
-            size_t unpacked = size_packer::unpack( unpacked_.begin( ),
-                                                   unpacked_.end( ) );
-
-            if( !validate_length( unpacked ) ) {
-                break;
-            }
-
-            if( unpacked_.size( ) >= (unpacked + pack_len) ) {
-
-                om_message( &this->unpacked_[pack_len], unpacked );
-
-                unpacked_.erase( unpacked_.begin( ),
-                                 unpacked_.begin( ) + pack_len + unpacked );
-
-                pack_len = size_packer::size_length( unpacked_.begin( ),
-                                                     unpacked_.end( ) );
-            } else {
-                break;
-            }
-        }
+        pack_begin( ctx, len );
+        pack_update( ctx, message, len );
+        pack_end( ctx );
+        parent_->write( ctx.data( ).c_str( ), ctx.data( ).size( ) );
+        parent_->read( );
     }
 
-    void pack_begin( size_t len )
+    bool validate_length( size_t len )
     {
-        static const size_t max = size_packer::max_length;
-        size_t old_size = packed_.size( );
-        packed_.resize( old_size + max + 1 );
-        size_t pack_size = size_packer::pack( len, &packed_[old_size] );
-        packed_.resize( old_size + pack_size );
+        return true;
     }
 
-    void pack_update( const char *data, size_t len )
+    void on_error( const char *message )
     {
-        packed_.insert( packed_.end( ), data, data + len );
+        std::cout << "on error: " << message << "\n";
     }
 
-    void pack_end( )
-    { }
-
-    std::string &packed( )
+    void on_read_error( const bs::error_code &err )
     {
-        return packed_;
+        std::cout << "on read error: " << err.message( ) << "\n";
     }
 
-    const std::string &packed( ) const
+    void on_write_error( const bs::error_code &err)
     {
-        return packed_;
+        std::cout << "on write error: " << err.message( ) << "\n";
     }
 
-protected:
+    void on_close( )
+    {
 
-    virtual void on_message( const char *message, size_t len ) = 0;
-    virtual bool validate_length( size_t len ) = 0;
+    }
 
-    std::string unpacked_;
-    std::string packed_;
 };
 
 struct udp_echo_delegate final: public common::transport::async::udp::delegate {
@@ -272,7 +253,7 @@ struct udp_acceptor_del: public acceptor::delegate {
     {
         std::cout << "New client!!!\n";
         gclients.insert( c->shared_from_this( ) );
-        udp_echo_delegate *deleg = new udp_echo_delegate;
+        auto deleg = new mess_delegate;
         c->set_delegate( deleg );
         deleg->parent_ = c->shared_from_this( );
         c->read( );
@@ -290,83 +271,8 @@ struct udp_acceptor_del: public acceptor::delegate {
     }
 };
 
-
-using varint = common::sizepack::varint<std::uint32_t>;
-
-std::string packed_data;
-std::string tmp_data;
-
-void om_message( const char *data, size_t len )
-{
-    std::cout << std::string(data, len)
-              << " = "
-              << len
-              << std::endl;
-}
-
-void pack( const char *data, size_t len )
-{
-    static const size_t max = varint::max_length;
-    size_t old_size = packed_data.size( );
-    packed_data.resize( old_size + max + len );
-    size_t packed = varint::pack( len, &packed_data[old_size] );
-    std::copy( data, data + len, &packed_data[old_size + packed] );
-    packed_data.resize( old_size + packed + len );
-}
-
-void unpack( const char *data, size_t length )
-{
-    packed_data.insert( packed_data.end( ), data, data + length );
-
-    size_t packed_len = varint::size_length( packed_data.begin( ),
-                                      packed_data.end( ) );
-
-    while( packed_len >= varint::min_length ) {
-
-        size_t unpacked = varint::unpack( packed_data.begin( ),
-                                          packed_data.end( ) );
-
-        if( packed_data.size( ) >= (unpacked + packed_len) ) {
-
-            om_message( &packed_data[packed_len], unpacked );
-
-            packed_data.erase( packed_data.begin( ),
-                               packed_data.begin( ) + packed_len + unpacked );
-
-            packed_len = varint::size_length( packed_data.begin( ),
-                                              packed_data.end( ) );
-        } else {
-            break;
-        }
-    }
-}
-
-void pack( const std::string &dat )
-{
-    pack( dat.c_str( ), dat.size( ) );
-}
-
 int main( )
 {
-    pack( "Hello!" );
-    pack( "Cruel" );
-    pack( "The world!" );
-    pack( "maldita sea!" );
-    pack( std::string(255, '!') );
-
-    std::string data;
-
-    std::cout << packed_data.size( ) << std::endl;
-
-    data.swap( packed_data );
-
-    for( auto &d: data ) {
-        unpack( &d, 1 );
-    }
-
-    std::cout << packed_data.size( ) << std::endl;
-
-    return 0;
 
     try {
         //ba::io_service::work wrk(ios);

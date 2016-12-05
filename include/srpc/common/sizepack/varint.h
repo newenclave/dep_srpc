@@ -16,6 +16,12 @@ namespace srpc { namespace common { namespace sizepack {
         static const size_t max_length = (sizeof(size_type) * 8) / 7 + 1;
         static const size_t min_length = 1;
 
+        static
+        bool valid_length( size_t len )
+        {
+            return (len >= min_length) && (len <= max_length);
+        }
+
         template <typename IterT>
         static size_t size_length( IterT begin, const IterT &end )
         {

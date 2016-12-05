@@ -34,7 +34,7 @@ namespace async {
 
             typedef srpc::shared_ptr<queue_value> shared_type;
             virtual void precall( ) { }
-            virtual void postcall(const error_code &) { }
+            virtual void postcall(const error_code &, size_t ) { }
             virtual ~queue_value( ) { }
             static
             shared_type create( const char *data, size_t length )
@@ -57,9 +57,9 @@ namespace async {
             {
                 cbacks.pre_call( );
             }
-            void postcall( const error_code &err )
+            void postcall( const error_code &err, size_t len )
             {
-                cbacks.post_call( err );
+                cbacks.post_call( err, len );
             }
 
             static
@@ -146,15 +146,14 @@ namespace async {
                 get_delegate( )->on_write_error( err );
                 on_write_error( err );
             }
-            top->postcall( err );
+            top->postcall( err, len );
             write_queue_.pop( );
             if( !write_queue_.empty( ) ) {
                 async_write( );
             }
         }
 
-        void write_to_handle( const error_code &err,
-                              size_t /*len*/,
+        void write_to_handle( const error_code &err, size_t len,
                               shared_type )
         {
             queue_value_sptr &top(write_queue_.front( ));
@@ -162,7 +161,7 @@ namespace async {
                 get_delegate( )->on_write_error( err );
                 on_write_to_error( err, top->to );
             }
-            top->postcall( err );
+            top->postcall( err, len );
 
             write_queue_.pop( );
             if( !write_queue_.empty( ) ) {
