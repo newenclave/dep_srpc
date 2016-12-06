@@ -24,6 +24,7 @@ namespace srpc { namespace client { namespace connector {
         virtual void close( ) = 0;
         virtual void connect( ) = 0;
         virtual void set_delegate( delegate * ) = 0;
+        virtual srpc::handle_type native_handle( ) = 0;
         virtual ~interface( ) { }
     };
 

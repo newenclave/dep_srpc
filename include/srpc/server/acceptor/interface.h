@@ -29,6 +29,7 @@ namespace srpc { namespace server { namespace acceptor {
         virtual void open( )         = 0;
         virtual void close( )        = 0;
         virtual void start_accept( ) = 0;
+        virtual srpc::handle_type native_handle( ) = 0;
         virtual void set_delegate( delegate * ) = 0;
     };
 

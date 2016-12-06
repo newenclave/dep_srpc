@@ -2,7 +2,8 @@
 #define CONFIG_HANDLE_H
 
 
-#if 0
+#if 1
+
 #ifdef _WIN32
 
 namespace CONFIG_TOPNAMESPACE {

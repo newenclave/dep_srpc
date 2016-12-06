@@ -74,7 +74,7 @@ namespace srpc { namespace common { namespace transport {
             return weak_type( shared_from_this( ) );
         }
 
-        std::weak_ptr<interface const> weak_from_this( ) const
+        srpc::weak_ptr<interface const> weak_from_this( ) const
         {
             return srpc::weak_ptr<interface const>( shared_from_this( ));
         }

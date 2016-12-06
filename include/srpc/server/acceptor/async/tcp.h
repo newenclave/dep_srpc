@@ -109,7 +109,6 @@ namespace async {
 
             acceptor_.bind( ep_ );
             acceptor_.listen( 5 );
-
         }
 
         void close( )
