@@ -106,6 +106,11 @@ namespace async {
                 }
             }
 
+            srpc::handle_type native_handle( )
+            {
+                return srpc::invalid_handle_value;
+            }
+
             void push_data( srpc::shared_ptr<std::string> data )
             {
                 parent_->acceptor_->get_dispatcher( ).post(
@@ -291,7 +296,7 @@ namespace async {
             delegate_ = val;
         }
 
-        native_handle_type native_handle( )
+        srpc::handle_type native_handle( )
         {
             return acceptor_->native_handle( );
         }

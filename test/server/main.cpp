@@ -79,8 +79,9 @@ std::set< std::shared_ptr<common::transport::interface> > gclients;
 
 template <typename SizePack>
 using delegate_message = common::transport::delegates::message<SizePack>;
+using size_pack_policy = common::sizepack::varint<std::uint16_t>;
 
-class mess_delegate: public delegate_message<common::sizepack::varint<std::uint16_t> > {
+class mess_delegate: public delegate_message<size_pack_policy> {
 
 public:
 

@@ -5,6 +5,7 @@
 #include "srpc/common/config/memory.h"
 #include "srpc/common/config/functional.h"
 #include "srpc/common/config/stdint.h"
+#include "srpc/common/config/handle.h"
 #include "srpc/common/config/system.h"
 
 namespace srpc { namespace common { namespace transport {
@@ -78,6 +79,7 @@ namespace srpc { namespace common { namespace transport {
             return srpc::weak_ptr<interface const>( shared_from_this( ));
         }
 
+
         virtual void open( )  = 0;
         virtual void close( ) = 0;
 
@@ -87,6 +89,7 @@ namespace srpc { namespace common { namespace transport {
 
         virtual void read( ) = 0;
         virtual void set_delegate( delegate *val ) = 0;
+        virtual srpc::handle_type native_handle( ) = 0;
 
         virtual ~interface( ) { }
     };

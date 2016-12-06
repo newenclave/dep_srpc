@@ -135,7 +135,7 @@ namespace async {
             delegate_ = val;
         }
 
-        native_handle_type native_handle( )
+        srpc::handle_type native_handle( )
         {
             return acceptor_.native_handle( );
         }

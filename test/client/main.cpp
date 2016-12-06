@@ -38,50 +38,12 @@ using stream_transport = common::transport::async::stream<StreamType>;
 using tcp_transport = common::transport::async::tcp;
 using udp_transport = common::transport::async::udp;
 
-struct tcp_echo_delegate final: public common::transport::interface::delegate {
-
-    using cb = common::transport::interface::write_callbacks;
-
-    std::shared_ptr<common::transport::interface> parent_;
-
-    void on_read_error( const bs::error_code &err )
-    {
-        std::cout << "Read error " << err.message( ) << "\n";
-        parent_->close( );
-    }
-
-    void on_write_error( const bs::error_code &)
-    {
-
-    }
-
-    void on_data( const char *data, size_t len )
-    {
-        std::shared_ptr<std::string> echo
-                = std::make_shared<std::string>( data, len );
-        std::cout << std::string(data, len);
-        std::cin >> *echo;
-        parent_->write( echo->c_str( ), echo->size( ),
-                        cb::post([echo](...){ }) );
-        parent_->read( );
-    }
-
-    void on_close( )
-    {
-        parent_.reset( );
-    }
-
-    void start_read( )
-    {
-        parent_->read( );
-    }
-
-};
-
 template <typename SizePack>
 using delegate_message = common::transport::delegates::message<SizePack>;
 
-class mess_delegate: public delegate_message<common::sizepack::varint<std::uint16_t> > {
+using size_pack_policy = common::sizepack::varint<std::uint16_t>;
+
+class mess_delegate: public delegate_message<size_pack_policy> {
 
 public:
 
@@ -224,52 +186,6 @@ struct connector_delegate: public connector::delegate {
         std::cerr << "Close\n";
     }
 };
-
-std::atomic<std::uint64_t> gdata {0};
-
-void call( )
-{
-    gdata++;
-}
-
-
-int main_( )
-{
-    static const size_t threads = 5;
-    ba::io_service         *ioss[threads];
-    ba::io_service::work   *wrk[threads];
-    ba::io_service::strand *dispatchers[threads];
-    std::thread            *thrds[threads];
-
-    for( auto d = 0; d < threads; d++ ) {
-        ioss[d] = new ba::io_service;
-        wrk[d]  = new ba::io_service::work(*ioss[d]);
-        dispatchers[d] = new ba::io_service::strand(*ioss[0]);
-    }
-
-    for( auto d = 0; d < threads; d++ ) {
-        thrds[d] = new std::thread( [&ioss, d]( ) { ioss[0]->run( ); } );
-    }
-
-    for( size_t i=0; i<2000000; i++ ) {
-        dispatchers[0]->post( call );
-        //dispatchers[i % threads]->post( call );
-        //dispatcher.post( call );
-    }
-
-    for( auto d = 0; d < threads; d++ ) {
-        delete wrk[d];
-    }
-
-    for( auto d = 0; d < threads; d++ ) {
-        if(thrds[d]->joinable( )) {
-            thrds[d]->join( );
-        }
-    }
-    std::cout << gdata << std::endl;
-
-    return 0;
-}
 
 int main( )
 {

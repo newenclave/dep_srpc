@@ -23,8 +23,8 @@ namespace async {
 
     public:
 
-        typedef asio_tcp::endpoint endpoint;
-        typedef parent_type::delegate delegate;
+        typedef asio_tcp::endpoint              endpoint;
+        typedef parent_type::delegate           delegate;
         typedef parent_type::native_handle_type native_handle_type;
 
         tcp(io_service &ios, srpc::uint32_t buflen )
