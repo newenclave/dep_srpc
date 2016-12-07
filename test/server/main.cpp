@@ -80,7 +80,8 @@ std::set< std::shared_ptr<common::transport::interface> > gclients;
 
 template <typename SizePack>
 using delegate_message = common::transport::delegates::message<SizePack>;
-using size_pack_policy = common::sizepack::varint<std::uint16_t>;
+using size_pack_policy = common::sizepack::none;
+//using size_pack_policy = common::sizepack::varint<std::uint16_t>;
 
 class mess_delegate: public delegate_message<size_pack_policy> {
 
@@ -224,7 +225,7 @@ buffer_type update_cursor( const char *data, size_t len )
 
 buffer_type start_new_stream( const char *data, size_t len )
 {
-    static const size_t max_len = size_pack_policy::max_length;
+    static const size_t max_len = size_pack_policy::max_length + 1;
     static const size_t min_len = size_pack_policy::min_length;
 
     size_t old_packed = unpacked.size( );
@@ -251,7 +252,7 @@ buffer_type start_new_stream( const char *data, size_t len )
         on_stream_begin( unpack_size );
 
         return buffer_type( data + used, len - used );
-    } else if( unpacked.size( ) > max_len ) {
+    } else if( unpacked.size( ) >= max_len ) {
         on_error( "Bad serialized data; prefix > max_length." );
         unpacked.resize( old_packed );
         return buffer_type( );
@@ -291,17 +292,17 @@ int main( )
     std::string data;
 
     data += pack( "Hello! stream" );
-    data += pack( "Hello! stream2" );
-    data += pack( "1234567890123456789012345678901234567890"
-                  "1234567890123456789012345678901234567890"
-                  );
-    data += pack( std::string( 65530, '!' ) );
+//    data += pack( "Hello! stream2" );
+//    data += pack( "1234567890123456789012345678901234567890"
+//                  "1234567890123456789012345678901234567890"
+//                  );
+//    data += pack( std::string( 65, '!' ) );
 
-//    on_data( &data[0], data.size( ) );
+    on_data( &data[0], data.size( ) );
 
-    for( auto &s: data ) {
-        on_data( &s, 1 );
-    }
+//    for( auto &s: data ) {
+//        on_data( &s, 1 );
+//    }
 
     return 0;
     try {
