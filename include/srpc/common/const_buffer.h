@@ -15,6 +15,11 @@ namespace srpc { namespace common {
 
         typedef T value_type;
 
+        const_buffer( )
+            :data_(NULL)
+            ,length_(0)
+        { }
+
         const_buffer( const value_type *val, size_t len )
             :data_(val)
             ,length_(len)

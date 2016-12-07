@@ -32,26 +32,26 @@ namespace delegates {
             return true;
         }
 
-//        void start_stream( const char *data, size_t len )
-//        {
-//            size_t pack_len = size_policy::size_length( data, data + len );
-//            while( (len > 0) && chck( pack_len )
-//                   && (pack_len >= size_policy::min_length) )
-//            {
-//                size_t unpacked = size_policy::unpack( data, data + len );
-//                if( !validate_length( unpacked ) ) {
-//                    break;
-//                }
-//                data += pack_len;
-//                len  -= pack_len;
-//                on_stream_begin( unpacked );
-//                if( len < unpacked ) {
+        void start_stream( const char *data, size_t len )
+        {
+            size_t pack_len = size_policy::size_length( data, data + len );
+            while( (len > 0) && chck( pack_len )
+                   && (pack_len >= size_policy::min_length) )
+            {
+                size_t unpacked = size_policy::unpack( data, data + len );
+                if( !validate_length( unpacked ) ) {
+                    break;
+                }
+                data += pack_len;
+                len  -= pack_len;
+                on_stream_begin( unpacked );
+                if( len < unpacked ) {
 
-//                } else {
-//                    cursor_ = len - unpacked;
-//                }
-//            }
-//        }
+                } else {
+                    cursor_ = len - unpacked;
+                }
+            }
+        }
 
 //        void on_data( const char *data, size_t len )
 //        {
