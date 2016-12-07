@@ -54,7 +54,7 @@ namespace delegates {
         buffer_type update_cursor( const char *data, size_t len )
         {
             if( cursor_ <= len ) {
-                on_stream_update( data, cursor );
+                on_stream_update( data, cursor_ );
                 len     -= cursor_;
                 data    += cursor_;
                 cursor_  = 0;
@@ -73,16 +73,16 @@ namespace delegates {
             static const size_t max_len = size_policy::max_length + 1;
             static const size_t min_len = size_policy::min_length;
 
-            size_t old_packed = unpacked.size( );
+            size_t old_packed = tmp_.size( );
             size_t minimum    = ((len < max_len) ? len : max_len);
 
-            tmp_.insert( unpacked.end( ), data, data + minimum );
+            tmp_.insert( tmp_.end( ), data, data + minimum );
 
             size_t packed = size_policy::size_length( tmp_.begin( ),
                                                       tmp_.end( ) );
 
             if( packed >= min_len ) {
-                size_policy::size_type unpack_size
+                typename size_policy::size_type unpack_size
                         = size_policy::unpack( tmp_.begin( ), tmp_.end( ) );
 
                 if( !validate_length( unpack_size ) ) {
@@ -99,9 +99,9 @@ namespace delegates {
 
                 return buffer_type( data + used, len - used );
 
-            } else if( unpacked.size( ) >= max_len ) {
+            } else if( tmp_.size( ) >= max_len ) {
                 on_error( "Bad serialized data; prefix > max_length." );
-                unpacked.resize( old_packed );
+                tmp_.resize( old_packed );
                 return buffer_type( );
             } else {
                 return buffer_type( data + minimum, len - minimum );
@@ -114,7 +114,7 @@ namespace delegates {
         {
             buffer_type buff(data, len);
             do {
-                if( cursor ) {
+                if( cursor_ ) {
                     buff = update_cursor( buff.data( ), buff.size( ) );
                 }
                 if( buff.size( ) ) {

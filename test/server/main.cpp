@@ -6,6 +6,7 @@
 
 #include "srpc/common/transport/interface.h"
 #include "srpc/common/transport/delegates/message.h"
+#include "srpc/common/transport/delegates/stream.h"
 #include "srpc/common/transport/async/stream.h"
 #include "srpc/common/transport/async/tcp.h"
 #include "srpc/common/transport/async/udp.h"
@@ -80,6 +81,10 @@ std::set< std::shared_ptr<common::transport::interface> > gclients;
 
 template <typename SizePack>
 using delegate_message = common::transport::delegates::message<SizePack>;
+
+template <typename SizePack>
+using delegate_stream = common::transport::delegates::stream<SizePack>;
+
 using size_pack_policy = common::sizepack::none;
 //using size_pack_policy = common::sizepack::varint<std::uint16_t>;
 
@@ -136,6 +141,58 @@ public:
         parent_.reset( );
         delete this;
     }
+
+};
+
+
+class stream_delegate: public delegate_stream<size_pack_policy> {
+
+public:
+
+    std::shared_ptr<common::transport::interface> parent_;
+    using cb = common::transport::interface::write_callbacks;
+    mess_delegate::pack_context ctx;
+
+    void on_stream_begin( size_t len )
+    {
+
+    }
+
+    void on_stream_update( const char *part, size_t len )
+    {
+
+    }
+
+    void on_stream_end( )
+    {
+
+    }
+
+    bool validate_length( size_t len )
+    {
+        return true;
+    }
+
+    void on_error( const char *message )
+    {
+
+    }
+
+    void on_read_error( const bs::error_code & )
+    {
+
+    }
+
+    void on_write_error( const bs::error_code &)
+    {
+
+    }
+
+    void on_close( )
+    {
+
+    }
+
 
 };
 
