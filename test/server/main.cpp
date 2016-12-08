@@ -147,7 +147,6 @@ public:
 
 };
 
-
 class stream_delegate: public delegate_stream<size_pack_policy> {
 
 public:
