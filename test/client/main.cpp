@@ -49,7 +49,7 @@ class mess_delegate: public delegate_message<size_pack_policy> {
 
 public:
 
-    std::shared_ptr<common::transport::interface> parent_;
+    srpc::shared_ptr<common::transport::interface> parent_;
     using cb = common::transport::interface::write_callbacks;
     int cnt = 0;
 

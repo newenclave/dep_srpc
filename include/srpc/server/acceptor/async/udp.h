@@ -177,7 +177,7 @@ namespace async {
                 } else {
                     if( parent_->accept_ ) {
                         srpc::shared_ptr<client_type> next
-                                = std::make_shared<client_type>(parent_, ep);
+                                = srpc::make_shared<client_type>(parent_, ep);
                         parent_->clients_[ep] = next;
                         next->read_queue_.push_back( dat );
                         parent_->delegate_->on_accept_client( next.get( ),

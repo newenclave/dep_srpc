@@ -4,6 +4,8 @@
 #include "boost/asio.hpp"
 #include "boost/lexical_cast.hpp"
 
+#include "srpc/common/config/chrono.h"
+
 #include "srpc/common/transport/interface.h"
 #include "srpc/common/transport/delegates/message.h"
 #include "srpc/common/transport/delegates/stream.h"
@@ -78,7 +80,7 @@ using stream_transport = common::transport::async::stream<StreamType>;
 using tcp_transport = common::transport::async::tcp;
 using udp_transport = common::transport::async::udp;
 
-std::set< std::shared_ptr<common::transport::interface> > gclients;
+std::set< srpc::shared_ptr<common::transport::interface> > gclients;
 
 template <typename SizePack>
 using delegate_message = common::transport::delegates::message<SizePack>;
@@ -93,7 +95,7 @@ class mess_delegate: public delegate_message<size_pack_policy> {
 
 public:
 
-    std::shared_ptr<common::transport::interface> parent_;
+    srpc::shared_ptr<common::transport::interface> parent_;
     using cb = common::transport::interface::write_callbacks;
     mess_delegate::pack_context ctx;
 
@@ -225,7 +227,7 @@ using udp_acceptor = server::acceptor::async::udp;
 
 struct udp_acceptor_del: public acceptor::delegate {
 
-    std::shared_ptr<tcp_acceptor>   acceptor_;
+    srpc::shared_ptr<tcp_acceptor>   acceptor_;
 
     void on_disconnect_client( common::transport::interface * )
     {
@@ -237,7 +239,7 @@ struct udp_acceptor_del: public acceptor::delegate {
     {
         std::cout << "New client!!!\n";
         gclients.insert( c->shared_from_this( ) );
-        auto deleg = new stream_delegate;
+        auto deleg = new mess_delegate;//stream_delegate;
         c->set_delegate( deleg );
         deleg->parent_ = c->shared_from_this( );
         c->read( );
@@ -281,7 +283,7 @@ int main( )
     q.push_to_slot( 100, data { 4, "r" } );
 
     data d;
-    auto res = q.read_slot( 100, d, std::chrono::seconds(1) );
+    auto res = q.read_slot( 100, d, srpc::chrono::seconds(1) );
 
     std::cout << "res: " << d.i << " = "
               << d.str << " "
