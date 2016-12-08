@@ -236,6 +236,7 @@ struct udp_acceptor_del: public acceptor::delegate {
 
 struct data {
     int i;
+    std::string str;
 };
 
 bool operator < (const data &l, const data &r)
@@ -245,7 +246,7 @@ bool operator < (const data &l, const data &r)
 
 template <typename T>
 using priority = common::queues::traits::priority<T>;
-using pqueue = common::queues::condition<size_t, data, priority<data> >;
+using pqueue   = common::queues::condition<size_t, data, priority<data> >;
 
 int main( )
 {
@@ -253,15 +254,17 @@ int main( )
 
     auto slot = q.add_slot( 100 );
 
-    q.push_to_slot( 100, data { 1 } );
-    q.push_to_slot( 100, data { 2 } );
-    q.push_to_slot( 100, data { 3 } );
-    q.push_to_slot( 100, data { 4 } );
+    q.push_to_slot( 100, data { 1, "q" } );
+    q.push_to_slot( 100, data { 2, "w" } );
+    q.push_to_slot( 100, data { 3, "e" } );
+    q.push_to_slot( 100, data { 4, "r" } );
 
     data d;
     auto res = q.read_slot( 100, d, std::chrono::seconds(1) );
 
-    std::cout << "res: " << d.i << " = " << res << "\n";
+    std::cout << "res: " << d.i << " = "
+              << d.str << " "
+              << res << "\n";
 
     return 0;
     try {
