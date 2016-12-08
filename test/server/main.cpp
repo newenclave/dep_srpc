@@ -13,6 +13,7 @@
 #include "srpc/server/acceptor/interface.h"
 #include "srpc/server/acceptor/async/tcp.h"
 #include "srpc/server/acceptor/async/udp.h"
+#include "srpc/common/queues/condition.h"
 
 #include "srpc/common/sizepack/varint.h"
 #include "srpc/common/sizepack/fixint.h"
@@ -233,9 +234,36 @@ struct udp_acceptor_del: public acceptor::delegate {
     }
 };
 
+struct data {
+    int i;
+};
+
+bool operator < (const data &l, const data &r)
+{
+    return l.i < r.i;
+}
+
+template <typename T>
+using priority = common::queues::traits::priority<T>;
+using pqueue = common::queues::condition<size_t, data, priority<data> >;
+
 int main( )
 {
+    pqueue q;
 
+    auto slot = q.add_slot( 100 );
+
+    q.push_to_slot( 100, data { 1 } );
+    q.push_to_slot( 100, data { 2 } );
+    q.push_to_slot( 100, data { 3 } );
+    q.push_to_slot( 100, data { 4 } );
+
+    data d;
+    auto res = q.read_slot( 100, d, std::chrono::seconds(1) );
+
+    std::cout << "res: " << d.i << " = " << res << "\n";
+
+    return 0;
     try {
         //ba::io_service::work wrk(ios);
 

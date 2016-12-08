@@ -5,6 +5,8 @@ list( APPEND src_dirs
       ${INCLUDE_DIR}/srpc/server
       ${INCLUDE_DIR}/srpc/common
       ${INCLUDE_DIR}/srpc/common/sizepack
+      ${INCLUDE_DIR}/srpc/common/queues
+      ${INCLUDE_DIR}/srpc/common/queues/traits
       ${INCLUDE_DIR}/srpc/common/transport
       ${INCLUDE_DIR}/srpc/common/transport/delegates
       ${INCLUDE_DIR}/srpc/common/transport/async

@@ -17,6 +17,8 @@
 #include "srpc/client/connector/async/tcp.h"
 #include "srpc/client/connector/async/udp.h"
 
+#include "srpc/common/queues/condition.h"
+
 #include <memory>
 #include <queue>
 #include <thread>
