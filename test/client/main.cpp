@@ -53,7 +53,7 @@ public:
     using cb = common::transport::interface::write_callbacks;
     int cnt = 0;
 
-    mess_delegate::pack_context ctx;
+    //mess_delegate::pack_context ctx;
 
     mess_delegate( int c )
         :cnt(c)
@@ -61,19 +61,18 @@ public:
 
     void on_message( const char *message, size_t len )
     {
+        auto ctx = std::make_shared<mess_delegate::pack_context>( );
         if( cnt-- > 0 ) {
 
             if( 0 == cnt % 10000 ) {
                 std::cout << cnt << std::endl;
             }
 
-            ctx.clear( );
-            pack_begin( ctx, len );
-            pack_update( ctx, message, len );
-            pack_end( ctx );
-            parent_->write( ctx.data( ).c_str( ), ctx.data( ).size( ) );
-
-            //std::cout << "sent " <<  packed( ).size( ) << " bytes\n";
+            pack_begin( *ctx, len );
+            pack_update( *ctx, "?", 1 );
+            pack_end( *ctx );
+            parent_->write( ctx->data( ).c_str( ), ctx->data( ).size( ),
+                            cb::post( [ctx]( ... ) { } ));
 
             parent_->read( );
         } else {
@@ -103,7 +102,6 @@ public:
 
     void on_close( )
     {
-
     }
 
 
@@ -173,7 +171,7 @@ struct connector_delegate: public connector::delegate {
         std::cout << "On connect!!\n";
         echo_.parent_ = c->shared_from_this( );
         c->set_delegate( &echo_ );
-        echo_.on_message( "1", 0 );
+        echo_.on_message( "?", 1 );
         //c->write( "1", 1 );
         c->read( );
     }

@@ -86,8 +86,8 @@ using delegate_message = common::transport::delegates::message<SizePack>;
 template <typename SizePack>
 using delegate_stream = common::transport::delegates::stream<SizePack>;
 
-using size_pack_policy = common::sizepack::none;
-//using size_pack_policy = common::sizepack::varint<std::uint16_t>;
+///using size_pack_policy = common::sizepack::none;
+using size_pack_policy = common::sizepack::varint<std::uint16_t>;
 
 class mess_delegate: public delegate_message<size_pack_policy> {
 
@@ -152,21 +152,40 @@ public:
 
     std::shared_ptr<common::transport::interface> parent_;
     using cb = common::transport::interface::write_callbacks;
-    mess_delegate::pack_context ctx;
+    //stream_delegate::pack_context ctx;
+    size_t len_;
 
     void on_stream_begin( size_t len )
     {
-
+        len_ = len;
+        //std::cout << "stream begin " << len << "\n";
     }
 
     void on_stream_update( const char *part, size_t len )
     {
-
+        //std::cout << "stream update " << std::string(part, len) << "\n";
+        auto ctx = std::make_shared<stream_delegate::pack_context>( );
+        if( len_ > 0) {
+            pack_length( *ctx, len_ );
+            len_ = 0;
+            ctx->data( ).append( part, part + len );
+        } else {
+            ctx->data( ).assign( part, part + len );
+        }
+        parent_->write( ctx->data( ).c_str( ), ctx->data( ).size( ),
+                        cb::post( [ctx]( ... ){  } ));
     }
 
     void on_stream_end( )
     {
+        messages++;
+        //std::cout << "stream end "<< "\n";
+    }
 
+    void on_read_end( )
+    {
+        //std::cout << "new read "<< "\n";
+        parent_->read( );
     }
 
     bool validate_length( size_t len )
@@ -176,24 +195,26 @@ public:
 
     void on_error( const char *message )
     {
-
+        std::cerr << "Stream Error: " << message << "\n";
+        parent_->close( );
     }
 
-    void on_read_error( const bs::error_code & )
+    void on_read_error( const bs::error_code &err )
     {
-
+        std::cout << "on read error: " << err.message( ) << "\n";
+        parent_->close( );
     }
 
-    void on_write_error( const bs::error_code &)
+    void on_write_error( const bs::error_code &err )
     {
-
+        std::cout << "on write error: " << err.message( ) << "\n";
+        parent_->close( );
     }
 
     void on_close( )
     {
-
+        delete this;
     }
-
 
 };
 
@@ -216,7 +237,7 @@ struct udp_acceptor_del: public acceptor::delegate {
     {
         std::cout << "New client!!!\n";
         gclients.insert( c->shared_from_this( ) );
-        auto deleg = new mess_delegate;
+        auto deleg = new stream_delegate;
         c->set_delegate( deleg );
         deleg->parent_ = c->shared_from_this( );
         c->read( );
@@ -266,7 +287,7 @@ int main( )
               << d.str << " "
               << res << "\n";
 
-    return 0;
+//    /return 0;
     try {
         //ba::io_service::work wrk(ios);
 

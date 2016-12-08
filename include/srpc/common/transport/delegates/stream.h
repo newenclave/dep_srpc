@@ -23,7 +23,7 @@ namespace delegates {
         { }
 
         class pack_context {
-            friend class message<SizePackPolicy>;
+            friend class stream<SizePackPolicy>;
             std::string data_;
         public:
             std::string &data( )
@@ -121,11 +121,13 @@ namespace delegates {
                     buff = start_new_stream( buff.data( ), buff.size( ) );
                 }
             } while( buff.size( ) );
+            on_read_end( );
         }
 
         virtual void on_stream_begin( size_t len ) = 0;
         virtual void on_stream_update( const char *part, size_t len ) = 0;
         virtual void on_stream_end( ) = 0;
+        virtual void on_read_end( ) = 0;
         virtual bool validate_length( size_t len ) = 0;
         virtual void on_error( const char *message ) = 0;
 //        virtual void on_read_error( const error_code & ) = 0;
