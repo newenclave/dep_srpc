@@ -45,7 +45,6 @@ namespace calls {
             }
         }
 
-
     public:
 
         typedef PeriodType period_type;

@@ -45,9 +45,9 @@ SRPC_ASIO::io_service gios[4];
 std::uint64_t ticks_now( )
 {
     using std::chrono::duration_cast;
-    using microsec = std::chrono::microseconds;
+    using milliseconds = std::chrono::milliseconds;
     auto n = std::chrono::high_resolution_clock::now( );
-    return duration_cast<microsec>(n.time_since_epoch( )).count( );
+    return duration_cast<milliseconds>(n.time_since_epoch( )).count( );
 }
 
 ba::io_service test_io;
@@ -98,6 +98,21 @@ public:
     srpc::shared_ptr<common::transport::interface> parent_;
     using cb = common::transport::interface::write_callbacks;
     mess_delegate::pack_context ctx;
+    std::uint64_t last_tick_ = ticks_now( );
+    common::timers::calls::periodical<srpc::chrono::milliseconds> timer_;
+
+    mess_delegate(SRPC_ASIO::io_service &ios)
+        :timer_(ios, 1000 )
+    {
+        timer_.call( [this]( ... ) {
+            auto now = ticks_now( );
+            if( now - last_tick_ > 10000 ) {
+                std::cout << "Client expired\n";
+                parent_->close( );
+                timer_.cancel( );
+            }
+        } );
+    }
 
     void on_message( const char *message, size_t len )
     {
@@ -141,6 +156,7 @@ public:
 
     void on_close( )
     {
+        std::cout << "on close\n";
         parent_.reset( );
         delete this;
     }
@@ -238,7 +254,7 @@ struct udp_acceptor_del: public acceptor::delegate {
     {
         std::cout << "New client!!!\n";
         gclients.insert( c->shared_from_this( ) );
-        auto deleg = new mess_delegate;//stream_delegate;
+        auto deleg = new mess_delegate( acceptor_->get_io_service( ) );//stream_delegate;
         c->set_delegate( deleg );
         deleg->parent_ = c->shared_from_this( );
         c->read( );

@@ -216,8 +216,6 @@ namespace async {
                     f->second->delegate_->on_close( );
                     clients_.erase( f );
                 }
-                delegate_->on_close( );
-                acceptor_->close( );
             }
         }
 
@@ -283,6 +281,7 @@ namespace async {
 
         void close( )
         {
+            delegate_->on_close( );
             acceptor_->close( );
         }
 
@@ -304,6 +303,16 @@ namespace async {
         void resize_buffer( size_t new_size )
         {
             acceptor_->resize_buffer( new_size );
+        }
+
+        SRPC_ASIO::io_service &get_io_service( )
+        {
+            return acceptor_->get_io_service( );
+        }
+
+        const SRPC_ASIO::io_service &get_io_service( ) const
+        {
+            return acceptor_->get_io_service( );
         }
 
     private:

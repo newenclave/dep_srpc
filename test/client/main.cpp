@@ -79,9 +79,9 @@ public:
 //                if( err ) {
 //                    throw SRPC_SYSTEM::system_error( err );
 //                };
-                std::cout << "sent " << len << " bytes from "
-                            << ctx->data( ).size( )
-                          << " error " << err.message( ) << "\n";
+//                std::cout << "sent " << len << " bytes from "
+//                            << ctx->data( ).size( )
+//                          << " error " << err.message( ) << "\n";
             } ));
 
             parent_->read( );
@@ -209,7 +209,7 @@ int main( )
         transtort_type::endpoint ep(ba::ip::address::from_string("127.0.0.1"), 2356);
 
         connector_delegate deleg;
-        auto uc = std::make_shared<client::connector::async::udp>(std::ref(ios), 4096, ep);
+        auto uc = srpc::make_shared<client::connector::async::udp>(std::ref(ios), 4096, ep);
 
         uc->set_delegate( &deleg );
         uc->connect( );
