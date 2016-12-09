@@ -1,12 +1,6 @@
 #ifndef SRPC_COMMON_TIMERS_TYPES_H
 #define SRPC_COMMON_TIMERS_TYPES_H
 
-#ifdef ASIO_STANALONE
-#include "asio/basic_waitable_timer.hpp"
-#else
-#include "boost/asio/basic_deadline_timer.hpp"
-#endif
-
 #include "srpc/common/config/chrono.h"
 
 namespace srpc { namespace common {  namespace timers {
