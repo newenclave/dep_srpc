@@ -67,11 +67,22 @@ public:
                 std::cout << cnt << std::endl;
             }
 
-            pack_begin( *ctx, len );
-            pack_update( *ctx, "?", 1 );
+            pack_begin( *ctx, 10 * 1000 );
+
+            for( int i=0; i<1000; i++ )
+                pack_update( *ctx, "??????????", 10 );
             pack_end( *ctx );
+
             parent_->write( ctx->data( ).c_str( ), ctx->data( ).size( ),
-                            cb::post( [ctx]( ... ) { } ));
+            cb::post([ctx]( const bs::error_code &err, size_t len )
+            {
+//                if( err ) {
+//                    throw SRPC_SYSTEM::system_error( err );
+//                };
+                std::cout << "sent " << len << " bytes from "
+                            << ctx->data( ).size( )
+                          << " error " << err.message( ) << "\n";
+            } ));
 
             parent_->read( );
         } else {
@@ -162,7 +173,7 @@ struct connector_delegate: public connector::delegate {
     mess_delegate echo_;
 
     connector_delegate( )
-        :echo_(1000000)
+        :echo_(100000)
     { }
 
     void on_connect( common::transport::interface *c )
@@ -191,17 +202,18 @@ int main( )
     try {
 
         std::cout << sizeof(std::function<void( )>) << "\n\n";
-        using transtort_type      = tcp_transport;
+        using transtort_type      = udp_transport;
         using transtort_delegate  = udp_echo_delegate;
 
         ba::io_service ios;
         transtort_type::endpoint ep(ba::ip::address::from_string("127.0.0.1"), 2356);
 
         connector_delegate deleg;
-        auto uc = std::make_shared<client::connector::async::tcp>(std::ref(ios), 4096, ep);
+        auto uc = std::make_shared<client::connector::async::udp>(std::ref(ios), 4096, ep);
 
         uc->set_delegate( &deleg );
         uc->connect( );
+        uc->transport( )->resize_buffer(8000);
 
         ios.run( );
 

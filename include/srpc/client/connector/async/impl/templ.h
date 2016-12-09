@@ -15,7 +15,11 @@ namespace async { namespace impl {
     template<typename TransportType>
     class templ: public interface {
 
+    public:
+
         typedef TransportType transport_type;
+
+    private:
 
         class client_type: public transport_type {
 
@@ -121,6 +125,16 @@ namespace async { namespace impl {
         native_handle_type native_handle( )
         {
             return client_->native_handle( );
+        }
+
+        transport_type *transport( )
+        {
+            return client_.get( );
+        }
+
+        const transport_type *transport( ) const
+        {
+            return client_.get( );
         }
 
     private:

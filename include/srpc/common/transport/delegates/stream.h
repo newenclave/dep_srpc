@@ -121,13 +121,13 @@ namespace delegates {
                     buff = start_new_stream( buff.data( ), buff.size( ) );
                 }
             } while( buff.size( ) );
-            on_read_end( );
+            on_need_read( );
         }
 
         virtual void on_stream_begin( size_t len ) = 0;
         virtual void on_stream_update( const char *part, size_t len ) = 0;
         virtual void on_stream_end( ) = 0;
-        virtual void on_read_end( ) = 0;
+        virtual void on_need_read( ) = 0;
         virtual bool validate_length( size_t len ) = 0;
         virtual void on_error( const char *message ) = 0;
 //        virtual void on_read_error( const error_code & ) = 0;

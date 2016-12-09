@@ -301,6 +301,11 @@ namespace async {
             return acceptor_->native_handle( );
         }
 
+        void resize_buffer( size_t new_size )
+        {
+            acceptor_->resize_buffer( new_size );
+        }
+
     private:
 
         delegate                          *delegate_;

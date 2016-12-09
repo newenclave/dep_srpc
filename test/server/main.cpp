@@ -46,9 +46,9 @@ std::uint64_t ticks_now( )
     return duration_cast<microsec>(n.time_since_epoch( )).count( );
 }
 
-SRPC_ASIO::io_service test_io;
-SRPC_ASIO::io_service ios;
-SRPC_ASIO::io_service ios2;
+ba::io_service test_io;
+ba::io_service ios;
+ba::io_service ios2;
 
 void show_messages(  )
 {
@@ -112,7 +112,7 @@ public:
 
     bool validate_length( size_t len )
     {
-        if( len >= 10000 ) {
+        if( len >= 100000 ) {
             parent_->close( );
             return false;
         }
@@ -179,7 +179,7 @@ public:
         //std::cout << "stream end "<< "\n";
     }
 
-    void on_read_end( )
+    void on_need_read( )
     {
         //std::cout << "new read "<< "\n";
         parent_->read( );
@@ -222,7 +222,7 @@ using udp_acceptor = server::acceptor::async::udp;
 
 struct udp_acceptor_del: public acceptor::delegate {
 
-    srpc::shared_ptr<tcp_acceptor>   acceptor_;
+    srpc::shared_ptr<udp_acceptor>   acceptor_;
 
     void on_disconnect_client( common::transport::interface * )
     {
@@ -295,9 +295,9 @@ int main( )
         ba::io_service::work wrk2(gios[2]);
         ba::io_service::work wrk3(gios[3]);
 
-        tcp_transport::endpoint uep(ba::ip::address::from_string("0.0.0.0"), 2356);
+        udp_transport::endpoint uep(ba::ip::address::from_string("0.0.0.0"), 2356);
 
-        auto acc =  tcp_acceptor::create( ios, 4096, uep );
+        auto acc =  udp_acceptor::create( ios, 4096, uep );
 
         udp_acceptor_del udeleg;
 
@@ -305,6 +305,8 @@ int main( )
         udeleg.acceptor_ = acc;
 
         acc->open( );
+
+        acc->resize_buffer( 12000 );
 
 #if 0 && defined(SO_REUSEPORT) && (SO_REUSEPORT != 0)
         int opt = 1;
