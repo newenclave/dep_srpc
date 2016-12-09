@@ -235,8 +235,7 @@ namespace async {
 
         void write( const char *data, size_t len, write_callbacks cback )
         {
-            queue_callback::shared_type t
-                    = queue_callback::create( data, len );
+            queue_callback::shared_type t = queue_callback::create( data, len );
             t->cbacks  = cback;
             push_to_queue( t );
         }

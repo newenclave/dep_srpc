@@ -44,6 +44,27 @@ namespace srpc { namespace common {
         {
             return length_;
         }
+
+        const value_type *begin( ) const
+        {
+            return data_;
+        }
+
+        const value_type *end( ) const
+        {
+            return data_ + length_;
+        }
+
+        value_type *begin( )
+        {
+            return data_;
+        }
+
+        value_type *end( )
+        {
+            return data_ + length_;
+        }
+
     };
 }}
 

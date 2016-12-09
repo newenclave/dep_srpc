@@ -21,8 +21,6 @@
 #include "srpc/common/sizepack/fixint.h"
 #include "srpc/common/sizepack/none.h"
 
-#include <shared_mutex>
-
 #include <memory>
 #include <queue>
 #include <chrono>

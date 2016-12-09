@@ -2,7 +2,7 @@
 #define CONFIG_HANDLE_H
 
 
-#if 1
+#if 0
 
 #ifdef _WIN32
 

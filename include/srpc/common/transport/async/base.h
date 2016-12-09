@@ -69,9 +69,9 @@ namespace async {
 
     public:
 
-        typedef SocketType                               socket_type;
-        typedef interface::delegate                      delegate;
-        typedef typename socket_type::native_handle_type native_handle_type;
+        typedef SocketType            socket_type;
+        typedef interface::delegate   delegate;
+        typedef srpc::handle_type     native_handle_type;
 
         base( io_service &ios, srpc::uint32_t buf_len )
             :socket_(ios)
@@ -129,7 +129,7 @@ namespace async {
             return active_;
         }
 
-        srpc::handle_type native_handle( )
+        native_handle_type native_handle( )
         {
             return socket_.native_handle( );
         }
