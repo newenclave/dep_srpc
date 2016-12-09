@@ -72,6 +72,7 @@ namespace async {
         typedef SocketType            socket_type;
         typedef interface::delegate   delegate;
         typedef srpc::handle_type     native_handle_type;
+        typedef std::vector<char>     data_buffer_type;
 
         base( io_service &ios, srpc::uint32_t buf_len )
             :socket_(ios)
@@ -88,20 +89,20 @@ namespace async {
             set_buffers( len );
         }
 
-        std::vector<char> &get_read_buffer( )
+        data_buffer_type &get_read_buffer( )
         {
             return read_buffer_;
         }
 
-        const std::vector<char> &get_read_buffer( ) const
+        const data_buffer_type &get_read_buffer( ) const
         {
             return read_buffer_;
         }
 
         void close( )
         {
-            dispatcher_.post( srpc::bind(&this_type::close_impl, this,
-                              weak_type(this->shared_from_this( ) ) ) );
+            dispatcher_.post( srpc::bind( &this_type::close_impl, this,
+                                           weak_from_this( ) ) );
         }
 
         io_service &get_io_service( )
@@ -139,7 +140,7 @@ namespace async {
         socket_type          socket_;
         io_service::strand   dispatcher_;
         delegate            *delegate_;
-        std::vector<char>    read_buffer_;
+        data_buffer_type     read_buffer_;
         bool                 active_;
     };
 
