@@ -4,6 +4,9 @@ list( APPEND src_dirs
       .
       ${INCLUDE_DIR}/srpc/server
       ${INCLUDE_DIR}/srpc/common
+      ${INCLUDE_DIR}/srpc/common/timers
+      ${INCLUDE_DIR}/srpc/common/timers/calls
+      ${INCLUDE_DIR}/srpc/common/timers/traits
       ${INCLUDE_DIR}/srpc/common/sizepack
       ${INCLUDE_DIR}/srpc/common/queues
       ${INCLUDE_DIR}/srpc/common/queues/traits

@@ -20,6 +20,10 @@
 #include "srpc/common/sizepack/fixint.h"
 #include "srpc/common/sizepack/none.h"
 
+#include "srpc/common/timers/deadline.h"
+#include "srpc/common/timers/calls/once.h"
+#include "srpc/common/timers/calls/periodical.h"
+
 #include <memory>
 #include <queue>
 #include <chrono>
@@ -266,11 +270,30 @@ template <typename T>
 using priority = common::queues::traits::priority<T>;
 using pqueue   = common::queues::condition<size_t, data, priority<data> >;
 
+
+template <typename T>
+using period_timer = common::timers::calls::periodical<T>;
+
+using once_timer = common::timers::calls::once;
+
 int main( )
 {
     pqueue q;
 
     auto slot = q.add_slot( 100 );
+
+    period_timer<srpc::chrono::nanoseconds> dl(ios, 1000000000 );
+    once_timer dl2(ios);
+
+    dl.call( [&dl]( ... ) {
+        std::cerr << "Timer expired!!!\n";
+        dl.cancel( );
+    } );
+
+    dl2.call( [&dl]( ... ) {
+        std::cerr << "Timer2 expired!!!\n";
+
+    }, srpc::chrono::seconds(2) );
 
     q.push_to_slot( 100, data { 1, "q" } );
     q.push_to_slot( 100, data { 2, "w" } );

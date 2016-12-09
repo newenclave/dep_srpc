@@ -87,6 +87,7 @@ namespace CONFIG_TOPNAMESPACE {
 
     using boost::intmax_t;
     using boost::uintmax_t;
+    using boost::uintptr_t;
 }
 
 #endif
@@ -176,6 +177,7 @@ namespace CONFIG_TOPNAMESPACE {
 
     using boost::intmax_t;
     using boost::uintmax_t;
+    using boost::uintptr_t;
 }
 
 
