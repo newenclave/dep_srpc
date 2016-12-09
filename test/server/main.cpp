@@ -282,12 +282,12 @@ int main( )
 
     auto slot = q.add_slot( 100 );
 
-    period_timer<srpc::chrono::nanoseconds> dl(ios, 1000000000 );
+    period_timer<srpc::chrono::milliseconds> dl(ios, 10000 );
     once_timer dl2(ios);
 
     dl.call( [&dl]( ... ) {
         std::cerr << "Timer expired!!!\n";
-        dl.cancel( );
+        //dl.cancel( );
     } );
 
     dl2.call( [&dl]( ... ) {

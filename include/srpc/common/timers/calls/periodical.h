@@ -14,9 +14,9 @@ namespace calls {
     template <typename PeriodType>
     class  periodical {
 
-        deadline timer_;
-        PeriodType duration_;
-        bool enabled_;
+        deadline    timer_;
+        PeriodType  duration_;
+        bool        enabled_;
 
         periodical ( periodical& );
         periodical &operator = ( periodical& );
