@@ -213,7 +213,7 @@ int main( )
 
         uc->set_delegate( &deleg );
         uc->connect( );
-        uc->transport( )->resize_buffer(8000);
+        uc->transport( )->resize_buffer(12000);
 
         ios.run( );
 
