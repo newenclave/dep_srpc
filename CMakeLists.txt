@@ -33,18 +33,23 @@ if( NOT DEFINED LINK_TYPE )
     set( LINK_TYPE STATIC )
 endif( )
 
-if( ASIO_STANDALONE_DIR AND CXX11_ENABLED )
-    include_directories( ${ASIO_STANDALONE_DIR} )
-    add_definitions( -DASIO_STANALONE=1 )
-else( )
+if( CXX11_ENABLED )
+    if( ASIO_STANDALONE_DIR )
+        include_directories( ${ASIO_STANDALONE_DIR} )
+        add_definitions( -DASIO_STANALONE=1 )
+    else( )
+        find_package( Boost 1.53 COMPONENTS
+                            system
+                        REQUIRED)
+    endif( ASIO_STANDALONE_DIR )
+else( CXX11_ENABLED )
     find_package( Boost 1.53 COMPONENTS
-                    system
-                    chrono
-                    date_time
-                    thread
-                  REQUIRED)
-endif( ASIO_STANDALONE_DIR )
-
+                        system
+                        chrono
+                        date_time
+                        thread
+                    REQUIRED)
+endif( CXX11_ENABLED )
 
 find_package( Protobuf REQUIRED)
 

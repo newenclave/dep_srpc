@@ -9,8 +9,6 @@
 
 namespace srpc { namespace common {  namespace timers {
 
-namespace calls {
-
     template <typename PeriodType>
     class  periodical {
 
@@ -109,7 +107,6 @@ namespace calls {
         }
 
     };
-}
 
 }}}
 

@@ -7,8 +7,6 @@
 
 namespace srpc { namespace common {  namespace timers {
 
-namespace calls {
-
     class once { // !periodical
 
         deadline timer_;
@@ -53,7 +51,6 @@ namespace calls {
         }
 
     };
-}
 
 }}}
 

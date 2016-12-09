@@ -20,9 +20,8 @@
 #include "srpc/common/sizepack/fixint.h"
 #include "srpc/common/sizepack/none.h"
 
-#include "srpc/common/timers/deadline.h"
-#include "srpc/common/timers/calls/once.h"
-#include "srpc/common/timers/calls/periodical.h"
+#include "srpc/common/timers/once.h"
+#include "srpc/common/timers/periodical.h"
 
 #include <memory>
 #include <queue>
@@ -99,7 +98,7 @@ public:
     using cb = common::transport::interface::write_callbacks;
     mess_delegate::pack_context ctx;
     std::uint64_t last_tick_ = ticks_now( );
-    common::timers::calls::periodical<srpc::chrono::milliseconds> timer_;
+    common::timers::periodical<srpc::chrono::milliseconds> timer_;
 
     mess_delegate(SRPC_ASIO::io_service &ios)
         :timer_(ios, 1000 )
@@ -288,9 +287,9 @@ using pqueue   = common::queues::condition<size_t, data, priority<data> >;
 
 
 template <typename T>
-using period_timer = common::timers::calls::periodical<T>;
+using period_timer = common::timers::periodical<T>;
 
-using once_timer = common::timers::calls::once;
+using once_timer = common::timers::once;
 
 int main( )
 {
