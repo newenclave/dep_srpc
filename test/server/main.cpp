@@ -1,7 +1,6 @@
 #include <iostream>
 #include "protocol/t.pb.h"
 
-#include "boost/asio.hpp"
 #include "boost/lexical_cast.hpp"
 
 #include "srpc/common/config/chrono.h"
@@ -31,10 +30,13 @@
 #include <unistd.h>
 #include <stdlib.h>
 
+namespace ba = SRPC_ASIO;
+namespace bs = SRPC_SYSTEM;
+
 std::atomic<std::uint64_t> messages {0};
 std::atomic<std::uint64_t> bytes {0};
 
-boost::asio::io_service gios[4];
+SRPC_ASIO::io_service gios[4];
 
 std::uint64_t ticks_now( )
 {
@@ -44,9 +46,9 @@ std::uint64_t ticks_now( )
     return duration_cast<microsec>(n.time_since_epoch( )).count( );
 }
 
-boost::asio::io_service test_io;
-boost::asio::io_service ios;
-boost::asio::io_service ios2;
+SRPC_ASIO::io_service test_io;
+SRPC_ASIO::io_service ios;
+SRPC_ASIO::io_service ios2;
 
 void show_messages(  )
 {
@@ -62,10 +64,6 @@ void show_messages(  )
 //        }
     }
 }
-
-
-namespace ba = boost::asio;
-namespace bs = boost::system;
 
 using namespace srpc;
 

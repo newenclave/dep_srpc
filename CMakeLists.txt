@@ -33,10 +33,16 @@ if( NOT DEFINED LINK_TYPE )
     set( LINK_TYPE STATIC )
 endif( )
 
+if( ASIO_STANDALONE_DIR )
+    include_directories( ${ASIO_STANDALONE_DIR} )
+    add_definitions( -DASIO_STANALONE=1 )
+else( ASIO_STANDALONE_DIR )
+    find_package( Boost 1.53 COMPONENTS
+                    system
+                  REQUIRED)
+endif( ASIO_STANDALONE_DIR )
+
 find_package( Protobuf REQUIRED)
-find_package( Boost 1.53 COMPONENTS
-                system
-              REQUIRED)
 
 set( INCLUDE_DIR ${PROJECT_SOURCE_DIR}/include )
 

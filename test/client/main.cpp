@@ -1,7 +1,6 @@
 #include <iostream>
 #include "protocol/t.pb.h"
 
-#include "boost/asio.hpp"
 #include "boost/lexical_cast.hpp"
 
 #include "srpc/common/transport/interface.h"
@@ -26,8 +25,8 @@
 #include <mutex>
 #include <condition_variable>
 
-namespace ba = boost::asio;
-namespace bs = boost::system;
+namespace ba = SRPC_ASIO;
+namespace bs = SRPC_SYSTEM;
 
 using namespace srpc;
 
@@ -90,12 +89,12 @@ public:
         std::cout << "on error: " << message << "\n";
     }
 
-    void on_read_error( const bs::error_code &err )
+    void on_read_error( const SRPC_SYSTEM::error_code &err )
     {
         std::cout << "on read error: " << err.message( ) << "\n";
     }
 
-    void on_write_error( const bs::error_code &err)
+    void on_write_error( const SRPC_SYSTEM::error_code &err)
     {
         std::cout << "on write error: " << err.message( ) << "\n";
     }

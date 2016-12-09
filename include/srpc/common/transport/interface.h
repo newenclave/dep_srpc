@@ -27,7 +27,6 @@ namespace srpc { namespace common { namespace transport {
 
         struct write_callbacks {
 
-            typedef boost::system::error_code error_code;
             typedef srpc::function<void ( )> pre_call_type;
             typedef srpc::function<void (const error_code &,
                                          size_t)> post_call_type;
