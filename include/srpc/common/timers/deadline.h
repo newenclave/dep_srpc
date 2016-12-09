@@ -5,15 +5,7 @@
 #include "srpc/common/config/asio.h"
 
 namespace srpc { namespace common {  namespace timers {
-
     typedef SRPC_ASIO::basic_waitable_timer<chrono::steady_clock> deadline;
-
-    typedef srpc::chrono::microseconds microseconds;
-    typedef srpc::chrono::milliseconds milliseconds;
-    typedef srpc::chrono::seconds      seconds;
-    typedef srpc::chrono::minutes      minutes;
-    typedef srpc::chrono::hours        hours;
-
 }}}
 
 #endif // DEADLINE_H
