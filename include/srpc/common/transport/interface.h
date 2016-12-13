@@ -1,5 +1,5 @@
-#ifndef TRANSPORT_IFACE_H
-#define TRANSPORT_IFACE_H
+#ifndef SRPC_COMMON_TRANSPORT_IFACE_H
+#define SRPC_COMMON_TRANSPORT_IFACE_H
 
 #include "srpc/common/buffer.h"
 #include "srpc/common/config/memory.h"

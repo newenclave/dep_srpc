@@ -128,8 +128,9 @@ namespace delegates {
         virtual void on_stream_update( const char *part, size_t len ) = 0;
         virtual void on_stream_end( ) = 0;
         virtual void on_need_read( ) = 0;
-        virtual bool validate_length( size_t len ) = 0;
         virtual void on_error( const char *message ) = 0;
+
+        virtual bool validate_length( size_t len ) = 0;
 //        virtual void on_read_error( const error_code & ) = 0;
 //        virtual void on_write_error( const error_code &) = 0;
 //        virtual void on_close( ) = 0;

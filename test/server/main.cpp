@@ -22,6 +22,9 @@
 
 #include "srpc/common/timers/once.h"
 #include "srpc/common/timers/periodical.h"
+#include "srpc/common/timers/ticks.h"
+
+#include "srpc/common/hash/crc32.h"
 
 #include <memory>
 #include <queue>
@@ -33,6 +36,8 @@
 #include <unistd.h>
 #include <stdlib.h>
 
+using namespace srpc;
+
 namespace ba = SRPC_ASIO;
 namespace bs = SRPC_SYSTEM;
 
@@ -43,10 +48,8 @@ SRPC_ASIO::io_service gios[4];
 
 std::uint64_t ticks_now( )
 {
-    using std::chrono::duration_cast;
-    using milliseconds = std::chrono::milliseconds;
-    auto n = std::chrono::high_resolution_clock::now( );
-    return duration_cast<milliseconds>(n.time_since_epoch( )).count( );
+    using tick = common::timers::ticks<srpc::chrono::milliseconds>;
+    return tick::now( );
 }
 
 ba::io_service test_io;
@@ -67,8 +70,6 @@ void show_messages(  )
 //        }
     }
 }
-
-using namespace srpc;
 
 template <typename StreamType>
 using common_transport = common::transport::async::base<StreamType>;
@@ -294,6 +295,12 @@ using once_timer = common::timers::once;
 int main( )
 {
     pqueue q;
+
+    common::hash::crc32 crc32;
+    std::string crc_data(4, '\0');
+
+    crc32.get( "0000000000", 10, &crc_data[0] );
+    std::cout << std::hex << *(std::uint32_t *)(&crc_data[0]) << "\n";
 
     auto slot = q.add_slot( 100 );
 
