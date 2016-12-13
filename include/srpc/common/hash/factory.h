@@ -11,7 +11,7 @@
 namespace srpc { namespace common { namespace hash {
     class factory {
     public:
-        srpc::function<hash::interface *( )> creator_type;
+        srpc::function<hash::interface *( )> producer_type;
     private:
         std::map<std::string, creator_type> map_;
     };
