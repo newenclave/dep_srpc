@@ -209,7 +209,7 @@ int main( )
         transtort_type::endpoint ep(ba::ip::address::from_string("127.0.0.1"), 2356);
 
         connector_delegate deleg;
-        auto uc = srpc::make_shared<client::connector::async::udp>(std::ref(ios), 4096, ep);
+        auto uc = client::connector::async::udp::create(std::ref(ios), 4096, ep);
 
         uc->set_delegate( &deleg );
         uc->connect( );

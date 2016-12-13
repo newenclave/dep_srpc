@@ -64,7 +64,7 @@ namespace async {
 
         typedef io_acceptor_type::native_handle_type native_handle_type;
 
-        tcp( io_service &ios, size_t bufsize, const endpoint &ep, key & )
+        tcp( io_service &ios, size_t bufsize, const endpoint &ep, key )
             :ios_(ios)
             ,acceptor_(ios)
             ,bufsize_(bufsize)
@@ -76,9 +76,8 @@ namespace async {
         srpc::shared_ptr<tcp> create( io_service &ios, size_t bufsize,
                                       const endpoint &ep )
         {
-            static key k;
-            return srpc::make_shared<tcp>( srpc::ref(ios), bufsize, ep,
-                                           srpc::ref(k) );
+            return srpc::make_shared<tcp>( srpc::ref(ios), bufsize,
+                                           ep, key( ) );
         }
 
         srpc::weak_ptr<interface> weak_from_this( )

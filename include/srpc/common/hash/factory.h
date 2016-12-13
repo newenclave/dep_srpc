@@ -7,7 +7,6 @@
 #include "srpc/common/config/mutex.h"
 #include "srpc/common/config/functional.h"
 
-
 namespace srpc { namespace common { namespace hash {
     class factory {
     public:

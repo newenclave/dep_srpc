@@ -237,13 +237,15 @@ namespace async {
             return res;
         }
 
+    protected:
+
         struct key { };
 
     public:
 
         typedef parent_transport::native_handle_type native_handle_type;
 
-        udp( io_service &ios, size_t bufsize, const endpoint &ep, key & )
+        udp( io_service &ios, size_t bufsize, const endpoint &ep, key )
             :delegate_(NULL)
             ,ep_(ep)
         {
@@ -255,9 +257,9 @@ namespace async {
         static
         srpc::shared_ptr<udp> create( io_service &ios, size_t bufsize,
                                       const endpoint &ep )
-        {   key k;
-            return srpc::make_shared<udp>( srpc::ref(ios),
-                                           bufsize, ep, std::ref( k ) );
+        {
+            return srpc::make_shared<udp>( srpc::ref(ios), bufsize,
+                                           ep, key( ) );
         }
 
         void open( )
