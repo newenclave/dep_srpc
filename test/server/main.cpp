@@ -48,7 +48,7 @@ SRPC_ASIO::io_service gios[4];
 
 std::uint64_t ticks_now( )
 {
-    using tick = common::timers::ticks<srpc::chrono::milliseconds>;
+    using tick = common::timers::ticks<>;
     return tick::now( );
 }
 
