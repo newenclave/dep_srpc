@@ -6,6 +6,7 @@
 #include "srpc/common/timers/deadline.h"
 #include "srpc/common/config/functional.h"
 #include "srpc/common/config/stdint.h"
+#include "srpc/common/config/mutex.h"
 
 namespace srpc { namespace common {  namespace timers {
 
@@ -14,6 +15,7 @@ namespace srpc { namespace common {  namespace timers {
 
         deadline    timer_;
         PeriodType  duration_;
+        srpc::mutex lock_;
         bool        enabled_;
 
         periodical ( periodical& );
@@ -70,6 +72,11 @@ namespace srpc { namespace common {  namespace timers {
                 enabled_ = false;
                 timer_.cancel( );
             }
+        }
+
+        bool enabled( ) const
+        {
+            return enabled_;
         }
 
         deadline &timer( )

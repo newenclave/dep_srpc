@@ -55,7 +55,9 @@ namespace async { namespace impl {
         }
 
     protected:
+
         struct key { };
+
     public:
 
         typedef typename transport_type::endpoint           endpoint;

@@ -122,6 +122,8 @@ public:
 
         ctx.clear( );
 
+        last_tick_ = ticks_now( );
+
         pack_begin( ctx, len );
         pack_update( ctx, message, len );
         pack_end( ctx );
@@ -286,6 +288,8 @@ template <typename T>
 using priority = common::queues::traits::priority<T>;
 using pqueue   = common::queues::condition<size_t, data, priority<data> >;
 
+using squeue = common::queues::condition<size_t, data>;
+
 
 template <typename T>
 using period_timer = common::timers::periodical<T>;
@@ -294,28 +298,9 @@ using once_timer = common::timers::once;
 
 int main( )
 {
-    pqueue q;
-
-    common::hash::crc32 crc32;
-    std::string crc_data(4, '\0');
-
-    crc32.get( "0000000000", 10, &crc_data[0] );
-    std::cout << std::hex << *(std::uint32_t *)(&crc_data[0]) << "\n";
+    squeue q;
 
     auto slot = q.add_slot( 100 );
-
-    period_timer<srpc::chrono::milliseconds> dl(ios, 10000 );
-    once_timer dl2(ios);
-
-    dl.call( [&dl]( ... ) {
-        std::cerr << "Timer expired!!!\n";
-        //dl.cancel( );
-    } );
-
-    dl2.call( [&dl]( ... ) {
-        std::cerr << "Timer2 expired!!!\n";
-
-    }, srpc::chrono::seconds(2) );
 
     q.push_to_slot( 100, data { 1, "q" } );
     q.push_to_slot( 100, data { 2, "w" } );

@@ -173,7 +173,7 @@ struct connector_delegate: public connector::delegate {
     mess_delegate echo_;
 
     connector_delegate( )
-        :echo_(100000)
+        :echo_(1000000)
     { }
 
     void on_connect( common::transport::interface *c )
