@@ -47,7 +47,7 @@ namespace srpc { namespace common { namespace sizepack {
             std::string res;
             res.reserve(sizeof(size_type));
             for( ; size > 0x7F; size >>= 7 ) {
-                res.push_back(static_cast<char>(size & 0x7F) | 0x80);
+                res.push_back(static_cast<char>((size & 0x7F) | 0x80));
             }
             res.push_back(static_cast<char>(size));
             return res;
@@ -58,7 +58,7 @@ namespace srpc { namespace common { namespace sizepack {
             std::string tmp;
             tmp.reserve(max_length);
             for( ; size > 0x7F; size >>= 7 ) {
-                tmp.push_back(static_cast<char>(size & 0x7F) | 0x80);
+                tmp.push_back(static_cast<char>((size & 0x7F) | 0x80));
             }
             tmp.push_back(static_cast<char>(size));
 
@@ -72,7 +72,7 @@ namespace srpc { namespace common { namespace sizepack {
             srpc::uint8_t *res = reinterpret_cast<srpc::uint8_t *>(result);
 
             for( ; size > 0x7F; size >>= 7 ) {
-                res[index++] = (static_cast<char>(size & 0x7F) | 0x80);
+                res[index++] = (static_cast<char>((size & 0x7F) | 0x80));
             }
             res[index++] = (static_cast<char>(size));
             return index;
