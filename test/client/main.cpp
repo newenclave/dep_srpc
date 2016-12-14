@@ -67,9 +67,9 @@ public:
                 std::cout << cnt << std::endl;
             }
 
-            pack_begin( *ctx, 10 * 1000 );
+            pack_begin( *ctx, 10 * 100 );
 
-            for( int i=0; i<1000; i++ )
+            for( int i=0; i<100; i++ )
                 pack_update( *ctx, "??????????", 10 );
             pack_end( *ctx );
 
@@ -197,16 +197,21 @@ struct connector_delegate: public connector::delegate {
     }
 };
 
-int main( )
+int main( int argc, char *argv[] )
 {
     try {
+
+        const char *host = argc > 1 ? argv[1] : "127.0.0.1";
 
         std::cout << sizeof(std::function<void( )>) << "\n\n";
         using transtort_type      = udp_transport;
         using transtort_delegate  = udp_echo_delegate;
 
+
+        std::cout << "host: " << host << "\n";
+
         ba::io_service ios;
-        transtort_type::endpoint ep(ba::ip::address::from_string("127.0.0.1"), 2356);
+        transtort_type::endpoint ep(ba::ip::address::from_string(host), 12347);
 
         connector_delegate deleg;
         auto uc = client::connector::async::udp::create(std::ref(ios), 4096, ep);

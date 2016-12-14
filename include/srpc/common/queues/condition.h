@@ -39,7 +39,7 @@ namespace srpc { namespace common { namespace queues {
             srpc::uint32_t           flag_;
 
             typedef condition<KeyType, ValueType, QueueTrait> parent_type;
-
+            typedef typename parent_type::result_enum result_enum;
         public:
 
             typedef typename parent_type::value_type value_type;
@@ -73,8 +73,7 @@ namespace srpc { namespace common { namespace queues {
             }
 
             template <typename TimeDuration>
-            parent_type::result_enum read_for( value_type &result,
-                                               const TimeDuration &td )
+            result_enum read_for( value_type &result, const TimeDuration &td )
             {
                 unique_lock ul(lock_);
                 bool res = cond_.wait_for( ul, td, not_empty( this ) );

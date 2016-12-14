@@ -63,7 +63,7 @@ void show_messages(  )
         std::cout << messages << " ";
         std::cout << bytes << std::endl;
         messages = 0;
-        sleep( 1 );
+        std::this_thread::sleep_for( chrono::seconds(1) );
 //        if( ticks_now( ) - start >= 1e7 ) {
 //            ios.stop( );
 //            return;
