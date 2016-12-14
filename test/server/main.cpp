@@ -48,28 +48,13 @@ SRPC_ASIO::io_service gios[4];
 
 std::uint64_t ticks_now( )
 {
-    using tick = common::timers::ticks<>;
+    using tick = common::timers::ticks<chrono::milliseconds>;
     return tick::now( );
 }
 
 ba::io_service test_io;
 ba::io_service ios;
 ba::io_service ios2;
-
-void show_messages(  )
-{
-    auto start = ticks_now( );
-    while( 1 ) {
-        std::cout << messages << " ";
-        std::cout << bytes << std::endl;
-        messages = 0;
-        std::this_thread::sleep_for( chrono::seconds(1) );
-//        if( ticks_now( ) - start >= 1e7 ) {
-//            ios.stop( );
-//            return;
-//        }
-    }
-}
 
 template <typename StreamType>
 using common_transport = common::transport::async::base<StreamType>;
@@ -99,10 +84,10 @@ public:
     using cb = common::transport::interface::write_callbacks;
     mess_delegate::pack_context ctx;
     std::uint64_t last_tick_ = ticks_now( );
-    common::timers::periodical<srpc::chrono::milliseconds> timer_;
+    common::timers::periodical timer_;
 
     mess_delegate(SRPC_ASIO::io_service &ios)
-        :timer_(ios, 1000 )
+        :timer_(ios)
     {
         timer_.call( [this]( ... ) {
             auto now = ticks_now( );
@@ -111,7 +96,7 @@ public:
                 parent_->close( );
                 timer_.cancel( );
             }
-        } );
+        }, chrono::seconds(1) );
     }
 
     void on_message( const char *message, size_t len )
@@ -119,6 +104,7 @@ public:
         //std::cout << "Message " << std::string(message, len) << "\n";
         ++messages;
         bytes += len;
+        last_tick_ = ticks_now( );
 
         ctx.clear( );
 
@@ -291,14 +277,12 @@ using pqueue   = common::queues::condition<size_t, data, priority<data> >;
 using squeue = common::queues::condition<size_t, data>;
 
 
-template <typename T>
-using period_timer = common::timers::periodical<T>;
-
-using once_timer = common::timers::once;
+using period_timer  = common::timers::periodical;
+using once_timer    = common::timers::once;
 
 int main( )
 {
-    squeue q;
+    pqueue q;
 
     auto slot = q.add_slot( 100 );
 
@@ -309,6 +293,13 @@ int main( )
 
     data d;
     auto res = q.read_slot( 100, d, srpc::chrono::seconds(1) );
+
+    period_timer dt(ios);
+    dt.call( [ ](...) {
+        std::cout << messages << " ";
+        std::cout << bytes << std::endl;
+        messages = 0;
+    }, chrono::seconds(1) );
 
     std::cout << "res: " << d.i << " = "
               << d.str << " "
@@ -325,9 +316,9 @@ int main( )
         ba::io_service::work wrk2(gios[2]);
         ba::io_service::work wrk3(gios[3]);
 
-        udp_transport::endpoint uep(ba::ip::address::from_string("0.0.0.0"), 2356);
+        udp_transport::endpoint uep(ba::ip::address::from_string("0.0.0.0"), 12347);
 
-        auto acc =  udp_acceptor::create( ios, 4096, uep );
+        auto acc = udp_acceptor::create( ios, 4096, uep );
 
         udp_acceptor_del udeleg;
 
@@ -352,8 +343,6 @@ int main( )
         acc->bind( true );
 
         acc->start_accept( );
-
-        std::thread( show_messages ).detach( );
 
 //        std::thread([]( ){ gios[0].run( ); }).detach( );
 //        std::thread([]( ){ gios[1].run( ); }).detach( );

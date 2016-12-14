@@ -103,15 +103,18 @@ public:
     void on_read_error( const SRPC_SYSTEM::error_code &err )
     {
         std::cout << "on read error: " << err.message( ) << "\n";
+        parent_->close( );
     }
 
     void on_write_error( const SRPC_SYSTEM::error_code &err)
     {
         std::cout << "on write error: " << err.message( ) << "\n";
+        parent_->close( );
     }
 
     void on_close( )
     {
+        std::cout << "on close\n";
     }
 
 

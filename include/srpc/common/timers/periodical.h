@@ -10,14 +10,9 @@
 
 namespace srpc { namespace common {  namespace timers {
 
-    template <typename PeriodType>
     class  periodical {
 
-        deadline    timer_;
-        PeriodType  duration_;
-        srpc::mutex lock_;
-        bool        enabled_;
-
+        typedef chrono::steady_clock::duration duration_type;
         periodical ( periodical& );
         periodical &operator = ( periodical& );
 
@@ -26,7 +21,7 @@ namespace srpc { namespace common {  namespace timers {
         void handler( const SRPC_SYSTEM::error_code &err, hdl_type userhdl )
         {
             userhdl( err );
-            if( !err && enabled_ ) {
+            if( !err && enabled( ) ) {
                 call_impl( userhdl );
             }
         }
@@ -45,20 +40,25 @@ namespace srpc { namespace common {  namespace timers {
             }
         }
 
+        void set_enabled( bool val )
+        {
+            srpc::lock_guard<srpc::mutex> lck(lock_);
+            enabled_ = val;
+        }
+
     public:
 
-        typedef PeriodType period_type;
-        typedef SRPC_SYSTEM::error_code error_code;
+        typedef SRPC_SYSTEM::error_code        error_code;
 
-        periodical( SRPC_ASIO::io_service &ios, srpc::uint64_t period )
+        periodical( SRPC_ASIO::io_service &ios )
             :timer_(ios)
-            ,duration_(period_type(period))
             ,enabled_(false)
         { }
 
-        void set_period( srpc::uint64_t val )
+        template <typename Duration>
+        void set_period( Duration dur )
         {
-            duration_ = period_type(val);
+            duration_ = srpc::chrono::duration_cast<duration_type>(dur);
         }
 
         srpc::uint64_t period( ) const
@@ -68,6 +68,7 @@ namespace srpc { namespace common {  namespace timers {
 
         void cancel( )
         {
+            srpc::lock_guard<srpc::mutex> lck(lock_);
             if( enabled_ ) {
                 enabled_ = false;
                 timer_.cancel( );
@@ -76,6 +77,7 @@ namespace srpc { namespace common {  namespace timers {
 
         bool enabled( ) const
         {
+            srpc::lock_guard<srpc::mutex> lck(lock_);
             return enabled_;
         }
 
@@ -89,30 +91,36 @@ namespace srpc { namespace common {  namespace timers {
             return timer_;
         }
 
-        template <typename Handler>
-        void call( Handler hdl )
+        template <typename Handler, typename Duration>
+        void call( Handler hdl, Duration dur )
         {
             namespace ph = srpc::placeholders;
+            duration_ = srpc::chrono::duration_cast<duration_type>(dur);
             timer_.expires_from_now( duration_ );
-            enabled_ = true;
+            set_enabled( true );
             hdl_type uhdl = srpc::bind( &periodical::handler, this,
                                         ph::_1, hdl );
             timer_.async_wait( uhdl );
         }
 
-        template <typename Handler>
-        void call( Handler hdl, error_code &err )
+        template <typename Handler, typename Duration>
+        void call( Handler hdl, Duration dur, error_code &err )
         {
             namespace ph = srpc::placeholders;
+            duration_ = srpc::chrono::duration_cast<duration_type>(dur);
             timer_.expires_from_now( duration_, err );
             if( !err ) {
-                enabled_ = true;
+                set_enabled( true );
                 hdl_type uhdl = srpc::bind( &periodical::handler, this,
                                             ph::_1, hdl );
                 timer_.async_wait( uhdl );
             }
         }
-
+    private:
+        deadline            timer_;
+        duration_type       duration_;
+        mutable srpc::mutex lock_;
+        bool                enabled_;
     };
 
 }}}

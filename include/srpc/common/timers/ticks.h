@@ -6,7 +6,7 @@
 
 namespace srpc { namespace common {  namespace timers {
 
-    template <typename DurationType = srpc::chrono::nanoseconds>
+    template <typename DurationType = srpc::chrono::steady_clock::duration>
     struct ticks {
         typedef DurationType duration_type;
         static srpc::uint64_t now( )
