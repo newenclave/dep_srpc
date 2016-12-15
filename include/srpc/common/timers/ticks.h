@@ -12,10 +12,10 @@ namespace srpc { namespace common {  namespace timers {
         static srpc::uint64_t now( )
         {
             typedef duration_type dt;
-            using srpc::chrono::duration_cast;
-            using srpc::chrono::high_resolution_clock;
-            return duration_cast<dt>( high_resolution_clock::now( )
-                                     .time_since_epoch( ) ).count( );
+            using   srpc::chrono::duration_cast;
+            using   srpc::chrono::high_resolution_clock;
+            return  duration_cast<dt>( high_resolution_clock::now( )
+                                      .time_since_epoch( ) ).count( );
         }
     };
 }}}
