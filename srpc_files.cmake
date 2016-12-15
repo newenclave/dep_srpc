@@ -1,5 +1,5 @@
 
-macro( all_headers_path OUT_LIST )
+macro( srpc_all_headers_path OUT_LIST )
     list( APPEND OUT_LIST
           ${CMAKE_CURRENT_SOURCE_DIR}/include/srpc/server
           ${CMAKE_CURRENT_SOURCE_DIR}/include/srpc/common
