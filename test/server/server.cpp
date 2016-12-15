@@ -20,7 +20,8 @@ struct keeper: public srpc::enable_shared_from_this<keeper> {
 
 };
 
-template <typename T, typename MutexType = std::mutex>
+template <typename T,
+          typename MutexType = std::mutex>
 class signal {
 public:
     typedef std::function<T> call_type;
@@ -29,7 +30,28 @@ private:
 
     typedef MutexType                     mutex_type;
     typedef std::lock_guard<mutex_type>   guard_type;
-    typedef std::list<call_type>          list_type;
+
+    struct call_holder {
+
+        explicit call_holder( const call_type &c )
+            :call(c)
+        { }
+
+        call_holder (const call_holder &other)
+            :call(other.call)
+        { }
+
+        call_holder &operator = (const call_holder &other)
+        {
+            call = other.call;
+            return *this;
+        }
+
+        call_type     call;
+    };
+
+    typedef std::list<call_holder>        list_type;
+
     typedef typename list_type::iterator  list_iterator;
     struct iterator_cmp {
         bool operator ( ) ( const list_iterator &l,
@@ -116,7 +138,7 @@ public:
     connection connect(  call_type call )
     {
         guard_type l(impl_->list_lock_);
-        impl_->list_.push_back( call );
+        impl_->list_.push_back( call_holder(call) );
         return connection( impl_, impl_->list_.rbegin( ).base( ) );
     }
 
@@ -133,7 +155,7 @@ public:
         list_iterator e(impl_->list_.end( ));
         for( ;b != e; ++b ) {
             if( !impl_->removed( b ) ) {
-                (*b)( );
+                b->call( );
             }
         }
         impl_->clear_removed( );
@@ -147,7 +169,7 @@ public:
         list_iterator e(impl_->list_.end( ));
         for( ;b != e; ++b ) {
             if( !impl_->removed( b ) ) {
-                (*b)(p1);
+                b->call(p1);
             }
         }
         impl_->clear_removed( );
@@ -161,7 +183,7 @@ public:
         list_iterator e(impl_->list_.end( ));
         for( ;b != e; ++b ) {
             if( !impl_->removed( b ) ) {
-                (*b)(p0, p1);
+                b->call(p0, p1);
             }
         }
         impl_->clear_removed( );
@@ -180,9 +202,18 @@ std::atomic<std::uint32_t> gcounter {0};
 
 int main( int argc, char *argv[] )
 {
-    using sig  = signal<void (int), fake_mutex>;
-    using bsig = boost::signals2::signal_type<void (int),
-                         boost::signals2::keywords::mutex_type<boost::signals2::dummy_mutex> >::type;
+    //using sig  = signal<void (int), fake_mutex>;
+    using sig  = signal<void (int)>;
+
+//    using bsig = boost::signals2::signal_type<void (int),
+//                         boost::signals2::keywords::mutex_type<boost::signals2::dummy_mutex> >::type;
+    using bsig = boost::signals2::signal_type<void (int)>::type;
+
+
+    std::cout << sizeof(sig) << " "
+              << sizeof(bsig) << " "
+              << sizeof(std::mutex)
+              << std::endl;
 
     sig s;
 
@@ -190,7 +221,7 @@ int main( int argc, char *argv[] )
         gcounter += i;
     };
 
-    for( int i = 0; i<30000; i++ ) {
+    for( int i = 0; i<300000; i++ ) {
         s.connect( lambda );
     }
 
