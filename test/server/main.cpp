@@ -280,7 +280,7 @@ using squeue = common::queues::condition<size_t, data>;
 using period_timer  = common::timers::periodical;
 using once_timer    = common::timers::once;
 
-int main( )
+int main_( )
 {
     pqueue q;
 
