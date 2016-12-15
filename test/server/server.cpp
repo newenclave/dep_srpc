@@ -162,14 +162,14 @@ public:
     }
 
     template <typename P>
-    void operator ( ) ( const P& p1 )
+    void operator ( ) ( const P& p0 )
     {
         guard_type l(impl_->list_lock_);
         list_iterator b(impl_->list_.begin( ));
         list_iterator e(impl_->list_.end( ));
         for( ;b != e; ++b ) {
             if( !impl_->removed( b ) ) {
-                b->call(p1);
+                b->call(p0);
             }
         }
         impl_->clear_removed( );
@@ -198,10 +198,42 @@ struct fake_mutex {
     void unlock( ) { }
 };
 
+namespace rrr {
+    template <typename T>
+    struct result;
+
+    template <typename T>
+    struct result<T()> {
+        typedef T type;
+    };
+
+    template <typename T, typename P0>
+    struct result<T(P0)> {
+        typedef T type;
+    };
+
+    template <typename T, typename P0, typename P1>
+    struct result<T(P0, P1)> {
+        typedef T type;
+    };
+
+    template <typename T, typename P0,
+                          typename P1,
+                          typename P2>
+    struct result<T(P0, P1, P2)> {
+        typedef T type;
+    };
+}
+
 std::atomic<std::uint32_t> gcounter {0};
 
 int main( int argc, char *argv[] )
 {
+
+    typename rrr::result<double(int, const std::string&, int)>::type K = 100.100;
+
+    std::cout << K << "\n";
+    return 0;
     //using sig  = signal<void (int), fake_mutex>;
     using sig  = signal<void (int)>;
 
