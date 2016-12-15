@@ -3,10 +3,11 @@
 
 #include "srpc/common/config/asio.h"
 #include "srpc/common/config/system.h"
-#include "srpc/common/timers/deadline.h"
 #include "srpc/common/config/functional.h"
 #include "srpc/common/config/stdint.h"
 #include "srpc/common/config/mutex.h"
+
+#include "srpc/common/timers/deadline.h"
 
 namespace srpc { namespace common {  namespace timers {
 
@@ -59,11 +60,6 @@ namespace srpc { namespace common {  namespace timers {
         void set_period( Duration dur )
         {
             duration_ = srpc::chrono::duration_cast<duration_type>(dur);
-        }
-
-        srpc::uint64_t period( ) const
-        {
-            return duration_.count( );
         }
 
         void cancel( )
