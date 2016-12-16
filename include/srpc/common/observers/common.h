@@ -48,7 +48,7 @@ namespace srpc { namespace common { namespace observers {
 
         struct param_keeper {
 
-            iterator_set        set_;
+            iterator_set        removed_;
             list_type           list_;
             list_type           added_;
 
@@ -58,19 +58,19 @@ namespace srpc { namespace common { namespace observers {
             void add_remove( size_t itr )
             {
                 guard_type lck(tmp_lock_);
-                set_.insert( itr );
+                removed_.insert( itr );
             }
 
             void del_remove( size_t itr )
             {
                 guard_type lck(tmp_lock_);
-                set_.erase( itr );
+                removed_.erase( itr );
             }
 
             bool is_removed( list_iterator itr ) const
             {
                 guard_type lck(tmp_lock_);
-                return set_.find( itr->id_ ) != set_.end( );
+                return removed_.find( itr->id_ ) != removed_.end( );
             }
 
             void remove_by_index( size_t id )
@@ -88,7 +88,7 @@ namespace srpc { namespace common { namespace observers {
                 iterator_set tmp;
                 {
                     guard_type lck(tmp_lock_);
-                    tmp.swap( set_ );
+                    tmp.swap( removed_ );
                 }
 
                 typename iterator_set::iterator b(tmp.begin( ));
@@ -104,6 +104,15 @@ namespace srpc { namespace common { namespace observers {
                     }
                 }
 
+            }
+
+            void clear( )
+            {
+                guard_type l0(list_lock_);
+                guard_type l1(tmp_lock_);
+                list_.clear( );
+                added_.clear( );
+                removed_.clear( );
             }
 
             list_iterator splice_added( )
@@ -180,6 +189,11 @@ namespace srpc { namespace common { namespace observers {
         static void disconnect( connection cc )
         {
             cc.disconnect( );
+        }
+
+        void disconnect_all(  )
+        {
+            impl_->clear( );
         }
 
 #if CXX11_ENABLED == 0

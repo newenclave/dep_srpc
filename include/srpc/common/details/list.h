@@ -124,12 +124,18 @@ namespace srpc { namespace common { namespace details {
 
         ~list( )
         {
+            clear( );
+        }
+
+        void clear( )
+        {
             node *p = front_;
             while( p ) {
                 node *tmp = p->next_;
                 delete p;
                 p = tmp;
             }
+            front_ = back_ = NULL;
         }
 
         iterator begin( )
