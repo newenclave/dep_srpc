@@ -53,7 +53,7 @@ namespace rrr {
 std::atomic<std::uint32_t> gcounter {0};
 
 using sig  = common::observers::simple<void (int), srpc::mutex>;
-//using sig  = common::observers::simple<void (int), std::mutex>;
+//using sig  = common::observers::simple<void (int), srpc::dummy_mutex>;
 
 //using bsig = boost::signals2::signal_type<void (int),
 //                     boost::signals2::keywords::mutex_type<boost::signals2::dummy_mutex> >::type;
@@ -63,9 +63,11 @@ sig s;
 
 void sleep_thread( )
 {
-    for( int i=0; i<100; i++ ) {
-        s( 1 );
-    }
+//    for( int i=0; i<100; i++ ) {
+//        auto c = s.connect([](...){ gcounter++; });
+//        s( 1 );
+//        s.disconnect( c );
+//    }
 //    for( int i = 1; i<5; i++ ) {
 //        auto c = s.connect([](...){ gcounter++; });
 //        std::this_thread::sleep_for( std::chrono::milliseconds(100) );
@@ -98,7 +100,7 @@ int main( int argc, char *argv[] )
 
     s.connect( lambda );
 
-    for( int i = 0; i<1000; i++ ) {
+    for( int i = 0; i<10; i++ ) {
         s.connect( lambda );
     }
 
