@@ -1,5 +1,5 @@
-#ifndef SRPC_COMMON_OBSERVERS_SIMPLE_H
-#define SRPC_COMMON_OBSERVERS_SIMPLE_H
+#ifndef SRPC_COMMON_OBSERVERS_COMMON_H
+#define SRPC_COMMON_OBSERVERS_COMMON_H
 
 #include <list>
 #include <set>
@@ -7,69 +7,27 @@
 #include "srpc/common/config/functional.h"
 #include "srpc/common/config/mutex.h"
 #include "srpc/common/details/list.h"
+#include "srpc/common/observers/traits/simple.h"
+
 
 namespace srpc { namespace common { namespace observers {
 
     template <typename T,
-              typename MutexType = srpc::mutex>
-    class simple {
+              typename MutexType = srpc::mutex,
+              typename SlotType  = traits::simple<T> >
+    class common {
     public:
+
         typedef srpc::function<T> sig_type;
+        typedef SlotType          slot_type;
 
     private:
 
         typedef MutexType                     mutex_type;
         typedef srpc::lock_guard<mutex_type>  guard_type;
 
-        struct slot_type {
-
-            typedef srpc::lock_guard<slot_type> lock_type;
-
-            explicit slot_type( const sig_type &c )
-                :call_(c)
-            { }
-
-            slot_type (const slot_type &other)
-                :call_(other.call_)
-            { }
-
-            slot_type &operator = (const slot_type &other)
-            {
-                call_ = other.call_;
-                return *this;
-            }
-
-            sig_type &get( )
-            {
-                return call_;
-            }
-
-            bool valid( ) const
-            {
-                return true;
-            }
-
-            void lock( )
-            {
-
-            }
-
-            void unlock( )
-            {
-
-            }
-
-            bool try_lock( )
-            {
-                return true;
-            }
-
-        private:
-            sig_type     call_;
-        };
-
-        typedef details::list<slot_type>     list_type;
-        typedef typename list_type::iterator list_iterator;
+        typedef details::list<typename slot_type::value_type> list_type;
+        typedef typename list_type::iterator                  list_iterator;
 
         struct iterator_cmp {
             bool operator ( ) ( const list_iterator &l,
@@ -138,8 +96,8 @@ namespace srpc { namespace common { namespace observers {
 
         class connection {
 
-            friend class observers::simple<T, MutexType>;
-            typedef observers::simple<T, MutexType> parent_type;
+            friend class observers::common<T, MutexType, SlotType>;
+            typedef observers::common<T, MutexType, SlotType> parent_type;
 
             connection( const typename parent_type::param_sptr &parent,
                         typename parent_type::list_iterator me )
@@ -170,14 +128,14 @@ namespace srpc { namespace common { namespace observers {
             }
         };
 
-        simple( )
+        common( )
             :impl_(srpc::make_shared<param_keeper>( ))
         { }
 
-        connection connect(  sig_type call )
+        connection connect( typename slot_type::value_type call )
         {
             guard_type l(impl_->tmp_lock_);
-            impl_->added_.push_back( slot_type(call) );
+            impl_->added_.push_back( call );
             return connection( impl_, impl_->list_.rbegin( ) );
         }
 
@@ -195,10 +153,7 @@ namespace srpc { namespace common { namespace observers {
             list_iterator e(impl_->list_.end( ));
             for( ;b != e; ++b ) {
                 if( !impl_->removed( b ) ) {
-                    typename slot_type::lock_type l(*b);
-                    if( b->valid( ) ) {
-                        b->get( )( );
-                    }
+                    slot_type::exec( *b );
                 }
             }
             impl_->clear_removed( );
@@ -215,10 +170,7 @@ namespace srpc { namespace common { namespace observers {
             impl_->splice_added( );
             for( ;b != e; ++b ) {
                 if( !impl_->removed( b ) ) {
-                    typename slot_type::lock_type l(*b);
-                    if( b->valid( ) ) {
-                        b->get( )(p0);
-                    }
+                    slot_type::exec( *b, p0 );
                 }
             }
             impl_->clear_removed( );
@@ -233,10 +185,7 @@ namespace srpc { namespace common { namespace observers {
             list_iterator e(impl_->list_.end( ));
             for( ;b != e; ++b ) {
                 if( !impl_->removed( b ) ) {
-                    typename slot_type::lock_type l(*b);
-                    if( b->valid( ) ) {
-                        b->get( )(p0, p1);
-                    }
+                    slot_type::exec( *b, p0, p1);
                 }
             }
             impl_->clear_removed( );
@@ -254,10 +203,7 @@ namespace srpc { namespace common { namespace observers {
             list_iterator e(impl_->list_.end( ));
             for( ;b != e; ++b ) {
                 if( !impl_->removed( b ) ) {
-                    typename slot_type::lock_type l(*b);
-                    if( b->valid( ) ) {
-                        b->get( )(p0, p1, p2);
-                    }
+                    slot_type::exec( *b, p0, p1, p2);
                 }
             }
             impl_->clear_removed( );
@@ -275,10 +221,7 @@ namespace srpc { namespace common { namespace observers {
             list_iterator e(impl_->list_.end( ));
             for( ;b != e; ++b ) {
                 if( !impl_->removed( b ) ) {
-                    typename slot_type::lock_type l(*b);
-                    if( b->valid( ) ) {
-                        b->get( )(p0, p1, p2, p3);
-                    }
+                    slot_type::exec( *b, p0, p1, p2, p3);
                 }
             }
             impl_->clear_removed( );
@@ -298,10 +241,7 @@ namespace srpc { namespace common { namespace observers {
             list_iterator e(impl_->list_.end( ));
             for( ;b != e; ++b ) {
                 if( !impl_->removed( b ) ) {
-                    typename slot_type::lock_type l(*b);
-                    if( b->valid( ) ) {
-                        b->get( )(p0, p1, p2, p3, p4);
-                    }
+                    slot_type::exec( *b, p0, p1, p2, p3, p4);
                 }
             }
             impl_->clear_removed( );
@@ -321,10 +261,7 @@ namespace srpc { namespace common { namespace observers {
             list_iterator e(impl_->list_.end( ));
             for( ;b != e; ++b ) {
                 if( !impl_->removed( b ) ) {
-                    typename slot_type::lock_type l(*b);
-                    if( b->valid( ) ) {
-                        b->get( )(p0, p1, p2, p3, p4, p5);
-                    }
+                    slot_type::exec( *b, p0, p1, p2, p3, p4, p5);
                 }
             }
             impl_->clear_removed( );
@@ -346,10 +283,7 @@ namespace srpc { namespace common { namespace observers {
             list_iterator e(impl_->list_.end( ));
             for( ;b != e; ++b ) {
                 if( !impl_->removed( b ) ) {
-                    typename slot_type::lock_type l(*b);
-                    if( b->valid( ) ) {
-                        b->get( )(p0, p1, p2, p3, p4, p5, p6);
-                    }
+                    slot_type::exec( *b, p0, p1, p2, p3, p4, p5, p6);
                 }
             }
             impl_->clear_removed( );
@@ -371,10 +305,7 @@ namespace srpc { namespace common { namespace observers {
             list_iterator e(impl_->list_.end( ));
             for( ;b != e; ++b ) {
                 if( !impl_->removed( b ) ) {
-                    typename slot_type::lock_type l(*b);
-                    if( b->valid( ) ) {
-                        b->get( )(p0, p1, p2, p3, p4, p5, p6, p7);
-                    }
+                    slot_type::exec(p0, p1, p2, p3, p4, p5, p6, p7);
                 }
             }
             impl_->clear_removed( );
@@ -398,10 +329,7 @@ namespace srpc { namespace common { namespace observers {
             list_iterator e(impl_->list_.end( ));
             for( ;b != e; ++b ) {
                 if( !impl_->removed( b ) ) {
-                    typename slot_type::lock_type l(*b);
-                    if( b->valid( ) ) {
-                        b->get( )(p0, p1, p2, p3, p4, p5, p6, p7, p8);
-                    }
+                    slot_type::exec(p0, p1, p2, p3, p4, p5, p6, p7, p8);
                 }
             }
             impl_->clear_removed( );
@@ -425,10 +353,7 @@ namespace srpc { namespace common { namespace observers {
             list_iterator e(impl_->list_.end( ));
             for( ;b != e; ++b ) {
                 if( !impl_->removed( b ) ) {
-                    typename slot_type::lock_type l(*b);
-                    if( b->valid( ) ) {
-                        b->get( )(p0, p1, p2, p3, p4, p5, p6, p7, p8);
-                    }
+                    slot_type::exec(p0, p1, p2, p3, p4, p5, p6, p7, p8);
                 }
             }
             impl_->clear_removed( );
@@ -443,10 +368,7 @@ namespace srpc { namespace common { namespace observers {
             list_iterator e(impl_->list_.end( ));
             for( ;b != e; ++b ) {
                 if( !impl_->removed( b ) ) {
-                    typename slot_type::lock_type l(*b);
-                    if( b->valid( ) ) {
-                        b->get( )( args... );
-                    }
+                    slot_type::exec( *b, args... );
                 }
             }
             impl_->clear_removed( );
