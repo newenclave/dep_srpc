@@ -15,15 +15,16 @@ namespace srpc { namespace common { namespace observers {
     class common {
     public:
 
-        typedef SlotType  slot_type;
+        typedef SlotType slot_traits;
+        typedef typename SlotType::value_type  slot_type;
 
     private:
 
         typedef MutexType                     mutex_type;
         typedef srpc::lock_guard<mutex_type>  guard_type;
 
-        typedef details::list<typename slot_type::value_type> list_type;
-        typedef typename list_type::iterator                  list_iterator;
+        typedef details::list<slot_type>      list_type;
+        typedef typename list_type::iterator  list_iterator;
 
         struct iterator_cmp {
             bool operator ( ) ( const list_iterator &l,
@@ -131,7 +132,7 @@ namespace srpc { namespace common { namespace observers {
 
         virtual ~common( ) { }
 
-        connection connect( typename slot_type::value_type call )
+        connection connect( slot_type call )
         {
             guard_type l(impl_->tmp_lock_);
             impl_->added_.push_back( call );
@@ -152,7 +153,7 @@ namespace srpc { namespace common { namespace observers {
             list_iterator e(impl_->list_.end( ));
             for( ;b != e; ++b ) {
                 if( !impl_->removed( b ) ) {
-                    slot_type::exec( *b );
+                    slot_traits::exec( *b );
                 }
             }
             impl_->clear_removed( );
@@ -169,7 +170,7 @@ namespace srpc { namespace common { namespace observers {
             impl_->splice_added( );
             for( ;b != e; ++b ) {
                 if( !impl_->removed( b ) ) {
-                    slot_type::exec( *b, p0 );
+                    slot_traits::exec( *b, p0 );
                 }
             }
             impl_->clear_removed( );
@@ -184,7 +185,7 @@ namespace srpc { namespace common { namespace observers {
             list_iterator e(impl_->list_.end( ));
             for( ;b != e; ++b ) {
                 if( !impl_->removed( b ) ) {
-                    slot_type::exec( *b, p0, p1);
+                    slot_traits::exec( *b, p0, p1);
                 }
             }
             impl_->clear_removed( );
@@ -202,7 +203,7 @@ namespace srpc { namespace common { namespace observers {
             list_iterator e(impl_->list_.end( ));
             for( ;b != e; ++b ) {
                 if( !impl_->removed( b ) ) {
-                    slot_type::exec( *b, p0, p1, p2);
+                    slot_traits::exec( *b, p0, p1, p2);
                 }
             }
             impl_->clear_removed( );
@@ -220,7 +221,7 @@ namespace srpc { namespace common { namespace observers {
             list_iterator e(impl_->list_.end( ));
             for( ;b != e; ++b ) {
                 if( !impl_->removed( b ) ) {
-                    slot_type::exec( *b, p0, p1, p2, p3);
+                    slot_traits::exec( *b, p0, p1, p2, p3);
                 }
             }
             impl_->clear_removed( );
@@ -240,7 +241,7 @@ namespace srpc { namespace common { namespace observers {
             list_iterator e(impl_->list_.end( ));
             for( ;b != e; ++b ) {
                 if( !impl_->removed( b ) ) {
-                    slot_type::exec( *b, p0, p1, p2, p3, p4);
+                    slot_traits::exec( *b, p0, p1, p2, p3, p4);
                 }
             }
             impl_->clear_removed( );
@@ -260,7 +261,7 @@ namespace srpc { namespace common { namespace observers {
             list_iterator e(impl_->list_.end( ));
             for( ;b != e; ++b ) {
                 if( !impl_->removed( b ) ) {
-                    slot_type::exec( *b, p0, p1, p2, p3, p4, p5);
+                    slot_traits::exec( *b, p0, p1, p2, p3, p4, p5);
                 }
             }
             impl_->clear_removed( );
@@ -282,7 +283,7 @@ namespace srpc { namespace common { namespace observers {
             list_iterator e(impl_->list_.end( ));
             for( ;b != e; ++b ) {
                 if( !impl_->removed( b ) ) {
-                    slot_type::exec( *b, p0, p1, p2, p3, p4, p5, p6);
+                    slot_traits::exec( *b, p0, p1, p2, p3, p4, p5, p6);
                 }
             }
             impl_->clear_removed( );
@@ -304,7 +305,7 @@ namespace srpc { namespace common { namespace observers {
             list_iterator e(impl_->list_.end( ));
             for( ;b != e; ++b ) {
                 if( !impl_->removed( b ) ) {
-                    slot_type::exec(p0, p1, p2, p3, p4, p5, p6, p7);
+                    slot_traits::exec(p0, p1, p2, p3, p4, p5, p6, p7);
                 }
             }
             impl_->clear_removed( );
@@ -328,7 +329,7 @@ namespace srpc { namespace common { namespace observers {
             list_iterator e(impl_->list_.end( ));
             for( ;b != e; ++b ) {
                 if( !impl_->removed( b ) ) {
-                    slot_type::exec(p0, p1, p2, p3, p4, p5, p6, p7, p8);
+                    slot_traits::exec(p0, p1, p2, p3, p4, p5, p6, p7, p8);
                 }
             }
             impl_->clear_removed( );
@@ -352,7 +353,7 @@ namespace srpc { namespace common { namespace observers {
             list_iterator e(impl_->list_.end( ));
             for( ;b != e; ++b ) {
                 if( !impl_->removed( b ) ) {
-                    slot_type::exec(p0, p1, p2, p3, p4, p5, p6, p7, p8);
+                    slot_traits::exec(p0, p1, p2, p3, p4, p5, p6, p7, p8);
                 }
             }
             impl_->clear_removed( );
@@ -367,7 +368,7 @@ namespace srpc { namespace common { namespace observers {
             list_iterator e(impl_->list_.end( ));
             for( ;b != e; ++b ) {
                 if( !impl_->removed( b ) ) {
-                    slot_type::exec( *b, args... );
+                    slot_traits::exec( *b, args... );
                 }
             }
             impl_->clear_removed( );
