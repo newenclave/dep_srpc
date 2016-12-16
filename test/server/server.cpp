@@ -11,7 +11,7 @@
 #include "srpc/common/sizepack/varint.h"
 #include "srpc/common/sizepack/fixint.h"
 
-#include "srpc/common/observers/common.h"
+#include "srpc/common/observers/simple.h"
 
 #include "boost/signals2.hpp"
 
@@ -52,7 +52,7 @@ namespace rrr {
 
 std::atomic<std::uint32_t> gcounter {0};
 
-using sig  = common::observers::common<void (int), srpc::mutex>;
+using sig  = common::observers::simple<void (int), srpc::mutex>;
 //using sig  = common::observers::simple<void (int), srpc::dummy_mutex>;
 
 //using bsig = boost::signals2::signal_type<void (int),

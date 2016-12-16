@@ -4,22 +4,18 @@
 #include <list>
 #include <set>
 
-#include "srpc/common/config/functional.h"
 #include "srpc/common/config/mutex.h"
 #include "srpc/common/details/list.h"
 #include "srpc/common/observers/traits/simple.h"
 
-
 namespace srpc { namespace common { namespace observers {
 
-    template <typename T,
-              typename MutexType = srpc::mutex,
-              typename SlotType  = traits::simple<T> >
+    template <typename SlotType,
+              typename MutexType = srpc::mutex >
     class common {
     public:
 
-        typedef srpc::function<T> sig_type;
-        typedef SlotType          slot_type;
+        typedef SlotType  slot_type;
 
     private:
 
@@ -33,6 +29,7 @@ namespace srpc { namespace common { namespace observers {
             bool operator ( ) ( const list_iterator &l,
                                 const list_iterator &r ) const
             {
+                /// ptr -> details::list::node
                 return l.ptr( ) < r.ptr( );
             }
         };
@@ -96,8 +93,8 @@ namespace srpc { namespace common { namespace observers {
 
         class connection {
 
-            friend class observers::common<T, MutexType, SlotType>;
-            typedef observers::common<T, MutexType, SlotType> parent_type;
+            friend class observers::common<SlotType, MutexType>;
+            typedef observers::common<SlotType, MutexType> parent_type;
 
             connection( const typename parent_type::param_sptr &parent,
                         typename parent_type::list_iterator me )
@@ -131,6 +128,8 @@ namespace srpc { namespace common { namespace observers {
         common( )
             :impl_(srpc::make_shared<param_keeper>( ))
         { }
+
+        virtual ~common( ) { }
 
         connection connect( typename slot_type::value_type call )
         {
