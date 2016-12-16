@@ -6,6 +6,7 @@
 
 #include "srpc/common/config/functional.h"
 #include "srpc/common/config/mutex.h"
+#include "srpc/common/details/list.h"
 
 namespace srpc { namespace common { namespace observers {
 
@@ -39,7 +40,7 @@ namespace srpc { namespace common { namespace observers {
             call_type     call;
         };
 
-        typedef std::list<call_holder>    list_type;
+        typedef details::list<call_holder>    list_type;
 
         typedef typename list_type::iterator  list_iterator;
         struct iterator_cmp {
@@ -95,7 +96,8 @@ namespace srpc { namespace common { namespace observers {
             {
                 guard_type lck(tmp_lock_);
                 list_iterator b = added_.begin( );
-                list_.splice( list_.end( ), added_ );
+                list_.concat( added_ );
+                //list_.splice( list_.end( ), added_ );
                 return b;
             }
 
@@ -111,8 +113,8 @@ namespace srpc { namespace common { namespace observers {
             friend class observers::simple<T, MutexType>;
             typedef observers::simple<T, MutexType> parent_type;
 
-            connection( const parent_type::param_sptr &parent,
-                        parent_type::list_iterator me )
+            connection( const typename parent_type::param_sptr &parent,
+                        typename parent_type::list_iterator me )
                 :parent_list_(parent)
                 ,me_(me)
             { }
@@ -147,7 +149,7 @@ namespace srpc { namespace common { namespace observers {
         {
             guard_type l(impl_->tmp_lock_);
             impl_->added_.push_back( call_holder(call) );
-            return connection( impl_, impl_->list_.rbegin( ).base( ) );
+            return connection( impl_, impl_->list_.rbegin( ) );
         }
 
         static void disconnect( connection cc )

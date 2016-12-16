@@ -76,13 +76,9 @@ void sleep_thread( )
 int main( int argc, char *argv[] )
 {
 
-    sig::connection ccc;
-    ccc.disconnect( );
-
 //    typename rrr::result<double(int, const std::string&, int)>::type K = 100.100;
 
 //    std::cout << K << "\n";
-//    return 0;
 
     std::cout << sizeof(sig) << " "
               << sizeof(bsig) << " "
