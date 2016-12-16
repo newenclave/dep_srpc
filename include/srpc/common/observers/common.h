@@ -54,6 +54,11 @@ namespace srpc { namespace common { namespace observers {
 
             mutable mutex_type  list_lock_;
             mutable mutex_type  tmp_lock_;
+            size_t              id_;
+
+            param_keeper( )
+                :id_(1)
+            { }
 
             void add_remove( size_t itr )
             {
@@ -120,7 +125,6 @@ namespace srpc { namespace common { namespace observers {
                 guard_type lck(tmp_lock_);
                 list_iterator b = added_.begin( );
                 list_.splice_back( added_ );
-                //list_.splice( list_.end( ), added_ );
                 return b;
             }
 
@@ -173,7 +177,6 @@ namespace srpc { namespace common { namespace observers {
 
         common( )
             :impl_(srpc::make_shared<param_keeper>( ))
-            ,id_(1)
         { }
 
         virtual ~common( ) { }
@@ -181,7 +184,7 @@ namespace srpc { namespace common { namespace observers {
         connection connect( slot_type call )
         {
             guard_type l(impl_->tmp_lock_);
-            size_t next = id_++;
+            size_t next = impl_->id_++;
             impl_->added_.push_back( slot_info(call, next) );
             return connection( impl_, next );
         }
@@ -370,7 +373,6 @@ namespace srpc { namespace common { namespace observers {
 
 #endif
     private:
-        size_t     id_;
         param_sptr impl_;
     };
 
