@@ -4,12 +4,15 @@
 #if CXX11_ENABLED == 0
 
 #include "boost/thread/mutex.hpp"
+#include "boost/thread/recursive_mutex.hpp"
 #include "boost/thread/locks.hpp"
 
 namespace CONFIG_TOPNAMESPACE {
     using boost::mutex;
+    using boost::recursive_mutex;
     using boost::unique_lock;
     using boost::lock_guard;
+
 }
 
 #else
@@ -18,10 +21,19 @@ namespace CONFIG_TOPNAMESPACE {
 
 namespace CONFIG_TOPNAMESPACE {
     using std::mutex;
+    using std::recursive_mutex;
     using std::unique_lock;
     using std::lock_guard;
 }
 
 #endif
+
+namespace CONFIG_TOPNAMESPACE {
+    struct dummy_mutex {
+        void lock( ) { }
+        void unlock( ) { }
+        bool try_lock( ) { return true; }
+    };
+}
 
 #endif // CONFIG_MUTEX_H
