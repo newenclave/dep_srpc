@@ -52,8 +52,8 @@ namespace rrr {
 
 std::atomic<std::uint32_t> gcounter {0};
 
-using sig  = common::observers::simple<void (int), srpc::mutex>;
-//using sig  = common::observers::simple<void (int), srpc::dummy_mutex>;
+//using sig  = common::observers::simple<void (int), srpc::mutex>;
+using sig  = common::observers::simple<void (int), srpc::dummy_mutex>;
 
 //using bsig = boost::signals2::signal_type<void (int),
 //                     boost::signals2::keywords::mutex_type<boost::signals2::dummy_mutex> >::type;

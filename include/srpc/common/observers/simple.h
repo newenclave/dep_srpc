@@ -14,33 +14,38 @@ namespace srpc { namespace common { namespace observers {
               typename MutexType = srpc::mutex>
     class simple {
     public:
-        typedef srpc::function<T> call_type;
+        typedef srpc::function<T> sig_type;
 
     private:
 
         typedef MutexType                     mutex_type;
         typedef srpc::lock_guard<mutex_type>  guard_type;
 
-        struct call_holder {
+        struct slot_holder {
 
-            explicit call_holder( const call_type &c )
-                :call(c)
+            explicit slot_holder( const sig_type &c )
+                :call_(c)
             { }
 
-            call_holder (const call_holder &other)
-                :call(other.call)
+            slot_holder (const slot_holder &other)
+                :call_(other.call_)
             { }
 
-            call_holder &operator = (const call_holder &other)
+            slot_holder &operator = (const slot_holder &other)
             {
-                call = other.call;
+                call_ = other.call_;
                 return *this;
             }
-
-            call_type     call;
+            //mutex_type    lock;
+            sig_type &get( )
+            {
+                return call_;
+            }
+        private:
+            sig_type     call_;
         };
 
-        typedef details::list<call_holder>    list_type;
+        typedef details::list<slot_holder>    list_type;
 
         typedef typename list_type::iterator  list_iterator;
         struct iterator_cmp {
@@ -131,6 +136,7 @@ namespace srpc { namespace common { namespace observers {
             {
                 parent_type::param_sptr lck(parent_list_.lock( ));
                 if( lck ) {
+                    //guard_type l(me_->lock);
                     lck->add2remove( me_ );
                 }
             }
@@ -145,10 +151,10 @@ namespace srpc { namespace common { namespace observers {
             :impl_(srpc::make_shared<param_keeper>( ))
         { }
 
-        connection connect(  call_type call )
+        connection connect(  sig_type call )
         {
             guard_type l(impl_->tmp_lock_);
-            impl_->added_.push_back( call_holder(call) );
+            impl_->added_.push_back( slot_holder(call) );
             return connection( impl_, impl_->list_.rbegin( ) );
         }
 
@@ -166,7 +172,7 @@ namespace srpc { namespace common { namespace observers {
             list_iterator e(impl_->list_.end( ));
             for( ;b != e; ++b ) {
                 if( !impl_->removed( b ) ) {
-                    b->call( );
+                    b->get( )( );
                 }
             }
             impl_->clear_removed( );
@@ -183,7 +189,7 @@ namespace srpc { namespace common { namespace observers {
             impl_->splice_added( );
             for( ;b != e; ++b ) {
                 if( !impl_->removed( b ) ) {
-                    b->call(p0);
+                    b->get( )(p0);
                 }
             }
             impl_->clear_removed( );
@@ -198,7 +204,7 @@ namespace srpc { namespace common { namespace observers {
             list_iterator e(impl_->list_.end( ));
             for( ;b != e; ++b ) {
                 if( !impl_->removed( b ) ) {
-                    b->call(p0, p1);
+                    b->get( )(p0, p1);
                 }
             }
             impl_->clear_removed( );
@@ -216,7 +222,7 @@ namespace srpc { namespace common { namespace observers {
             list_iterator e(impl_->list_.end( ));
             for( ;b != e; ++b ) {
                 if( !impl_->removed( b ) ) {
-                    b->call(p0, p1, p2);
+                    b->get( )(p0, p1, p2);
                 }
             }
             impl_->clear_removed( );
@@ -234,7 +240,7 @@ namespace srpc { namespace common { namespace observers {
             list_iterator e(impl_->list_.end( ));
             for( ;b != e; ++b ) {
                 if( !impl_->removed( b ) ) {
-                    b->call(p0, p1, p2, p3);
+                    b->get( )(p0, p1, p2, p3);
                 }
             }
             impl_->clear_removed( );
@@ -254,7 +260,7 @@ namespace srpc { namespace common { namespace observers {
             list_iterator e(impl_->list_.end( ));
             for( ;b != e; ++b ) {
                 if( !impl_->removed( b ) ) {
-                    b->call(p0, p1, p2, p3, p4);
+                    b->get( )(p0, p1, p2, p3, p4);
                 }
             }
             impl_->clear_removed( );
@@ -274,7 +280,7 @@ namespace srpc { namespace common { namespace observers {
             list_iterator e(impl_->list_.end( ));
             for( ;b != e; ++b ) {
                 if( !impl_->removed( b ) ) {
-                    b->call(p0, p1, p2, p3, p4, p5);
+                    b->get( )(p0, p1, p2, p3, p4, p5);
                 }
             }
             impl_->clear_removed( );
@@ -296,7 +302,7 @@ namespace srpc { namespace common { namespace observers {
             list_iterator e(impl_->list_.end( ));
             for( ;b != e; ++b ) {
                 if( !impl_->removed( b ) ) {
-                    b->call(p0, p1, p2, p3, p4, p5, p6);
+                    b->get( )(p0, p1, p2, p3, p4, p5, p6);
                 }
             }
             impl_->clear_removed( );
@@ -318,7 +324,7 @@ namespace srpc { namespace common { namespace observers {
             list_iterator e(impl_->list_.end( ));
             for( ;b != e; ++b ) {
                 if( !impl_->removed( b ) ) {
-                    b->call(p0, p1, p2, p3, p4, p5, p6, p7);
+                    b->get( )(p0, p1, p2, p3, p4, p5, p6, p7);
                 }
             }
             impl_->clear_removed( );
@@ -342,7 +348,7 @@ namespace srpc { namespace common { namespace observers {
             list_iterator e(impl_->list_.end( ));
             for( ;b != e; ++b ) {
                 if( !impl_->removed( b ) ) {
-                    b->call(p0, p1, p2, p3, p4, p5, p6, p7, p8);
+                    b->get( )(p0, p1, p2, p3, p4, p5, p6, p7, p8);
                 }
             }
             impl_->clear_removed( );
@@ -366,7 +372,7 @@ namespace srpc { namespace common { namespace observers {
             list_iterator e(impl_->list_.end( ));
             for( ;b != e; ++b ) {
                 if( !impl_->removed( b ) ) {
-                    b->call(p0, p1, p2, p3, p4, p5, p6, p7, p8);
+                    b->get( )(p0, p1, p2, p3, p4, p5, p6, p7, p8);
                 }
             }
             impl_->clear_removed( );
@@ -381,7 +387,8 @@ namespace srpc { namespace common { namespace observers {
             list_iterator e(impl_->list_.end( ));
             for( ;b != e; ++b ) {
                 if( !impl_->removed( b ) ) {
-                    b->call( args... );
+                    //guard_type l(b->lock);
+                    b->get( )( args... );
                 }
             }
             impl_->clear_removed( );
