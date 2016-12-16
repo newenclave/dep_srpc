@@ -20,10 +20,19 @@ namespace srpc { namespace common { namespace observers {
 
     private:
 
+        struct slot_info {
+            slot_info( const slot_type &slot, size_t id )
+                :slot_(slot)
+                ,id_(id)
+            { }
+            slot_type slot_;
+            size_t    id_;
+        };
+
         typedef MutexType                     mutex_type;
         typedef srpc::lock_guard<mutex_type>  guard_type;
 
-        typedef details::list<slot_type>      list_type;
+        typedef details::list<slot_info>      list_type;
         typedef typename list_type::iterator  list_iterator;
 
         struct iterator_cmp {
@@ -35,7 +44,7 @@ namespace srpc { namespace common { namespace observers {
             }
         };
 
-        typedef std::set<list_iterator, iterator_cmp> iterator_set;
+        typedef std::set<size_t> iterator_set;
 
         struct param_keeper {
 
@@ -46,16 +55,32 @@ namespace srpc { namespace common { namespace observers {
             mutable mutex_type  list_lock_;
             mutable mutex_type  tmp_lock_;
 
-            void add2remove( list_iterator itr )
+            void add_remove( size_t itr )
             {
                 guard_type lck(tmp_lock_);
                 set_.insert( itr );
             }
 
-            bool removed( list_iterator itr ) const
+            void del_remove( size_t itr )
             {
                 guard_type lck(tmp_lock_);
-                return set_.find( itr ) != set_.end( );
+                set_.erase( itr );
+            }
+
+            bool is_removed( list_iterator itr ) const
+            {
+                guard_type lck(tmp_lock_);
+                return set_.find( itr->id_ ) != set_.end( );
+            }
+
+            void remove_by_index( size_t id )
+            {
+                list_iterator b(list_.begin( ));
+                list_iterator e(list_.end( ));
+                for( ; (b!=e) && (b->id_<id); ++b );
+                if( (b!=e) && (b->id_ == id) ) {
+                    b = list_.erase( b );
+                }
             }
 
             void clear_removed( )
@@ -69,11 +94,16 @@ namespace srpc { namespace common { namespace observers {
                 typename iterator_set::iterator b(tmp.begin( ));
                 typename iterator_set::iterator e(tmp.end( ));
 
-                for( ; b != e; ++b ) {
-                    if( *b != list_.end( ) ) {
-                        list_.erase( *b );
+                list_iterator bl(list_.begin( ));
+                list_iterator el(list_.end( ));
+
+                for( ; (b!=e) && (bl!=el); ++b ) {
+                    for( ; (bl!=el) && (bl->id_ < *b); ++bl );
+                    if( bl->id_ == *b ) {
+                        bl = list_.erase( bl );
                     }
                 }
+
             }
 
             list_iterator splice_added( )
@@ -98,25 +128,31 @@ namespace srpc { namespace common { namespace observers {
             typedef observers::common<SlotType, MutexType> parent_type;
 
             connection( const typename parent_type::param_sptr &parent,
-                        typename parent_type::list_iterator me )
+                        size_t me )
                 :parent_list_(parent)
                 ,me_(me)
             { }
 
-            //parent_type::set_keeper      &parent_list_;
-            typename parent_type::param_wptr     parent_list_;
-            typename parent_type::list_iterator  me_;
+            typename parent_type::param_wptr parent_list_;
+            size_t                           me_;
 
         public:
 
-            connection( ) { }
+            connection( )
+                :me_(0)
+            { }
 
             void disconnect(  )
             {
                 parent_type::param_sptr lck(parent_list_.lock( ));
-                if( lck ) {
-                    //guard_type l(me_->lock);
-                    lck->add2remove( me_ );
+                if( me_ && lck ) {
+                    if( lck->list_lock_.try_lock( ) ) {
+                        lck->remove_by_index( me_ );
+                        lck->list_lock_.unlock( );
+                    } else {
+                        lck->add_remove( me_ );
+                    }
+                    me_ = 0;
                 }
             }
 
@@ -128,6 +164,7 @@ namespace srpc { namespace common { namespace observers {
 
         common( )
             :impl_(srpc::make_shared<param_keeper>( ))
+            ,id_(1)
         { }
 
         virtual ~common( ) { }
@@ -135,8 +172,9 @@ namespace srpc { namespace common { namespace observers {
         connection connect( slot_type call )
         {
             guard_type l(impl_->tmp_lock_);
-            impl_->added_.push_back( call );
-            return connection( impl_, impl_->list_.rbegin( ) );
+            size_t next = id_++;
+            impl_->added_.push_back( slot_info(call, next) );
+            return connection( impl_, next );
         }
 
         static void disconnect( connection cc )
@@ -145,50 +183,42 @@ namespace srpc { namespace common { namespace observers {
         }
 
 #if CXX11_ENABLED == 0
+
+#define SRPC_OBSERVER_OPERATOR_PROLOGUE \
+            guard_type l(impl_->list_lock_); \
+            impl_->splice_added( ); \
+            list_iterator b(impl_->list_.begin( )); \
+            list_iterator e(impl_->list_.end( )); \
+            for( ;b != e; ++b ) { \
+                if( !impl_->is_removed( b ) ) { \
+                    slot_traits::exec( b->slot_
+
+#define SRPC_OBSERVER_OPERATOR_EPILOGUE \
+                    ); \
+                 } \
+            } \
+            impl_->clear_removed( )
+
         void operator ( ) ( )
         {
-            guard_type l(impl_->list_lock_);
-            impl_->splice_added( );
-            list_iterator b(impl_->list_.begin( ));
-            list_iterator e(impl_->list_.end( ));
-            for( ;b != e; ++b ) {
-                if( !impl_->removed( b ) ) {
-                    slot_traits::exec( *b );
-                }
-            }
-            impl_->clear_removed( );
+            SRPC_OBSERVER_OPERATOR_PROLOGUE
+            SRPC_OBSERVER_OPERATOR_EPILOGUE;
         }
 
         template <typename P>
         void operator ( ) ( const P& p0 )
         {
-            guard_type l(impl_->list_lock_);
-            impl_->splice_added( );
-
-            list_iterator b(impl_->list_.begin( ));
-            list_iterator e(impl_->list_.end( ));
-            impl_->splice_added( );
-            for( ;b != e; ++b ) {
-                if( !impl_->removed( b ) ) {
-                    slot_traits::exec( *b, p0 );
-                }
-            }
-            impl_->clear_removed( );
+            SRPC_OBSERVER_OPERATOR_PROLOGUE,
+                    p0
+            SRPC_OBSERVER_OPERATOR_EPILOGUE;
         }
 
         template <typename P0, typename P1>
         void operator ( ) ( const P0& p0, const P1& p1 )
         {
-            guard_type l(impl_->list_lock_);
-            impl_->splice_added( );
-            list_iterator b(impl_->list_.begin( ));
-            list_iterator e(impl_->list_.end( ));
-            for( ;b != e; ++b ) {
-                if( !impl_->removed( b ) ) {
-                    slot_traits::exec( *b, p0, p1);
-                }
-            }
-            impl_->clear_removed( );
+            SRPC_OBSERVER_OPERATOR_PROLOGUE,
+                    p0, p1
+            SRPC_OBSERVER_OPERATOR_EPILOGUE;
         }
 
         template <typename P0, typename P1,
@@ -197,16 +227,9 @@ namespace srpc { namespace common { namespace observers {
         void operator ( ) ( const P0& p0, const P1& p1,
                             const P2& p2 )
         {
-            guard_type l(impl_->list_lock_);
-            impl_->splice_added( );
-            list_iterator b(impl_->list_.begin( ));
-            list_iterator e(impl_->list_.end( ));
-            for( ;b != e; ++b ) {
-                if( !impl_->removed( b ) ) {
-                    slot_traits::exec( *b, p0, p1, p2);
-                }
-            }
-            impl_->clear_removed( );
+            SRPC_OBSERVER_OPERATOR_PROLOGUE,
+                    p0, p1, p2
+            SRPC_OBSERVER_OPERATOR_EPILOGUE;
         }
 
         template <typename P0, typename P1,
@@ -215,16 +238,9 @@ namespace srpc { namespace common { namespace observers {
         void operator ( ) ( const P0& p0, const P1& p1,
                             const P2& p2, const P3& p3 )
         {
-            guard_type l(impl_->list_lock_);
-            impl_->splice_added( );
-            list_iterator b(impl_->list_.begin( ));
-            list_iterator e(impl_->list_.end( ));
-            for( ;b != e; ++b ) {
-                if( !impl_->removed( b ) ) {
-                    slot_traits::exec( *b, p0, p1, p2, p3);
-                }
-            }
-            impl_->clear_removed( );
+            SRPC_OBSERVER_OPERATOR_PROLOGUE,
+                    p0, p1, p2, p3
+            SRPC_OBSERVER_OPERATOR_EPILOGUE;
         }
 
         template <typename P0, typename P1,
@@ -235,16 +251,9 @@ namespace srpc { namespace common { namespace observers {
                             const P2& p2, const P3& p3,
                             const P4& p4 )
         {
-            guard_type l(impl_->list_lock_);
-            impl_->splice_added( );
-            list_iterator b(impl_->list_.begin( ));
-            list_iterator e(impl_->list_.end( ));
-            for( ;b != e; ++b ) {
-                if( !impl_->removed( b ) ) {
-                    slot_traits::exec( *b, p0, p1, p2, p3, p4);
-                }
-            }
-            impl_->clear_removed( );
+            SRPC_OBSERVER_OPERATOR_PROLOGUE,
+                    p0, p1, p2, p3, p4
+            SRPC_OBSERVER_OPERATOR_EPILOGUE;
         }
 
         template <typename P0, typename P1,
@@ -255,16 +264,9 @@ namespace srpc { namespace common { namespace observers {
                             const P2& p2, const P3& p3,
                             const P4& p4, const P5& p5 )
         {
-            guard_type l(impl_->list_lock_);
-            impl_->splice_added( );
-            list_iterator b(impl_->list_.begin( ));
-            list_iterator e(impl_->list_.end( ));
-            for( ;b != e; ++b ) {
-                if( !impl_->removed( b ) ) {
-                    slot_traits::exec( *b, p0, p1, p2, p3, p4, p5);
-                }
-            }
-            impl_->clear_removed( );
+            SRPC_OBSERVER_OPERATOR_PROLOGUE,
+                    p0, p1, p2, p3, p4, p5
+            SRPC_OBSERVER_OPERATOR_EPILOGUE;
         }
 
         template <typename P0, typename P1,
@@ -277,16 +279,9 @@ namespace srpc { namespace common { namespace observers {
                             const P4& p4, const P5& p5,
                             const P6& p6 )
         {
-            guard_type l(impl_->list_lock_);
-            impl_->splice_added( );
-            list_iterator b(impl_->list_.begin( ));
-            list_iterator e(impl_->list_.end( ));
-            for( ;b != e; ++b ) {
-                if( !impl_->removed( b ) ) {
-                    slot_traits::exec( *b, p0, p1, p2, p3, p4, p5, p6);
-                }
-            }
-            impl_->clear_removed( );
+            SRPC_OBSERVER_OPERATOR_PROLOGUE,
+                    p0, p1, p2, p3, p4, p5, p6
+            SRPC_OBSERVER_OPERATOR_EPILOGUE;
         }
 
         template <typename P0, typename P1,
@@ -299,16 +294,9 @@ namespace srpc { namespace common { namespace observers {
                             const P4& p4, const P5& p5,
                             const P6& p6, const P7& p7 )
         {
-            guard_type l(impl_->list_lock_);
-            impl_->splice_added( );
-            list_iterator b(impl_->list_.begin( ));
-            list_iterator e(impl_->list_.end( ));
-            for( ;b != e; ++b ) {
-                if( !impl_->removed( b ) ) {
-                    slot_traits::exec(p0, p1, p2, p3, p4, p5, p6, p7);
-                }
-            }
-            impl_->clear_removed( );
+            SRPC_OBSERVER_OPERATOR_PROLOGUE,
+                    p0, p1, p2, p3, p4, p5, p6, p7
+            SRPC_OBSERVER_OPERATOR_EPILOGUE;
         }
 
         template <typename P0, typename P1,
@@ -323,16 +311,9 @@ namespace srpc { namespace common { namespace observers {
                             const P6& p6, const P7& p7,
                             const P8& p8 )
         {
-            guard_type l(impl_->list_lock_);
-            impl_->splice_added( );
-            list_iterator b(impl_->list_.begin( ));
-            list_iterator e(impl_->list_.end( ));
-            for( ;b != e; ++b ) {
-                if( !impl_->removed( b ) ) {
-                    slot_traits::exec(p0, p1, p2, p3, p4, p5, p6, p7, p8);
-                }
-            }
-            impl_->clear_removed( );
+            SRPC_OBSERVER_OPERATOR_PROLOGUE,
+                    p0, p1, p2, p3, p4, p5, p6, p7, p8
+            SRPC_OBSERVER_OPERATOR_EPILOGUE;
         }
 
         template <typename P0, typename P1,
@@ -347,17 +328,14 @@ namespace srpc { namespace common { namespace observers {
                             const P6& p6, const P7& p7,
                             const P8& p8, const P9& p9)
         {
-            guard_type l(impl_->list_lock_);
-            impl_->splice_added( );
-            list_iterator b(impl_->list_.begin( ));
-            list_iterator e(impl_->list_.end( ));
-            for( ;b != e; ++b ) {
-                if( !impl_->removed( b ) ) {
-                    slot_traits::exec(p0, p1, p2, p3, p4, p5, p6, p7, p8);
-                }
-            }
-            impl_->clear_removed( );
+            SRPC_OBSERVER_OPERATOR_PROLOGUE,
+                    p0, p1, p2, p3, p4, p5, p6, p7, p8, p9
+            SRPC_OBSERVER_OPERATOR_EPILOGUE;
         }
+
+#undef SRPC_OBSERVER_OPERATOR_PROLOGUE
+#undef SRPC_OBSERVER_OPERATOR_EPILOGUE
+
 #else
         template <typename ...Args>
         void operator ( ) ( const Args& ...args )
@@ -367,8 +345,10 @@ namespace srpc { namespace common { namespace observers {
             list_iterator b(impl_->list_.begin( ));
             list_iterator e(impl_->list_.end( ));
             for( ;b != e; ++b ) {
-                if( !impl_->removed( b ) ) {
-                    slot_traits::exec( *b, args... );
+                if( !impl_->is_removed( b ) ) {
+                    slot_traits::exec( b->slot_, args... );
+                } else {
+                    //b = impl_->list_.erase( b );
                 }
             }
             impl_->clear_removed( );
@@ -376,6 +356,7 @@ namespace srpc { namespace common { namespace observers {
 
 #endif
     private:
+        size_t     id_;
         param_sptr impl_;
     };
 
