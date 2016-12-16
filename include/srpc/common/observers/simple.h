@@ -47,7 +47,7 @@ namespace srpc { namespace common { namespace observers {
             bool operator ( ) ( const list_iterator &l,
                                 const list_iterator &r ) const
             {
-                return &(*l) < &(*r);
+                return l.ptr( ) < r.ptr( );
             }
         };
 
@@ -96,7 +96,7 @@ namespace srpc { namespace common { namespace observers {
             {
                 guard_type lck(tmp_lock_);
                 list_iterator b = added_.begin( );
-                list_.concat( added_ );
+                list_.splice_back( added_ );
                 //list_.splice( list_.end( ), added_ );
                 return b;
             }

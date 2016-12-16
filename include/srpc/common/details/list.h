@@ -8,6 +8,7 @@ namespace srpc { namespace common { namespace details {
     //// NOT STL LIST!!!
     template <typename T>
     class list {
+
         struct node {
             node *prev_;
             node *next_;
@@ -51,21 +52,11 @@ namespace srpc { namespace common { namespace details {
                 :node_(n)
             { }
 
-            void invalidate( )
-            {
-                node_ = NULL;
-            }
-
-            bool invalid( ) const
-            {
-                return node_ == NULL;
-            }
-
         public:
 
             srpc::uintptr_t ptr( ) const
             {
-                return static_cast<srpc::uintptr_t>(node_);
+                return reinterpret_cast<srpc::uintptr_t>(node_);
             }
 
             T & operator * ( )
@@ -163,7 +154,7 @@ namespace srpc { namespace common { namespace details {
 
         iterator erase( iterator itr )
         {
-            if( !itr.invalid( ) ) {
+            if( itr.node_ ) {
                 node *tmp = itr.node_->next_;
                 if( itr.node_->prev_ ) {
                     itr.node_->prev_->next_ = itr.node_->next_;
@@ -181,9 +172,8 @@ namespace srpc { namespace common { namespace details {
                     front_ = itr.node_->next_;
                 }
 
-
                 delete itr.node_;
-                itr.invalidate( );
+                itr.node_ = NULL;
 
                 return iterator(tmp);
             } else {
@@ -191,7 +181,7 @@ namespace srpc { namespace common { namespace details {
             }
         }
 
-        void concat( list<T> &other )
+        void splice_back( list<T> &other )
         {
             if( &other != this ) {
                 if( front_ == NULL ) {
