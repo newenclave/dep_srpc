@@ -230,9 +230,9 @@ namespace srpc { namespace common { namespace observers {
             void unsubscribe(  )
             {
                 parent_type::param_sptr lck(parent_list_.lock( ));
-                if( me_ && lck ) {
+                if( lck ) {
                     lck->add_remove( me_ );
-                    me_ = 0;
+                    parent_list_.reset( );
                 }
             }
 
@@ -387,14 +387,18 @@ namespace srpc { namespace common { namespace observers {
             return subscription( impl_, next );
         }
 
-        static void disconnect( subscription cc )
+        void disconnect( subscription &cc )
         {
-            cc.disconnect( );
+            unsubscribe( cc );
         }
 
-        static void unsubscribe( subscription cc )
+        void unsubscribe( subscription &cc )
         {
-            cc.disconnect( );
+            param_sptr lck(cc.parent_list_.lock( ));
+            if( lck == impl_ ) {
+                impl_->add_remove( cc.me_ );
+                cc.parent_list_.reset( );
+            }
         }
 
         void disconnect_all_slots(  )
