@@ -69,7 +69,7 @@ namespace bsig {
 
 }
 
-namespace my = bsig;
+namespace my = sig;
 
 my::vtype s;
 
@@ -88,6 +88,8 @@ void sleep_thread( )
 
 int main( int argc, char *argv[] )
 {
+    my::vtype rsig;
+
     auto lambda2 = []( int i ){
         //std::cout << "!\n";
         gcounter += i;

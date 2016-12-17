@@ -104,8 +104,9 @@ namespace srpc { namespace common { namespace observers {
                         list_iterator b(lst.begin( ));
 
                         for( ; b && (b->id_<id); ++b );
+
                         if( b && ( b->id_ == id ) ) {
-                            b = itr_erase( lst, b );
+                            itr_erase( lst, b );
                         }
 
                     } else {
@@ -113,8 +114,9 @@ namespace srpc { namespace common { namespace observers {
                         list_iterator b(lst.rbegin( ));
 
                         for( ; b && (id < b->id_); --b );
+
                         if( b && (b->id_ == id) ) {
-                            b = itr_rerase( lst, b );
+                            itr_rerase( lst, b );
                         }
                     }
                 }
@@ -344,6 +346,28 @@ namespace srpc { namespace common { namespace observers {
         common( )
             :impl_(srpc::make_shared<param_keeper>( ))
         { }
+
+#if CXX11_ENABLED == 0
+    private:
+        common( const common & );
+        common& operator = ( const common & );
+    public:
+#else
+        common( const common & )              = delete;
+        common& operator = ( const common & ) = delete;
+        common( common &&o )
+        {
+            impl_.swap( o.impl_ );
+            o.impl_ = srpc::make_shared<param_keeper>( );
+        }
+
+        common & operator = ( common &&o )
+        {
+            impl_.swap( o.impl_ );
+            o.impl_ = srpc::make_shared<param_keeper>( );
+            return *this;
+        }
+#endif
 
         //virtual
         ~common( )
