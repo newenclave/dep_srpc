@@ -24,7 +24,7 @@ namespace traits {
             self(p0);
         }
 
-        template < typename P0, typename P1>
+        template < typename P0,  typename P1>
         static
         void exec( value_type &self,
                    const P0 &p0, const P1 &p1 )
