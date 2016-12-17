@@ -88,6 +88,7 @@ void sleep_thread( )
 
 int main( int argc, char *argv[] )
 {
+
     auto lambda2 = []( int i ){
         //std::cout << "!\n";
         gcounter += i;
