@@ -52,22 +52,22 @@ namespace rrr {
 
 std::atomic<std::uint32_t> gcounter {0};
 
-using sig  = common::observers::simple<void (int)>;
-//using sig  = common::observers::simple<void (int), srpc::dummy_mutex>;
+//using sig  = common::observers::simple<void (int)>;
+using sig  = common::observers::simple<void (int), srpc::dummy_mutex>;
 
-//using bsig = boost::signals2::signal_type<void (int),
-//                     boost::signals2::keywords::mutex_type<boost::signals2::dummy_mutex> >::type;
-using bsig = boost::signals2::signal_type<void (int)>::type;
+using bsig = boost::signals2::signal_type<void (int),
+                     boost::signals2::keywords::mutex_type<boost::signals2::dummy_mutex> >::type;
+//using bsig = boost::signals2::signal_type<void (int)>::type;
 
 bsig s;
 
 void sleep_thread( )
 {
-    for( int i=0; i<100; i++ ) {
-        auto c = s.connect([](...){ gcounter++; });
-        s( 1 );
-        s.disconnect( c );
-    }
+//    for( int i=0; i<100; i++ ) {
+//        auto c = s.connect([](...){ gcounter++; });
+//        s( 1 );
+//        s.disconnect( c );
+//    }
 //    for( int i = 1; i<5; i++ ) {
 //        auto c = s.connect([](...){ gcounter++; });
 //        std::this_thread::sleep_for( std::chrono::milliseconds(100) );
@@ -91,7 +91,7 @@ int main( int argc, char *argv[] )
 
     auto lambda = [lambda2]( int i ){
         gcounter += i;
-        s.connect( lambda2 );
+        //s.connect( lambda2 );
     };
 
     s.connect( lambda );
@@ -102,7 +102,7 @@ int main( int argc, char *argv[] )
 
     std::thread r(sleep_thread);
 
-    for( int i = 0; i<600; i++ ) {
+    for( int i = 0; i<60000; i++ ) {
         s( 1 );
         s.connect( lambda );
         //std::cout << i << "\n";

@@ -158,12 +158,12 @@ namespace srpc { namespace common { namespace observers {
 
     public:
 
-        class connection {
+        class subscription {
 
             friend class observers::common<SlotType, MutexType>;
             typedef observers::common<SlotType, MutexType> parent_type;
 
-            connection( const typename parent_type::param_sptr &parent,
+            subscription( const typename parent_type::param_sptr &parent,
                         size_t me )
                 :parent_list_(parent)
                 ,me_(me)
@@ -174,9 +174,14 @@ namespace srpc { namespace common { namespace observers {
 
         public:
 
-            connection( )
+            subscription( )
                 :me_(0)
             { }
+
+            void unsubscribe(  )
+            {
+                disconnect( );
+            }
 
             void disconnect(  )
             {
@@ -187,11 +192,13 @@ namespace srpc { namespace common { namespace observers {
                 }
             }
 
-            void swap( connection &other )
+            void swap( subscription &other )
             {
                 parent_list_.swap( other.parent_list_ );
             }
         };
+
+        typedef subscription connection;
 
         common( )
             :impl_(srpc::make_shared<param_keeper>( ))
@@ -202,10 +209,21 @@ namespace srpc { namespace common { namespace observers {
         connection connect( slot_type call )
         {
             size_t next = impl_->connect( call );
-            return connection( impl_, next );
+            return subscription( impl_, next );
         }
 
-        static void disconnect( connection cc )
+        connection subscribe( slot_type call )
+        {
+            size_t next = impl_->connect( call );
+            return subscription( impl_, next );
+        }
+
+        static void disconnect( subscription cc )
+        {
+            cc.disconnect( );
+        }
+
+        static void unsubscribe( subscription cc )
         {
             cc.disconnect( );
         }
@@ -223,12 +241,16 @@ namespace srpc { namespace common { namespace observers {
             list_iterator b(impl_->list_.begin( )); \
             list_iterator e(impl_->list_.end( )); \
             while( b != e ) { \
-                if( !impl_->is_removed( b ) ) { \
+                if( !impl_->is_removed( b->id_ ) ) { \
                     slot_traits::exec( b->slot_
 
 #define SRPC_OBSERVER_OPERATOR_EPILOGUE \
                     ); \
-                    ++b; \
+                    if( slot_traits::expired( b->slot_ ) ) { \
+                        b = impl_->list_.erase( b ); \
+                    } else { \
+                        ++b; \
+                    } \
                  } else { \
                     b = impl_->list_.erase( b ); \
                  } \
@@ -385,7 +407,11 @@ namespace srpc { namespace common { namespace observers {
                     b = impl_->list_.erase( b );
                 } else {
                     slot_traits::exec( b->slot_, args... );
-                    ++b;
+                    if( slot_traits::expired( b->slot_ ) ) {
+                        b = impl_->list_.erase( b );
+                    } else {
+                        ++b;
+                    }
                 }
             }
             impl_->clear_removed( );

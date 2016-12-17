@@ -151,6 +151,12 @@ namespace traits {
         {
             self( args... );
         }
+
+        static
+        bool expired( value_type & )
+        {
+            return false;
+        }
 #endif
     };
 
