@@ -73,6 +73,7 @@ namespace srpc { namespace common { namespace observers {
                 return (removed_.erase( itr ) != 0);
             }
 
+            static
             void remove_by_index( list_type &lst, size_t id )
             {
                 if( lst.size( ) > 0 ) {
