@@ -373,6 +373,7 @@ namespace srpc { namespace common { namespace observers {
         ~common( )
         {
             impl_->clear_unsafe( );
+            //impl_->clear( ); // ??? hm
         }
 
         subscription connect( slot_type call )
@@ -406,7 +407,7 @@ namespace srpc { namespace common { namespace observers {
             impl_->clear( );
         }
 
-#if CXX11_ENABLED == 0
+#if !CXX11_ENABLED
 
 #define SRPC_OBSERVER_OPERATOR_PROLOGUE \
             guard_type l(impl_->list_lock_); \
