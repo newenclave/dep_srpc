@@ -210,7 +210,7 @@ namespace srpc { namespace common { namespace observers {
             cc.disconnect( );
         }
 
-        void disconnect_all(  )
+        void disconnect_all_slots(  )
         {
             impl_->clear( );
         }
@@ -231,7 +231,7 @@ namespace srpc { namespace common { namespace observers {
                     ++b; \
                  } else { \
                     b = impl_->list_.erase( b ); \
-                 }\
+                 } \
             } \
             impl_->clear_removed( )
 

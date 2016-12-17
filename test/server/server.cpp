@@ -59,7 +59,7 @@ using sig  = common::observers::simple<void (int)>;
 //                     boost::signals2::keywords::mutex_type<boost::signals2::dummy_mutex> >::type;
 using bsig = boost::signals2::signal_type<void (int)>::type;
 
-sig s;
+bsig s;
 
 void sleep_thread( )
 {
