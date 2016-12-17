@@ -10,8 +10,7 @@
 
 namespace srpc { namespace common { namespace observers {
 
-    template <typename SlotType,
-              typename MutexType = srpc::mutex >
+    template <typename SlotType, typename MutexType>
     class common {
     public:
 
@@ -49,7 +48,6 @@ namespace srpc { namespace common { namespace observers {
         struct param_keeper {
 
             iterator_set        removed_;
-            //iterator_set        added_set_;
             list_type           list_;
             list_type           added_;
 
@@ -65,20 +63,18 @@ namespace srpc { namespace common { namespace observers {
             {
                 guard_type lck(tmp_lock_);
                 removed_.insert( itr );
-                //if( added_set_.erase( itr ) > 0 ) {
-                    remove_by_index(added_, itr);
-                //}
+                remove_by_index(added_, itr);
             }
 
-            bool is_removed( list_iterator itr )
+            bool is_removed( size_t itr )
             {
                 guard_type lck(tmp_lock_);
-                return (removed_.erase( itr->id_ ) != 0);
+                return (removed_.erase( itr ) != 0);
             }
 
             void remove_by_index( list_type &lst, size_t id )
             {
-                const list_iterator e(lst.end( ));
+                const list_iterator e(lst.end( ));    /// null iterator
 
                 if( lst.size( ) > 0 ) {
 
@@ -139,14 +135,12 @@ namespace srpc { namespace common { namespace observers {
                 list_.clear( );
                 added_.clear( );
                 removed_.clear( );
-                //added_set_.clear( );
             }
 
             void splice_added( )
             {
                 guard_type lck(tmp_lock_);
                 list_.splice_back( added_ );
-                //added_set_.clear( );
             }
 
             size_t connect( slot_type call )
@@ -154,7 +148,6 @@ namespace srpc { namespace common { namespace observers {
                 guard_type l(tmp_lock_);
                 size_t next = id_++;
                 added_.push_back( slot_info(call, next) );
-                //added_set_.insert( next );
                 return next;
             }
 
@@ -388,7 +381,7 @@ namespace srpc { namespace common { namespace observers {
             list_iterator b(impl_->list_.begin( ));
             list_iterator e(impl_->list_.end( ));
             while( b != e ) {
-                if( impl_->is_removed( b ) ) {
+                if( impl_->is_removed( b->id_ ) ) {
                     b = impl_->list_.erase( b );
                 } else {
                     slot_traits::exec( b->slot_, args... );

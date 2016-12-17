@@ -52,22 +52,22 @@ namespace rrr {
 
 std::atomic<std::uint32_t> gcounter {0};
 
-using sig  = common::observers::simple<void (int), srpc::mutex>;
+using sig  = common::observers::simple<void (int)>;
 //using sig  = common::observers::simple<void (int), srpc::dummy_mutex>;
 
-using bsig = boost::signals2::signal_type<void (int),
-                     boost::signals2::keywords::mutex_type<boost::signals2::dummy_mutex> >::type;
-//using bsig = boost::signals2::signal_type<void (int)>::type;
+//using bsig = boost::signals2::signal_type<void (int),
+//                     boost::signals2::keywords::mutex_type<boost::signals2::dummy_mutex> >::type;
+using bsig = boost::signals2::signal_type<void (int)>::type;
 
 sig s;
 
 void sleep_thread( )
 {
-//    for( int i=0; i<100; i++ ) {
-//        auto c = s.connect([](...){ gcounter++; });
-//        s( 1 );
-//        s.disconnect( c );
-//    }
+    for( int i=0; i<100; i++ ) {
+        auto c = s.connect([](...){ gcounter++; });
+        s( 1 );
+        s.disconnect( c );
+    }
 //    for( int i = 1; i<5; i++ ) {
 //        auto c = s.connect([](...){ gcounter++; });
 //        std::this_thread::sleep_for( std::chrono::milliseconds(100) );
@@ -77,38 +77,6 @@ void sleep_thread( )
 
 int main( int argc, char *argv[] )
 {
-
-//    auto sss = s.connect([](int){ std::cout << "!\n"; });
-//    sss.disconnect( );
-//    s(1);
-
-//    return 0;
-
-//    typename rrr::result<double(int, const std::string&, int)>::type K = 100.100;
-
-//    std::cout << K << "\n";
-
-//    auto s1 = s.connect( [](int i){ gcounter++; std::cout << gcounter << "\n"; } );
-//              s.connect( [](int i){ gcounter++; std::cout << gcounter << "\n"; } );
-//    auto s2 = s.connect( [](int i){ gcounter++; std::cout << gcounter << "\n"; } );
-//              s.connect( [](int i){ gcounter++; std::cout << gcounter << "\n"; } );
-//    auto s3 = s.connect( [](int i){ gcounter++; std::cout << gcounter << "\n"; } );
-//              s.connect( [](int i){ gcounter++; std::cout << gcounter << "\n"; } );
-
-//    auto ss = s2;
-
-//    s1.disconnect( );
-//    s2.disconnect( );
-//    s3.disconnect( );
-
-//    s(100);
-//    ss.disconnect( );
-
-//    s(100);
-
-//    //std::cout << gcounter << "\n";
-
-//    return 0;
 
     std::cout << sizeof(sig) << " "
               << sizeof(bsig) << " "

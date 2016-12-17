@@ -6,9 +6,9 @@
 
 namespace srpc { namespace common { namespace observers {
 
-#if CXX11_ENABLED == 0
+#if CXX11_ENABLED == 1
     template <typename T,
-              typename MutexType>
+              typename MutexType = srpc::recursive_mutex>
     class simple: public common<traits::simple<T>, MutexType> {
         typedef common<traits::simple<T>, MutexType> parent_type;
     public:
@@ -16,7 +16,7 @@ namespace srpc { namespace common { namespace observers {
         typedef typename parent_type::connection connection;
     };
 #else
-    template <typename T, typename MutexType>
+    template <typename T, typename MutexType = srpc::recursive_mutex>
     using simple = common<traits::simple<T>, MutexType>;
 #endif
 }}}
