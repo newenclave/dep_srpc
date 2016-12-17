@@ -31,6 +31,7 @@ namespace srpc { namespace common { namespace observers {
         typedef MutexType                     mutex_type;
         typedef srpc::lock_guard<mutex_type>  guard_type;
 
+        /// NOT STL LIST!
         typedef details::list<slot_info>      list_type;
         typedef typename list_type::iterator  list_iterator;
 
