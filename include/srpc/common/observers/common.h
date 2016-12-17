@@ -134,7 +134,7 @@ namespace srpc { namespace common { namespace observers {
                 }
             }
 
-            void clear_us( )
+            void clear_unsafe( ) /// unsafe
             {
                 list_iterator b = list_.begin( );
                 while( b ) {
@@ -153,7 +153,7 @@ namespace srpc { namespace common { namespace observers {
             {
                 guard_type l0(list_lock_);
                 guard_type l1(tmp_lock_);
-                clear_us( );
+                clear_unsafe( );
             }
 
             void splice_added( )
@@ -341,7 +341,7 @@ namespace srpc { namespace common { namespace observers {
         //virtual
         ~common( )
         {
-            impl_->clear_us( );
+            impl_->clear_unsafe( );
         }
 
         subscription connect( slot_type call )
@@ -371,7 +371,7 @@ namespace srpc { namespace common { namespace observers {
             impl_->clear( );
         }
 
-#if CXX11_ENABLED == 1
+#if CXX11_ENABLED == 0
 
 #define SRPC_OBSERVER_OPERATOR_PROLOGUE \
             guard_type l(impl_->list_lock_); \
@@ -384,12 +384,12 @@ namespace srpc { namespace common { namespace observers {
 #define SRPC_OBSERVER_OPERATOR_EPILOGUE \
                     ); \
                     if( slot_traits::expired( b->slot_ ) ) { \
-                        b = impl_->itr_erase( impl_->list_, b ); \
+                        b = param_keeper::itr_erase( impl_->list_, b ); \
                     } else { \
                         ++b; \
                     } \
                  } else { \
-                    b = impl_->itr_erase( impl_->list_, b ); \
+                    b = param_keeper::itr_erase( impl_->list_, b ); \
                  } \
             } \
             impl_->clear_removed( )
@@ -540,11 +540,11 @@ namespace srpc { namespace common { namespace observers {
             list_iterator b(impl_->list_.begin( ));
             while( b ) {
                 if( impl_->is_removed( b->id_ ) ) {
-                    b = impl_->itr_erase( impl_->list_, b );
+                    b = param_keeper::itr_erase( impl_->list_, b );
                 } else {
                     slot_traits::exec( b->slot_, args... );
                     if( slot_traits::expired( b->slot_ ) ) {
-                        b = impl_->itr_erase( impl_->list_, b );
+                        b = param_keeper::itr_erase( impl_->list_, b );
                     } else {
                         ++b;
                     }

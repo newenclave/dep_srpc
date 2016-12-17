@@ -52,21 +52,32 @@ namespace rrr {
 
 std::atomic<std::uint32_t> gcounter {0};
 
-using sig  = common::observers::simple<void (int)>;
-//using sig  = common::observers::simple<void (int), srpc::dummy_mutex>;
+namespace sig {
+
+    using vtype  = common::observers::simple<void (int)>;
+    //using sig  = common::observers::simple<void (int), srpc::dummy_mutex>;
+    using scoped_connection = vtype::scoped_subscription;
+
+}
+
+namespace bsig {
 
 //using bsig = boost::signals2::signal_type<void (int),
 //                     boost::signals2::keywords::mutex_type<boost::signals2::dummy_mutex> >::type;
-using bsig = boost::signals2::signal_type<void (int)>::type;
+    using vtype = boost::signals2::signal_type<void (int)>::type;
+    using scoped_connection = boost::signals2::scoped_connection;
 
-bsig s;
+}
+
+namespace my = bsig;
+
+my::vtype s;
 
 void sleep_thread( )
 {
     for( int i=0; i<100; i++ ) {
-        auto c = s.connect([](...){ gcounter++; });
+        my::scoped_connection c = s.connect([](...){ gcounter++; });
         s( 1 );
-        s.disconnect( c );
     }
 //    for( int i = 1; i<5; i++ ) {
 //        auto c = s.connect([](...){ gcounter++; });
@@ -77,13 +88,6 @@ void sleep_thread( )
 
 int main( int argc, char *argv[] )
 {
-
-    std::cout << sizeof(sig) << " "
-              << sizeof(bsig) << " "
-              << sizeof(srpc::mutex) << " "
-              << sizeof(srpc::recursive_mutex) << " "
-              << std::endl;
-
     auto lambda2 = []( int i ){
         //std::cout << "!\n";
         gcounter += i;
