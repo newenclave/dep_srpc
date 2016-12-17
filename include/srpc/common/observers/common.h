@@ -74,8 +74,6 @@ namespace srpc { namespace common { namespace observers {
 
             void remove_by_index( list_type &lst, size_t id )
             {
-                const list_iterator e(lst.end( ));    /// null iterator
-
                 if( lst.size( ) > 0 ) {
 
                     size_t min_id = lst.begin( )->id_;
@@ -89,8 +87,8 @@ namespace srpc { namespace common { namespace observers {
                         /// CLOSE to begin!
                         list_iterator b(lst.begin( ));
 
-                        for( ; (b!=e) && (b->id_<id); ++b );
-                        if( (b!=e) && (b->id_ == id) ) {
+                        for( ; b && (b->id_<id); ++b );
+                        if( b && ( b->id_ == id ) ) {
                             b = lst.erase( b );
                         }
 
@@ -98,8 +96,8 @@ namespace srpc { namespace common { namespace observers {
                         /// CLOSE to end!
                         list_iterator b(lst.rbegin( ));
 
-                        for( ; (b!=e) && (id < b->id_); --b );
-                        if( (b!=e) && (b->id_ == id) ) {
+                        for( ; b && (id < b->id_); --b );
+                        if( b && (b->id_ == id) ) {
                             b = lst.rerase( b );
                         }
                     }
@@ -118,11 +116,10 @@ namespace srpc { namespace common { namespace observers {
                 typename iterator_set::iterator e(tmp.end( ));
 
                 list_iterator bl(list_.begin( ));
-                list_iterator el(list_.end( ));
 
-                for( ; (b!=e) && (bl!=el); ++b ) {
-                    for( ; (bl!=el) && (bl->id_ < *b); ++bl );
-                    if( (bl!=el) && (bl->id_ == *b) ) {
+                for( ; (b!=e) && bl; ++b ) {
+                    for( ; bl && (bl->id_ < *b); ++bl );
+                    if( bl && (bl->id_ == *b) ) {
                         bl = list_.erase( bl );
                     }
                 }
