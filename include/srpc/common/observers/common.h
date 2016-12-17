@@ -67,6 +67,13 @@ namespace srpc { namespace common { namespace observers {
                 return lst.erase( itr );
             }
 
+            static
+            list_iterator itr_rerase( list_type &lst, list_iterator itr )
+            {
+                slot_traits::erase( itr->slot_ );
+                return lst.rerase( itr );
+            }
+
             void add_remove( size_t itr )
             {
                 guard_type lck(tmp_lock_);
@@ -107,7 +114,7 @@ namespace srpc { namespace common { namespace observers {
 
                         for( ; b && (id < b->id_); --b );
                         if( b && (b->id_ == id) ) {
-                            b = itr_erase( lst, b );
+                            b = itr_rerase( lst, b );
                         }
                     }
                 }
