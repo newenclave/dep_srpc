@@ -60,6 +60,12 @@ namespace srpc { namespace common { namespace observers {
                 :id_(1)
             { }
 
+            ~param_keeper( )
+            {
+                clear_unsafe( );
+                //clear( ); // ??? hm
+            }
+
             static
             list_iterator itr_erase( list_type &lst, list_iterator itr )
             {
@@ -372,8 +378,6 @@ namespace srpc { namespace common { namespace observers {
         //virtual
         ~common( )
         {
-            impl_->clear_unsafe( );
-            //impl_->clear( ); // ??? hm
         }
 
         subscription connect( slot_type call )
@@ -573,6 +577,8 @@ namespace srpc { namespace common { namespace observers {
         {
             guard_type l(impl_->list_lock_);
             impl_->splice_added( );
+            std::cout << std::hex << impl_.get( ) << " "
+                      << impl_->list_.size( ) << "\n";
             list_iterator b(impl_->list_.begin( ));
             while( b ) {
                 if( impl_->is_removed( b->id_ ) ) {
