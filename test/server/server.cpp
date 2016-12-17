@@ -59,7 +59,7 @@ using bsig = boost::signals2::signal_type<void (int),
                      boost::signals2::keywords::mutex_type<boost::signals2::dummy_mutex> >::type;
 //using bsig = boost::signals2::signal_type<void (int)>::type;
 
-bsig s;
+sig s;
 
 void sleep_thread( )
 {
@@ -102,7 +102,7 @@ int main( int argc, char *argv[] )
 
     std::thread r(sleep_thread);
 
-    for( int i = 0; i<60000; i++ ) {
+    for( int i = 0; i<600; i++ ) {
         s( 1 );
         s.connect( lambda );
         //std::cout << i << "\n";

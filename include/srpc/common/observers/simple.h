@@ -6,7 +6,7 @@
 
 namespace srpc { namespace common { namespace observers {
 
-#if CXX11_ENABLED == 1
+#if CXX11_ENABLED == 0
     template <typename T,
               typename MutexType = srpc::mutex>
     class simple: public common<traits::simple<T>, MutexType> {

@@ -60,6 +60,12 @@ namespace srpc { namespace common { namespace observers {
                 :id_(1)
             { }
 
+            list_iterator itr_erase( list_type &lst, list_iterator itr )
+            {
+                slot_traits::erase( itr->slot_ );
+                return lst.erase( itr );
+            }
+
             void add_remove( size_t itr )
             {
                 guard_type lck(tmp_lock_);
@@ -91,7 +97,7 @@ namespace srpc { namespace common { namespace observers {
 
                         for( ; b && (b->id_<id); ++b );
                         if( b && ( b->id_ == id ) ) {
-                            b = lst.erase( b );
+                            b = itr_erase( lst, b );
                         }
 
                     } else {
@@ -100,7 +106,7 @@ namespace srpc { namespace common { namespace observers {
 
                         for( ; b && (id < b->id_); --b );
                         if( b && (b->id_ == id) ) {
-                            b = lst.rerase( b );
+                            b = itr_erase( lst, b );
                         }
                     }
                 }
@@ -122,18 +128,31 @@ namespace srpc { namespace common { namespace observers {
                 for( ; (b!=e) && bl; ++b ) {
                     for( ; bl && (bl->id_ < *b); ++bl );
                     if( bl && (bl->id_ == *b) ) {
-                        bl = list_.erase( bl );
+                        bl = itr_erase( list_, bl );
                     }
                 }
+            }
+
+            void clear_us( )
+            {
+                list_iterator b = list_.begin( );
+                while( b ) {
+                    b = itr_erase( list_, b );
+                }
+
+                b = added_.begin( );
+                while( b ) {
+                    b = itr_erase( added_, b );
+                }
+
+                removed_.clear( );
             }
 
             void clear( )
             {
                 guard_type l0(list_lock_);
                 guard_type l1(tmp_lock_);
-                list_.clear( );
-                added_.clear( );
-                removed_.clear( );
+                clear_us( );
             }
 
             void splice_added( )
@@ -160,6 +179,8 @@ namespace srpc { namespace common { namespace observers {
         class subscription {
 
             friend class observers::common<SlotType, MutexType>;
+            friend class scoped_subscription;
+
             typedef observers::common<SlotType, MutexType> parent_type;
 
             subscription( const typename parent_type::param_sptr &parent,
@@ -173,22 +194,135 @@ namespace srpc { namespace common { namespace observers {
 
         public:
 
+#if CXX11_ENABLED == 1
+            subscription( subscription &&o )
+            {
+                parent_list_ = o.parent_list_;
+                me_ = o.me_;
+                o.me_ = 0;
+            }
+
+            subscription &operator = ( subscription &&o )
+            {
+                parent_list_ = o.parent_list_;
+                me_ = o.me_;
+                o.me_ = 0;
+                return *this;
+            }
+
+            subscription( const subscription &o ) = default;
+            subscription &operator = ( const subscription &o ) = default;
+#endif
             subscription( )
                 :me_(0)
             { }
 
             void unsubscribe(  )
             {
-                disconnect( );
+                parent_type::param_sptr lck(parent_list_.lock( ));
+                if( me_ && lck ) {
+                    lck->add_remove( me_ );
+                    me_ = 0;
+                }
             }
 
             void disconnect(  )
+            {
+                unsubscribe( );
+            }
+
+            void swap( subscription &other )
+            {
+                parent_list_.swap( other.parent_list_ );
+            }
+        };
+
+        class scoped_subscription {
+            friend class observers::common<SlotType, MutexType>;
+            typedef observers::common<SlotType, MutexType> parent_type;
+
+            typename parent_type::param_wptr parent_list_;
+            size_t                           me_;
+
+        public:
+
+#if CXX11_ENABLED == 1
+            scoped_subscription( scoped_subscription &&o )
+                :parent_list_(o.parent_list_)
+            {
+                me_             = o.me_;
+                o.me_           = 0;
+            }
+
+            scoped_subscription &operator = ( scoped_subscription &&o )
+            {
+                parent_list_    = o.parent_list_;
+                me_             = o.me_;
+                o.me_           = 0;
+                return          *this;
+            }
+
+            scoped_subscription( subscription &&o )
+            {
+                parent_list_    = o.parent_list_;
+                me_             = o.me_;
+                o.me_           = 0;
+            }
+
+            scoped_subscription & operator = ( subscription &o )
+            {
+                parent_list_    = o.parent_list_;
+                me_             = o.me_;
+                o.me_           = 0;
+                return          *this;
+            }
+#endif
+            scoped_subscription( scoped_subscription &o )
+                :parent_list_(o.parent_list_)
+
+            {
+                me_             = o.me_;
+                o.me_           = 0;
+            }
+
+            scoped_subscription &operator = ( scoped_subscription &o )
+            {
+                parent_list_    = o.parent_list_;
+                me_             = o.me_;
+                o.me_           = 0;
+                return          *this;
+            }
+
+            scoped_subscription & operator = ( const subscription &ss )
+            {
+                me_             = ss.me_;
+            }
+
+            scoped_subscription( )
+                :me_(0)
+            { }
+
+            ~scoped_subscription( )
+            {
+                unsubscribe( );
+            }
+
+            scoped_subscription( const subscription &ss )
+                :me_(ss.me_)
+            { }
+
+            void unsubscribe(  )
             {
                 parent_type::param_sptr lck(parent_list_.lock( ));
                 if( me_ && lck ) {
                     lck->add_remove( me_ );
                     me_ = 0;
                 }
+            }
+
+            void disconnect(  )
+            {
+                unsubscribe( );
             }
 
             void swap( subscription &other )
@@ -203,15 +337,19 @@ namespace srpc { namespace common { namespace observers {
             :impl_(srpc::make_shared<param_keeper>( ))
         { }
 
-        //virtual ~common( ) { }
+        //virtual
+        ~common( )
+        {
+            impl_->clear_us( );
+        }
 
-        connection connect( slot_type call )
+        subscription connect( slot_type call )
         {
             size_t next = impl_->connect( call );
             return subscription( impl_, next );
         }
 
-        connection subscribe( slot_type call )
+        subscription subscribe( slot_type call )
         {
             size_t next = impl_->connect( call );
             return subscription( impl_, next );
@@ -232,7 +370,7 @@ namespace srpc { namespace common { namespace observers {
             impl_->clear( );
         }
 
-#if CXX11_ENABLED == 0
+#if CXX11_ENABLED == 1
 
 #define SRPC_OBSERVER_OPERATOR_PROLOGUE \
             guard_type l(impl_->list_lock_); \
@@ -245,12 +383,12 @@ namespace srpc { namespace common { namespace observers {
 #define SRPC_OBSERVER_OPERATOR_EPILOGUE \
                     ); \
                     if( slot_traits::expired( b->slot_ ) ) { \
-                        b = impl_->list_.erase( b ); \
+                        b = impl_->itr_erase( impl_->list_, b ); \
                     } else { \
                         ++b; \
                     } \
                  } else { \
-                    b = impl_->list_.erase( b ); \
+                    b = impl_->itr_erase( impl_->list_, b ); \
                  } \
             } \
             impl_->clear_removed( )
@@ -401,11 +539,11 @@ namespace srpc { namespace common { namespace observers {
             list_iterator b(impl_->list_.begin( ));
             while( b ) {
                 if( impl_->is_removed( b->id_ ) ) {
-                    b = impl_->list_.erase( b );
+                    b = impl_->itr_erase( impl_->list_, b );
                 } else {
                     slot_traits::exec( b->slot_, args... );
                     if( slot_traits::expired( b->slot_ ) ) {
-                        b = impl_->list_.erase( b );
+                        b = impl_->itr_erase( impl_->list_, b );
                     } else {
                         ++b;
                     }

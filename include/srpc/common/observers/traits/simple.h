@@ -157,6 +157,12 @@ namespace traits {
         {
             return false;
         }
+
+        static
+        void erase( value_type & )
+        {
+            // std::cout << "Erase!!!!\n";
+        }
 #endif
     };
 

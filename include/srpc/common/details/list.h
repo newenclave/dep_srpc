@@ -79,18 +79,21 @@ namespace srpc { namespace common { namespace details {
                 return &node_->data_;
             }
 
+            /// prefix
             iterator operator ++ ( )
             {
                 node_ = node_->next_;
                 return iterator(node_);
             }
 
+            /// prefix
             iterator operator -- ( )
             {
                 node_ = node_->prev_;
                 return iterator(node_);
             }
 
+            /// postfix
             iterator operator ++ ( int )
             {
                 iterator tmp(node_);
@@ -98,6 +101,7 @@ namespace srpc { namespace common { namespace details {
                 return tmp;
             }
 
+            /// postfix
             iterator operator -- ( int )
             {
                 iterator tmp(node_);
