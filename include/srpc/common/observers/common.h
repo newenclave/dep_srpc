@@ -60,6 +60,7 @@ namespace srpc { namespace common { namespace observers {
                 :id_(1)
             { }
 
+            static
             list_iterator itr_erase( list_type &lst, list_iterator itr )
             {
                 slot_traits::erase( itr->slot_ );
