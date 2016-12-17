@@ -115,6 +115,10 @@ namespace srpc { namespace common { namespace details {
                 return node_ != o.node_;
             }
 
+            operator bool ( ) const
+            {
+                return node_ != NULL;
+            }
         };
 
     private:

@@ -239,8 +239,7 @@ namespace srpc { namespace common { namespace observers {
             guard_type l(impl_->list_lock_); \
             impl_->splice_added( ); \
             list_iterator b(impl_->list_.begin( )); \
-            list_iterator e(impl_->list_.end( )); \
-            while( b != e ) { \
+            while( b ) { \
                 if( !impl_->is_removed( b->id_ ) ) { \
                     slot_traits::exec( b->slot_
 
@@ -401,8 +400,7 @@ namespace srpc { namespace common { namespace observers {
             guard_type l(impl_->list_lock_);
             impl_->splice_added( );
             list_iterator b(impl_->list_.begin( ));
-            list_iterator e(impl_->list_.end( ));
-            while( b != e ) {
+            while( b ) {
                 if( impl_->is_removed( b->id_ ) ) {
                     b = impl_->list_.erase( b );
                 } else {
