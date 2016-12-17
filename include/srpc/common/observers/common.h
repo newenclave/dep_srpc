@@ -347,7 +347,7 @@ namespace srpc { namespace common { namespace observers {
             :impl_(srpc::make_shared<param_keeper>( ))
         { }
 
-#if CXX11_ENABLED == 0
+#if !CXX11_ENABLED
     private:
         common( const common & );
         common& operator = ( const common & );
