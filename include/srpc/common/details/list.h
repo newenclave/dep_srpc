@@ -117,9 +117,35 @@ namespace srpc { namespace common { namespace details {
 
         };
 
+    private:
+        void cerase( iterator itr )
+        {
+            if( itr.node_->prev_ ) {
+                itr.node_->prev_->next_ = itr.node_->next_;
+            }
+
+            if( itr.node_->next_ ) {
+                itr.node_->next_->prev_ = itr.node_->prev_;
+            }
+
+            if( itr.node_ == back_ ) {
+                back_ = itr.node_->prev_;
+            }
+
+            if( itr.node_ == front_ ) {
+                front_ = itr.node_->next_;
+            }
+
+            delete itr.node_;
+            size_--;
+
+        }
+    public:
+
         list( )
             :front_(NULL)
             ,back_(NULL)
+            ,size_(0)
         { }
 
         ~list( )
@@ -158,29 +184,23 @@ namespace srpc { namespace common { namespace details {
             return end( );
         }
 
+        iterator rerase( iterator itr )
+        {
+            if( itr.node_ ) {
+                node *tmp = itr.node_->prev_;
+                cerase( itr );
+                return iterator(tmp);
+            } else {
+                return itr;
+            }
+
+        }
+
         iterator erase( iterator itr )
         {
             if( itr.node_ ) {
                 node *tmp = itr.node_->next_;
-                if( itr.node_->prev_ ) {
-                    itr.node_->prev_->next_ = itr.node_->next_;
-                }
-
-                if( itr.node_->next_ ) {
-                    itr.node_->next_->prev_ = itr.node_->prev_;
-                }
-
-                if( itr.node_ == back_ ) {
-                    back_ = itr.node_->prev_;
-                }
-
-                if( itr.node_ == front_ ) {
-                    front_ = itr.node_->next_;
-                }
-
-                delete itr.node_;
-                itr.node_ = NULL;
-
+                cerase( itr );
                 return iterator(tmp);
             } else {
                 return itr;
@@ -199,6 +219,8 @@ namespace srpc { namespace common { namespace details {
                     back_               = other.back_;
                 }
                 other.front_ = other.back_= NULL;
+                size_       += other.size( );
+                other.size_  = 0;
             }
         }
 
@@ -212,6 +234,7 @@ namespace srpc { namespace common { namespace details {
             } else {
                 back_ = front_  = new_node;
             }
+            size_++;
         }
 
         void push_front( const T &data )
@@ -224,6 +247,7 @@ namespace srpc { namespace common { namespace details {
             } else {
                 back_ = front_  = new_node;
             }
+            size_++;
         }
 
         void swap( list<T> &other )
@@ -235,12 +259,24 @@ namespace srpc { namespace common { namespace details {
             node *tb = back_;
             back_ = other.back_;
             other.back_ = tb;
+
+            size_t ts = size_;
+            size_ = other.size_;
+            other.size_ = ts;
+        }
+
+        size_t size( ) const
+        {
+            return size_;
         }
 
     private:
+
         node *front_;
         node *back_;
+        size_t size_;
     };
+
 
 }}}
 

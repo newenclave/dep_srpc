@@ -63,11 +63,11 @@ sig s;
 
 void sleep_thread( )
 {
-    for( int i=0; i<100; i++ ) {
-        auto c = s.connect([](...){ gcounter++; });
-        s( 1 );
-        s.disconnect( c );
-    }
+//    for( int i=0; i<100; i++ ) {
+//        auto c = s.connect([](...){ gcounter++; });
+//        s( 1 );
+//        s.disconnect( c );
+//    }
 //    for( int i = 1; i<5; i++ ) {
 //        auto c = s.connect([](...){ gcounter++; });
 //        std::this_thread::sleep_for( std::chrono::milliseconds(100) );
@@ -77,6 +77,12 @@ void sleep_thread( )
 
 int main( int argc, char *argv[] )
 {
+
+//    auto sss = s.connect([](int){ std::cout << "!\n"; });
+//    sss.disconnect( );
+//    s(1);
+
+//    return 0;
 
 //    typename rrr::result<double(int, const std::string&, int)>::type K = 100.100;
 
@@ -122,15 +128,16 @@ int main( int argc, char *argv[] )
 
     s.connect( lambda );
 
-    for( int i = 0; i<1000; i++ ) {
+    for( int i = 0; i<100; i++ ) {
         s.connect( lambda );
     }
 
     std::thread r(sleep_thread);
 
-    for( int i = 0; i<500; i++ ) {
+    for( int i = 0; i<600; i++ ) {
         s( 1 );
         s.connect( lambda );
+        //std::cout << i << "\n";
     }
 
     r.join( );
@@ -139,7 +146,7 @@ int main( int argc, char *argv[] )
 //        lambda( 1 );
 //    }
 
-    s.disconnect_all( );
+    //s.disconnect_all( );
     std::cout << gcounter << "\n";
 
     return 0;

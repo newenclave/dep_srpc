@@ -49,6 +49,7 @@ namespace srpc { namespace common { namespace observers {
         struct param_keeper {
 
             iterator_set        removed_;
+            //iterator_set        added_set_;
             list_type           list_;
             list_type           added_;
 
@@ -64,27 +65,48 @@ namespace srpc { namespace common { namespace observers {
             {
                 guard_type lck(tmp_lock_);
                 removed_.insert( itr );
+                //if( added_set_.erase( itr ) > 0 ) {
+                    remove_by_index(added_, itr);
+                //}
             }
 
-            void del_remove( size_t itr )
+            bool is_removed( list_iterator itr )
             {
                 guard_type lck(tmp_lock_);
-                removed_.erase( itr );
+                return (removed_.erase( itr->id_ ) != 0);
             }
 
-            bool is_removed( list_iterator itr ) const
+            void remove_by_index( list_type &lst, size_t id )
             {
-                guard_type lck(tmp_lock_);
-                return removed_.find( itr->id_ ) != removed_.end( );
-            }
+                const list_iterator e(lst.end( ));
 
-            void remove_by_index( size_t id )
-            {
-                list_iterator b(list_.begin( ));
-                list_iterator e(list_.end( ));
-                for( ; (b!=e) && (b->id_<id); ++b );
-                if( (b!=e) && (b->id_ == id) ) {
-                    b = list_.erase( b );
+                if( lst.size( ) > 0 ) {
+
+                    size_t min_id = lst.begin( )->id_;
+                    size_t max_id = lst.rbegin( )->id_;
+
+                    if( (id < min_id) || (id > max_id) ) {
+
+                        return;
+
+                    } else if( (id - min_id) < (max_id - id) ) {
+                        /// CLOSE to begin!
+                        list_iterator b(lst.begin( ));
+
+                        for( ; (b!=e) && (b->id_<id); ++b );
+                        if( (b!=e) && (b->id_ == id) ) {
+                            b = lst.erase( b );
+                        }
+
+                    } else {
+                        /// CLOSE to end!
+                        list_iterator b(lst.rbegin( ));
+
+                        for( ; (b!=e) && (id < b->id_); --b );
+                        if( (b!=e) && (b->id_ == id) ) {
+                            b = lst.rerase( b );
+                        }
+                    }
                 }
             }
 
@@ -104,11 +126,10 @@ namespace srpc { namespace common { namespace observers {
 
                 for( ; (b!=e) && (bl!=el); ++b ) {
                     for( ; (bl!=el) && (bl->id_ < *b); ++bl );
-                    if( bl->id_ == *b ) {
+                    if( (bl!=el) && (bl->id_ == *b) ) {
                         bl = list_.erase( bl );
                     }
                 }
-
             }
 
             void clear( )
@@ -118,14 +139,23 @@ namespace srpc { namespace common { namespace observers {
                 list_.clear( );
                 added_.clear( );
                 removed_.clear( );
+                //added_set_.clear( );
             }
 
-            list_iterator splice_added( )
+            void splice_added( )
             {
                 guard_type lck(tmp_lock_);
-                list_iterator b = added_.begin( );
                 list_.splice_back( added_ );
-                return b;
+                //added_set_.clear( );
+            }
+
+            size_t connect( slot_type call )
+            {
+                guard_type l(tmp_lock_);
+                size_t next = id_++;
+                added_.push_back( slot_info(call, next) );
+                //added_set_.insert( next );
+                return next;
             }
 
         };
@@ -159,12 +189,7 @@ namespace srpc { namespace common { namespace observers {
             {
                 parent_type::param_sptr lck(parent_list_.lock( ));
                 if( me_ && lck ) {
-                    if( lck->list_lock_.try_lock( ) ) {
-                        lck->remove_by_index( me_ );
-                        lck->list_lock_.unlock( );
-                    } else {
-                        lck->add_remove( me_ );
-                    }
+                    lck->add_remove( me_ );
                     me_ = 0;
                 }
             }
@@ -179,13 +204,11 @@ namespace srpc { namespace common { namespace observers {
             :impl_(srpc::make_shared<param_keeper>( ))
         { }
 
-        virtual ~common( ) { }
+        //virtual ~common( ) { }
 
         connection connect( slot_type call )
         {
-            guard_type l(impl_->tmp_lock_);
-            size_t next = impl_->id_++;
-            impl_->added_.push_back( slot_info(call, next) );
+            size_t next = impl_->connect( call );
             return connection( impl_, next );
         }
 
@@ -206,13 +229,16 @@ namespace srpc { namespace common { namespace observers {
             impl_->splice_added( ); \
             list_iterator b(impl_->list_.begin( )); \
             list_iterator e(impl_->list_.end( )); \
-            for( ;b != e; ++b ) { \
+            while( b != e ) { \
                 if( !impl_->is_removed( b ) ) { \
                     slot_traits::exec( b->slot_
 
 #define SRPC_OBSERVER_OPERATOR_EPILOGUE \
                     ); \
-                 } \
+                    ++b; \
+                 } else { \
+                    b = impl_->list_.erase( b ); \
+                 }\
             } \
             impl_->clear_removed( )
 
@@ -361,11 +387,12 @@ namespace srpc { namespace common { namespace observers {
             impl_->splice_added( );
             list_iterator b(impl_->list_.begin( ));
             list_iterator e(impl_->list_.end( ));
-            for( ;b != e; ++b ) {
-                if( !impl_->is_removed( b ) ) {
-                    slot_traits::exec( b->slot_, args... );
+            while( b != e ) {
+                if( impl_->is_removed( b ) ) {
+                    b = impl_->list_.erase( b );
                 } else {
-                    //b = impl_->list_.erase( b );
+                    slot_traits::exec( b->slot_, args... );
+                    ++b;
                 }
             }
             impl_->clear_removed( );
