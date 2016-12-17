@@ -204,7 +204,7 @@ namespace srpc { namespace common { namespace observers {
 
         public:
 
-#if CXX11_ENABLED != 0
+#if CXX11_ENABLED
             subscription( subscription &&o )
             {
                 parent_list_ = o.parent_list_;
