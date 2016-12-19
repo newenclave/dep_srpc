@@ -4,6 +4,8 @@
 #include <atomic>
 #include <thread>
 
+#include "boost/asio.hpp"
+
 #include "srpc/common/config/memory.h"
 #include "srpc/common/config/mutex.h"
 #include "srpc/common/config/functional.h"
@@ -55,29 +57,31 @@ std::atomic<std::uint32_t> gcounter {0};
 namespace sig {
 
     using vtype  = common::observers::simple<void (int)>;
-    //using sig  = common::observers::simple<void (int), srpc::dummy_mutex>;
+    ///using vtype  = common::observers::simple<void (int), srpc::dummy_mutex>;
     using scoped_connection = vtype::scoped_subscription;
 
 }
 
 namespace bsig {
 
-//using bsig = boost::signals2::signal_type<void (int),
-//                     boost::signals2::keywords::mutex_type<boost::signals2::dummy_mutex> >::type;
+//    using vtype = boost::signals2::signal_type<void (int),
+//                  boost::signals2::keywords::mutex_type<
+//                                       srpc::dummy_mutex> >::type;
+
     using vtype = boost::signals2::signal_type<void (int)>::type;
     using scoped_connection = boost::signals2::scoped_connection;
 
 }
 
-namespace my = sig;
+namespace my = bsig;
 
 my::vtype s;
 
 void sleep_thread( )
 {
     for( int i=0; i<100; i++ ) {
-        my::scoped_connection c = s.connect([](...){ gcounter++; });
-        s( 1 );
+        my::scoped_connection c = s.connect([](int){ gcounter++; });
+        s( i );
     }
 //    for( int i = 1; i<5; i++ ) {
 //        auto c = s.connect([](...){ gcounter++; });
@@ -89,17 +93,17 @@ void sleep_thread( )
 int main( int argc, char *argv[] )
 {
 
-    std::vector<std::shared_ptr<my::vtype> > v;
+//    std::vector<std::shared_ptr<my::vtype> > v;
 
-    for( int i=0; i<10000; i++ ) {
-        v.push_back(std::make_shared<my::vtype>( ));
-        v.back( )->connect( [ ](int){ gcounter++; } );
-        v.back( )->connect( [ ](int){ gcounter++; } );
-        (*v.back( ))( 1 );
-    }
-    std::cout << gcounter << "\n";
+//    for( int i=0; i<10000; i++ ) {
+//        v.push_back(std::make_shared<my::vtype>( ));
+//        v.back( )->connect( [ ](int){ gcounter++; } );
+//        v.back( )->connect( [ ](int){ gcounter++; } );
+//        (*v.back( ))( 1 );
+//    }
+//    std::cout << gcounter << "\n";
 
-    return 0;
+//    return 0;
     auto lambda2 = []( int i ){
         //std::cout << "!\n";
         gcounter += i;

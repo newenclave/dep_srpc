@@ -42,6 +42,9 @@ if( CXX11_ENABLED )
                             system
                         REQUIRED)
     endif( ASIO_STANDALONE_DIR )
+    find_package( Boost 1.53 COMPONENTS
+                        system
+                    REQUIRED)
 else( CXX11_ENABLED )
     find_package( Boost 1.53 COMPONENTS
                         system

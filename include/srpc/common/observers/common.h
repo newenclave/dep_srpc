@@ -35,15 +35,6 @@ namespace srpc { namespace common { namespace observers {
         typedef details::list<slot_info>      list_type;
         typedef typename list_type::iterator  list_iterator;
 
-        struct iterator_cmp {
-            bool operator ( ) ( const list_iterator &l,
-                                const list_iterator &r ) const
-            {
-                /// ptr -> details::list::node
-                return l.ptr( ) < r.ptr( );
-            }
-        };
-
         typedef std::set<size_t> iterator_set;
 
         struct param_keeper {
