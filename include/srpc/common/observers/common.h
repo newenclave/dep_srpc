@@ -276,7 +276,7 @@ namespace srpc { namespace common { namespace observers {
                 o.me_           = 0;
             }
 
-            scoped_subscription & operator = ( subscription &o )
+            scoped_subscription & operator = ( subscription &&o )
             {
                 parent_list_    = o.parent_list_;
                 me_             = o.me_;
