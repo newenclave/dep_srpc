@@ -7,6 +7,7 @@ macro( srpc_all_headers_path OUT_LIST PREFIX_PATH )
           ${PREFIX_PATH}/srpc/common/timers
           ${PREFIX_PATH}/srpc/common/timers/calls
           ${PREFIX_PATH}/srpc/common/sizepack
+          ${PREFIX_PATH}/srpc/common/details
           ${PREFIX_PATH}/srpc/common/observers
           ${PREFIX_PATH}/srpc/common/observers/traits
           ${PREFIX_PATH}/srpc/common/queues
