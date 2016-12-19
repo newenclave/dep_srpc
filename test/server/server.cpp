@@ -73,16 +73,16 @@ namespace bsig {
 
 }
 
-namespace my = bsig;
+namespace my = sig;
 
 my::vtype s;
 
 void sleep_thread( )
 {
-//    for( int i=0; i<100; i++ ) {
-//        my::scoped_connection c = s.connect([](int){ gcounter++; });
-//        s( i );
-//    }
+    for( int i=0; i<100; i++ ) {
+        my::scoped_connection c = s.connect([](int){ gcounter++; });
+        s( i );
+    }
 //    for( int i = 1; i<5; i++ ) {
 //        auto c = s.connect([](...){ gcounter++; });
 //        std::this_thread::sleep_for( std::chrono::milliseconds(100) );
