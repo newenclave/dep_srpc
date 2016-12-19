@@ -89,15 +89,17 @@ void sleep_thread( )
 int main( int argc, char *argv[] )
 {
 
-//    std::vector<std::shared_ptr<my::vtype> > v;
+    std::vector<std::shared_ptr<my::vtype> > v;
 
-//    for( int i=0; i<10000; i++ ) {
-//        v.push_back(std::make_shared<my::vtype>( ));
-//        v.back( )->connect( [ ](int){  } );
-//        v.back( )->connect( [ ](int){  } );
-//    }
+    for( int i=0; i<10000; i++ ) {
+        v.push_back(std::make_shared<my::vtype>( ));
+        v.back( )->connect( [ ](int){ gcounter++; } );
+        v.back( )->connect( [ ](int){ gcounter++; } );
+        (*v.back( ))( 1 );
+    }
+    std::cout << gcounter << "\n";
 
-//    return 0;
+    return 0;
     auto lambda2 = []( int i ){
         //std::cout << "!\n";
         gcounter += i;

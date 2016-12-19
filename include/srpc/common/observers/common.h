@@ -577,8 +577,6 @@ namespace srpc { namespace common { namespace observers {
         {
             guard_type l(impl_->list_lock_);
             impl_->splice_added( );
-            std::cout << std::hex << impl_.get( ) << " "
-                      << impl_->list_.size( ) << "\n";
             list_iterator b(impl_->list_.begin( ));
             while( b ) {
                 if( impl_->is_removed( b->id_ ) ) {
