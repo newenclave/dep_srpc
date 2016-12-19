@@ -19,25 +19,24 @@ namespace srpc { namespace common { namespace observers {
 
     private:
 
-        struct slot_info {
-            slot_info( const slot_type &slot, size_t id )
-                :slot_(slot)
-                ,id_(id)
-            { }
-            slot_type slot_;
-            size_t    id_;
-        };
-
         typedef MutexType                     mutex_type;
         typedef srpc::lock_guard<mutex_type>  guard_type;
 
-        /// NOT STL LIST!
-        typedef details::list<slot_info>      list_type;
-        typedef typename list_type::iterator  list_iterator;
-
-        typedef std::set<size_t> iterator_set;
-
         struct impl {
+
+            struct slot_info {
+                slot_info( const slot_type &slot, size_t id )
+                    :slot_(slot)
+                    ,id_(id)
+                { }
+                slot_type slot_;
+                size_t    id_;
+            };
+
+            /// NOT STL LIST!
+            typedef details::list<slot_info>      list_type;
+            typedef typename list_type::iterator  list_iterator;
+            typedef std::set<size_t>              iterator_set;
 
             iterator_set        removed_;
             list_type           list_;
@@ -411,7 +410,7 @@ namespace srpc { namespace common { namespace observers {
 #define SRPC_OBSERVER_OPERATOR_PROLOGUE \
             guard_type l(impl_->list_lock_); \
             impl_->splice_added( ); \
-            list_iterator b(impl_->list_.begin( )); \
+            typename impl::list_iterator b(impl_->list_.begin( )); \
             while( b ) { \
                 if( !impl_->is_removed( b->id_ ) ) { \
                     slot_traits::exec( b->slot_
@@ -572,7 +571,7 @@ namespace srpc { namespace common { namespace observers {
         {
             guard_type l(impl_->list_lock_);
             impl_->splice_added( );
-            list_iterator b(impl_->list_.begin( ));
+            typename impl::list_iterator b(impl_->list_.begin( ));
             while( b ) {
                 if( impl_->is_removed( b->id_ ) ) {
                     b = impl::itr_erase( impl_->list_, b );
