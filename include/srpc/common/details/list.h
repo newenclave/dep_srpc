@@ -260,17 +260,17 @@ namespace srpc { namespace common { namespace details {
 
         void swap( list<T> &other )
         {
-            node *tf = front_;
-            front_ = other.front_;
+            node *tf     = front_;
+            front_       = other.front_;
             other.front_ = tf;
 
-            node *tb = back_;
-            back_ = other.back_;
-            other.back_ = tb;
+            node *tb     = back_;
+            back_        = other.back_;
+            other.back_  = tb;
 
-            size_t ts = size_;
-            size_ = other.size_;
-            other.size_ = ts;
+            size_t ts    = size_;
+            size_        = other.size_;
+            other.size_  = ts;
         }
 
         size_t size( ) const
