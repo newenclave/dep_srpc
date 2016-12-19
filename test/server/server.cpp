@@ -73,7 +73,7 @@ namespace bsig {
 
 }
 
-namespace my = bsig;
+namespace my = sig;
 
 my::vtype s;
 
