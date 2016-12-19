@@ -191,7 +191,7 @@ namespace srpc { namespace common { namespace observers {
             typedef observers::common<SlotType, MutexType> parent_type;
 
             subscription( const typename parent_type::param_sptr &parent,
-                        size_t me )
+                          size_t me )
                 :parent_list_(parent)
                 ,me_(me)
             { }
@@ -371,20 +371,15 @@ namespace srpc { namespace common { namespace observers {
         {
         }
 
-        subscription connect( slot_type call )
-        {
-            return subscribe( call );
-        }
-
         subscription subscribe( slot_type call )
         {
             size_t next = impl_->connect( call );
             return subscription( impl_, next );
         }
 
-        void disconnect( subscription &cc )
+        subscription connect( slot_type call )
         {
-            unsubscribe( cc );
+            return subscribe( call );
         }
 
         void unsubscribe( subscription &cc )
@@ -396,9 +391,19 @@ namespace srpc { namespace common { namespace observers {
             }
         }
 
-        void disconnect_all_slots(  )
+        void disconnect( subscription &cc )
+        {
+            unsubscribe( cc );
+        }
+
+        void unsubscribe_all(  )
         {
             impl_->clear( );
+        }
+
+        void disconnect_all_slots(  )
+        {
+            unsubscribe_all( );
         }
 
 #if !CXX11_ENABLED
