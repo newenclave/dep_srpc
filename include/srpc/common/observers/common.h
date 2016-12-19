@@ -373,8 +373,7 @@ namespace srpc { namespace common { namespace observers {
 
         subscription connect( slot_type call )
         {
-            size_t next = impl_->connect( call );
-            return subscription( impl_, next );
+            return subscribe( call );
         }
 
         subscription subscribe( slot_type call )
