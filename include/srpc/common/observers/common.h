@@ -253,7 +253,7 @@ namespace srpc { namespace common { namespace observers {
 
         public:
 
-#if CXX11_ENABLED == 1
+#if CXX11_ENABLED
             scoped_subscription( scoped_subscription &&o )
                 :parent_list_(o.parent_list_)
             {
