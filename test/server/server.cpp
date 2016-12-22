@@ -19,16 +19,22 @@
 #include "srpc/server/acceptor/async/udp.h"
 #include "srpc/common/transport/delegates/message.h"
 
+#include "protocol/t.pb.h"
+
 using namespace srpc;
 
 using size_policy     = common::sizepack::varint<size_t>;
 using client_delegate = common::transport::delegates::message<size_policy>;
+
+namespace gpb = google::protobuf;
 
 class protocol_client: public client_delegate {
 
     using iface_ptr   = common::transport::interface *;
     using client_sptr = srpc::shared_ptr<common::transport::interface>;
     using error_code  = common::transport::error_code;
+
+    static const size_t max_length = client_delegate::size_policy::max_length;
 
 public:
 
@@ -40,12 +46,11 @@ private:
 
     void on_message( const char *message, size_t len )
     {
-
+        process_call( message, len );
     }
 
     void on_need_read( )
     {
-        std::cout << "On read!\n";
         client_->read( );
     }
 
@@ -73,7 +78,42 @@ private:
 
     void on_close( );
 
+    void send_message( const gpb::MessageLite &msg )
+    {
+        typedef common::transport::interface::write_callbacks cb;
+        char block[max_length];
+
+        srpc::shared_ptr<std::string> r(srpc::make_shared<std::string>( ));
+
+        r->assign( msg.SerializeAsString( ) );
+
+        size_t packed = pack_size( r->size( ), block );
+        r->insert( r->begin( ), &block[0], &block[packed] );
+
+        client_->write( &(*r)[0], r->size( ),
+                cb::post( [r, this](...) {  } ) );
+    }
+
+    void process_call( const char *message, size_t len )
+    {
+        test::run t;
+        t.ParseFromArray( message, len );
+
+        test::run r;
+        std::string *name = r.mutable_name( );
+
+        size_t l = len = t.name( ).size( );
+
+        while( len-- ) {
+            name->push_back( t.name( )[len] );
+        }
+        std::cout << "resent " << name->size( )
+                  << " bytes of " << l << "\n" ;
+        send_message( r );
+    }
+
 public:
+
     client_sptr client_;
 };
 
@@ -84,6 +124,7 @@ void protocol_client::on_close( )
 {
     g_clients.erase( client_.get( ) );
 }
+
 
 struct listener {
 

@@ -53,6 +53,11 @@ namespace delegates {
         void pack_end( pack_context &ctx )
         { }
 
+        size_t pack_size( size_t len, char *data )
+        {
+            return size_policy::pack( len, data );
+        }
+
     private:
 
         bool chck( size_t len )
