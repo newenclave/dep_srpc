@@ -99,6 +99,11 @@ public:
         }, chrono::seconds(1) );
     }
 
+    void on_need_read( )
+    {
+        parent_->read( );
+    }
+
     void on_message( const char *message, size_t len )
     {
         //std::cout << "Message " << std::string(message, len) << "\n";
@@ -114,7 +119,6 @@ public:
         pack_update( ctx, message, len );
         pack_end( ctx );
         parent_->write( ctx.data( ).c_str( ), ctx.data( ).size( ) );
-        parent_->read( );
     }
 
     bool validate_length( size_t len )
@@ -292,7 +296,7 @@ int main_( )
     q.push_to_slot( 100, data { 4, "r" } );
 
     data d;
-    auto res = q.read_slot( 100, d, srpc::chrono::seconds(1) );
+    auto res = slot->read_for( d, srpc::chrono::seconds(1) );
 
     period_timer dt(ios);
     dt.call( [ ](...) {

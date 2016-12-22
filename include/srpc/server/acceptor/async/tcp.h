@@ -92,6 +92,7 @@ namespace async {
             ep_.address( ).is_v6( )
                     ? acceptor_.open( asio_tcp::v6( ) )
                     : acceptor_.open( asio_tcp::v4( ) );
+            bind( true );
         }
 
 //        void listen( int backlog )
@@ -145,7 +146,6 @@ namespace async {
         size_t            bufsize_;
         delegate         *delegate_;
         endpoint          ep_;
-        //endpoint          ep_;
     };
 }
 

@@ -58,6 +58,11 @@ public:
         :cnt(c)
     { }
 
+    void on_need_read( )
+    {
+        parent_->read( );
+    }
+
     void on_message( const char *message, size_t len )
     {
         auto ctx = std::make_shared<mess_delegate::pack_context>( );
@@ -83,8 +88,6 @@ public:
 //                            << ctx->data( ).size( )
 //                          << " error " << err.message( ) << "\n";
             } ));
-
-            parent_->read( );
         } else {
             parent_->close( );
         }

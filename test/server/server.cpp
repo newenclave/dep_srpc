@@ -12,130 +12,190 @@
 #include "srpc/common/transport/delegates/message.h"
 #include "srpc/common/sizepack/varint.h"
 #include "srpc/common/sizepack/fixint.h"
+#include "srpc/common/timers/once.h"
 
 #include "srpc/common/observers/simple.h"
-
-#include "boost/signals2.hpp"
+#include "srpc/server/acceptor/async/tcp.h"
+#include "srpc/server/acceptor/async/udp.h"
+#include "srpc/common/transport/delegates/message.h"
 
 using namespace srpc;
 
-using size_policy = common::sizepack::varint<size_t>;
+struct listener {
 
-struct keeper: public srpc::enable_shared_from_this<keeper> {
+    using size_policy = common::sizepack::varint<size_t>;
+    using error_code  = common::transport::error_code;
+    using io_service  = common::transport::io_service;
 
+private:
+
+    using tcp = server::acceptor::async::tcp;
+    using udp = server::acceptor::async::udp;
+
+    struct message_delegate;
+    struct impl;
+    struct accept_delegate;
+
+    using iface_ptr     = common::transport::interface *;
+    using client_sptr   = srpc::shared_ptr<common::transport::interface>;
+    using acceptor_sptr = srpc::shared_ptr<server::acceptor::interface>;
+    using impl_sptr     = srpc::shared_ptr<impl>;
+
+    using message_delegate_sptr = srpc::shared_ptr<message_delegate>;
+
+    struct impl: public srpc::enable_shared_from_this<impl> {
+        acceptor_sptr                               acceptor_;
+        srpc::unique_ptr<accept_delegate>           deleg_;
+        std::map<iface_ptr, message_delegate_sptr>  clients_;
+        srpc::mutex                                 lock_;
+
+        void add_client( iface_ptr c, message_delegate_sptr deleg )
+        {
+            srpc::lock_guard<srpc::mutex> l(lock_);
+            clients_.insert( std::make_pair(c, deleg) );
+        }
+
+        size_t erase_client( iface_ptr c )
+        {
+            srpc::lock_guard<srpc::mutex> l(lock_);
+            return clients_.erase( c );
+        }
+    };
+
+    using client_delegate = common::transport::delegates::message<size_policy>;
+
+    struct message_delegate: public client_delegate {
+
+        message_delegate( srpc::shared_ptr<impl> lst )
+            :lst_(lst)
+        { }
+
+        void on_message( const char *message, size_t len )
+        {
+
+        }
+
+        void on_need_read( )
+        {
+            std::cout << "On read!\n";
+            client_->read( );
+        }
+
+        bool validate_length( size_t len )
+        {
+            return (len < 44000);
+        }
+
+        void on_error( const char *message )
+        {
+            std::cerr << "on_error " << message << "\n";
+        }
+
+        void on_read_error( const error_code &e )
+        {
+            std::cerr << "on_read_error " << e.message( ) << "\n";
+            client_->close( );
+        }
+
+        void on_write_error( const error_code &e)
+        {
+            std::cerr << "on_write_error " << e.message( ) << "\n";
+            client_->close( );
+        }
+
+        void on_close( )
+        {
+            srpc::shared_ptr<impl> lck(lst_.lock( ));
+            std::cerr << "on_client close\n";
+            if( lck ) {
+                lck->erase_client( client_.get( ) );
+            }
+        }
+
+        srpc::weak_ptr<impl> lst_;
+        client_sptr client_;
+    };
+
+    struct accept_delegate: public server::acceptor::interface::delegate {
+
+        accept_delegate( srpc::shared_ptr<impl> lst )
+            :lst_(lst)
+        { }
+
+        void on_accept_client( common::transport::interface *c,
+                               const std::string &addr, srpc::uint16_t svc )
+        {
+
+            srpc::shared_ptr<impl> lck(lst_.lock( ));
+
+            if( lck ) {
+
+                std::cout << "New client " << addr << ":" << svc << "\n";
+
+                message_delegate_sptr next =
+                        srpc::make_shared<message_delegate>(lck);
+
+                next->client_ = c->shared_from_this( );
+
+                next->client_->set_delegate( next.get( ) );
+                next->client_->read( );
+
+                lck->add_client( c, next );
+                lck->acceptor_->start_accept( );
+            }
+        }
+
+        void on_accept_error( const error_code &e )
+        {
+            std::cerr << "on_accept_error " << e.message( ) << "\n";
+        }
+
+        void on_close( )
+        {
+
+        }
+
+        srpc::weak_ptr<impl> lst_;
+    };
+
+
+    friend class accept_delegate;
+    friend class message_delegate;
+
+public:
+
+    listener( io_service &ios, const std::string &addr, srpc::uint16_t svc )
+    {
+        tcp::endpoint ep(SRPC_ASIO::ip::address::from_string(addr), svc);
+
+        impl_ = srpc::make_shared<impl>( );
+        impl_->acceptor_ = tcp::create( ios, 45000, ep );
+        impl_->deleg_.reset( new accept_delegate(impl_) );
+        impl_->acceptor_->set_delegate( impl_->deleg_.get( ) );
+    }
+
+    void start( )
+    {
+        impl_->acceptor_->open( );
+        impl_->acceptor_->start_accept( );
+    }
+
+private:
+
+    impl_sptr impl_;
 };
 
-namespace rrr {
-    template <typename T>
-    struct result;
-
-    template <typename T>
-    struct result<T()> {
-        typedef T type;
-    };
-
-    template <typename T, typename P0>
-    struct result<T(P0)> {
-        typedef T type;
-    };
-
-    template <typename T, typename P0, typename P1>
-    struct result<T(P0, P1)> {
-        typedef T type;
-    };
-
-    template <typename T, typename P0,
-                          typename P1,
-                          typename P2>
-    struct result<T(P0, P1, P2)> {
-        typedef T type;
-    };
-}
-
-std::atomic<std::uint32_t> gcounter {0};
-
-namespace sig {
-
-    using vtype  = common::observers::simple<void (int)>;
-    ///using vtype  = common::observers::simple<void (int), srpc::dummy_mutex>;
-    using scoped_connection = vtype::scoped_subscription;
-
-}
-
-namespace bsig {
-
-//    using vtype = boost::signals2::signal_type<void (int),
-//                  boost::signals2::keywords::mutex_type<
-//                                       srpc::dummy_mutex> >::type;
-
-    using vtype = boost::signals2::signal_type<void (int)>::type;
-    using scoped_connection = boost::signals2::scoped_connection;
-
-}
-
-namespace my = sig;
-
-my::vtype s;
-
-void sleep_thread( )
-{
-    for( int i=0; i<100; i++ ) {
-        my::scoped_connection c = s.connect([](int){ gcounter++; });
-        s( i );
-    }
-//    for( int i = 1; i<5; i++ ) {
-//        auto c = s.connect([](...){ gcounter++; });
-//        std::this_thread::sleep_for( std::chrono::milliseconds(100) );
-//        s.disconnect( c );
-//    }
-}
 
 int main( int argc, char *argv[] )
 {
-
-//    std::vector<std::shared_ptr<my::vtype> > v;
-
-//    for( int i=0; i<10000; i++ ) {
-//        v.push_back(std::make_shared<my::vtype>( ));
-//        v.back( )->connect( [ ](int){ gcounter++; } );
-//        v.back( )->connect( [ ](int){ gcounter++; } );
-//        (*v.back( ))( 1 );
-//    }
-//    std::cout << gcounter << "\n";
-
-//    return 0;
-    auto lambda2 = []( int i ){
-        //std::cout << "!\n";
-        gcounter += i;
-    };
-
-    auto lambda = [lambda2]( int i ){
-        gcounter += i;
-        s.connect( lambda2 );
-    };
-
-    s.connect( lambda );
-
-    for( int i = 0; i<100; i++ ) {
-        s.connect( lambda );
+    try {
+        listener::io_service ios;
+        listener l(ios, "0.0.0.0", 23456);
+        l.start( );
+        ios.run( );
+    } catch( const std::exception &ex ) {
+        std::cerr << "Error: " << ex.what( ) << "\n";
+        return 1;
     }
-
-    std::thread r(sleep_thread);
-
-    for( int i = 0; i<600; i++ ) {
-        s( 1 );
-        s.connect( lambda );
-        //std::cout << i << "\n";
-    }
-
-    r.join( );
-
-//    for( int i = 0; i<30000000; i++ ) {
-//        lambda( 1 );
-//    }
-
-    //s.disconnect_all( );
-    std::cout << gcounter << "\n";
-
     return 0;
 }

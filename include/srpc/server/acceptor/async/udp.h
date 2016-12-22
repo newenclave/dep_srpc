@@ -254,6 +254,14 @@ namespace async {
             acceptor_->set_delegate( &accept_delegate_ );
         }
 
+        ~udp( )
+        {
+            client_map::iterator b(clients_.begin( ));
+            for( ; b!= clients_.end( ); ++b ) {
+                b->second->delegate_->on_close( );
+            }
+        }
+
         static
         srpc::shared_ptr<udp> create( io_service &ios, size_t bufsize,
                                       const endpoint &ep )
@@ -267,6 +275,7 @@ namespace async {
             ep_.address( ).is_v6( )
                 ? acceptor_->get_socket( ).open( SRPC_ASIO::ip::udp::v6( ) )
                 : acceptor_->get_socket( ).open( SRPC_ASIO::ip::udp::v4( ) );
+            bind( true );
         }
 
         void bind( bool reuse = true )
