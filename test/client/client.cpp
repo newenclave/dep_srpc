@@ -117,7 +117,7 @@ public:
         typedef common::transport::interface::write_callbacks cb;
         char block[max_length];
 
-        srpc::shared_ptr<std::string> r(srpc::make_shared<std::string>( ));
+        srpc::shared_ptr<std::string> r = get_str( );
 
         r->assign( msg.SerializeAsString( ) );
 
@@ -125,13 +125,31 @@ public:
         r->insert( r->begin( ), &block[0], &block[packed] );
 
         client_->write( &(*r)[0], r->size( ),
-                        cb::post( [r, this](...) {  } ) );
+            cb::post( [r, this](...)
+            {
+                if( cache_.size( ) < 10 ) {
+                    cache_.push( r );
+                }
+            } ) );
+    }
+
+    srpc::shared_ptr<std::string> get_str( )
+    {
+        if(cache_.empty( )) {
+            return srpc::make_shared<std::string>( );
+        } else {
+            srpc::shared_ptr<std::string> n = cache_.front( );
+            cache_.pop( );
+            return n;
+        }
     }
 
 private:
     client_sptr         client_;
     connector_sptr      connector_;
     connector_delegate  delegate_;
+
+    std::queue<srpc::shared_ptr<std::string> > cache_;
 };
 
 int main( int argc, char *argv[] )
