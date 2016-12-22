@@ -127,7 +127,8 @@ namespace async {
 
         };
 
-        typedef std::map<endpoint, srpc::shared_ptr<client_type> > client_map;
+        typedef srpc::shared_ptr<client_type>   client_sptr;
+        typedef std::map<endpoint, client_sptr> client_map;
 
         struct accept_delegate: public common::transport::interface::delegate {
 
