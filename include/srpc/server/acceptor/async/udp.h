@@ -257,9 +257,11 @@ namespace async {
 
         ~udp( )
         {
+            acceptor_->close( );
             client_map::iterator b(clients_.begin( ));
             for( ; b!= clients_.end( ); ++b ) {
                 b->second->delegate_->on_close( );
+                b->second->parent_ = NULL; /// for debug purposes
             }
         }
 
