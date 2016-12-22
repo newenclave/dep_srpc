@@ -46,7 +46,9 @@ namespace async {
 
             void close( )
             {
-                parent_->client_close( ep_ );
+                if( parent_ ) {
+                    parent_->client_close( ep_ );
+                }
             }
 
             void write( const char *data, size_t len )

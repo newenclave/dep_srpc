@@ -21,6 +21,70 @@
 
 using namespace srpc;
 
+using size_policy     = common::sizepack::varint<size_t>;
+using client_delegate = common::transport::delegates::message<size_policy>;
+
+class protocol_client: public client_delegate {
+
+    using iface_ptr   = common::transport::interface *;
+    using client_sptr = srpc::shared_ptr<common::transport::interface>;
+    using error_code  = common::transport::error_code;
+
+public:
+
+    protocol_client( iface_ptr iface )
+        :client_(iface->shared_from_this( ))
+    { }
+
+private:
+
+    void on_message( const char *message, size_t len )
+    {
+
+    }
+
+    void on_need_read( )
+    {
+        std::cout << "On read!\n";
+        client_->read( );
+    }
+
+    bool validate_length( size_t len )
+    {
+        return (len < 44000);
+    }
+
+    void on_error( const char *message )
+    {
+        std::cerr << "on_error " << message << "\n";
+    }
+
+    void on_read_error( const error_code &e )
+    {
+        std::cerr << "on_read_error " << e.message( ) << "\n";
+        client_->close( );
+    }
+
+    void on_write_error( const error_code &e)
+    {
+        std::cerr << "on_write_error " << e.message( ) << "\n";
+        client_->close( );
+    }
+
+    void on_close( );
+
+public:
+    client_sptr client_;
+};
+
+using protocol_client_sptr = srpc::shared_ptr<protocol_client>;
+std::map<common::transport::interface *, protocol_client_sptr> g_clients;
+
+void protocol_client::on_close( )
+{
+    g_clients.erase( client_.get( ) );
+}
+
 struct listener {
 
     using size_policy = common::sizepack::varint<size_t>;
@@ -46,75 +110,9 @@ private:
     struct impl: public srpc::enable_shared_from_this<impl> {
         acceptor_sptr                               acceptor_;
         srpc::unique_ptr<accept_delegate>           deleg_;
-        std::map<iface_ptr, message_delegate_sptr>  clients_;
-        srpc::mutex                                 lock_;
-
-        void add_client( iface_ptr c, message_delegate_sptr deleg )
-        {
-            srpc::lock_guard<srpc::mutex> l(lock_);
-            clients_.insert( std::make_pair(c, deleg) );
-        }
-
-        size_t erase_client( iface_ptr c )
-        {
-            srpc::lock_guard<srpc::mutex> l(lock_);
-            return clients_.erase( c );
-        }
     };
 
     using client_delegate = common::transport::delegates::message<size_policy>;
-
-    struct message_delegate: public client_delegate {
-
-        message_delegate( srpc::shared_ptr<impl> lst )
-            :lst_(lst)
-        { }
-
-        void on_message( const char *message, size_t len )
-        {
-
-        }
-
-        void on_need_read( )
-        {
-            std::cout << "On read!\n";
-            client_->read( );
-        }
-
-        bool validate_length( size_t len )
-        {
-            return (len < 44000);
-        }
-
-        void on_error( const char *message )
-        {
-            std::cerr << "on_error " << message << "\n";
-        }
-
-        void on_read_error( const error_code &e )
-        {
-            std::cerr << "on_read_error " << e.message( ) << "\n";
-            client_->close( );
-        }
-
-        void on_write_error( const error_code &e)
-        {
-            std::cerr << "on_write_error " << e.message( ) << "\n";
-            client_->close( );
-        }
-
-        void on_close( )
-        {
-            srpc::shared_ptr<impl> lck(lst_.lock( ));
-            std::cerr << "on_client close\n";
-            if( lck ) {
-                lck->erase_client( client_.get( ) );
-            }
-        }
-
-        srpc::weak_ptr<impl> lst_;
-        client_sptr client_;
-    };
 
     struct accept_delegate: public server::acceptor::interface::delegate {
 
@@ -132,15 +130,16 @@ private:
 
                 std::cout << "New client " << addr << ":" << svc << "\n";
 
-                message_delegate_sptr next =
-                        srpc::make_shared<message_delegate>(lck);
+                protocol_client_sptr next =
+                        srpc::make_shared<protocol_client>(c);
 
                 next->client_ = c->shared_from_this( );
 
                 next->client_->set_delegate( next.get( ) );
                 next->client_->read( );
 
-                lck->add_client( c, next );
+                g_clients.insert( std::make_pair(c, next) );
+
                 lck->acceptor_->start_accept( );
             }
         }
