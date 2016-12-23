@@ -29,14 +29,22 @@ namespace async {
 
         public:
 
-            client_type( udp *parent, endpoint ep )
+            client_type( udp *parent, endpoint ep, size_t max_cache )
                 :parent_(parent)
                 ,dispatcher_(parent_->acceptor_->get_io_service( ))
                 ,read_(false)
                 ,ep_(ep)
                 ,delegate_(NULL)
+                ,max_cache_(max_cache)
             {
 
+            }
+
+            static
+            srpc::shared_ptr<client_type> create( udp *p, endpoint ep,
+                                                  size_t mc )
+            {
+                return srpc::make_shared<client_type>( p, ep, mc );
             }
 
             void open( )
@@ -104,6 +112,9 @@ namespace async {
                         delegate_->on_data( data->c_str( ), data->size( ) );
                     } else {
                         read_queue_.push_back( data );
+                        if( read_queue_.size( ) > max_cache_ ) {
+                            read_queue_.pop_front( );
+                        }
                     }
                 }
             }
@@ -126,6 +137,7 @@ namespace async {
             queue_type                      read_queue_;
             endpoint                        ep_;
             delegate                       *delegate_;
+            size_t                          max_cache_;
 
         };
 
@@ -179,8 +191,10 @@ namespace async {
                     f->second->push_data( dat );
                 } else {
                     if( parent_->accept_ ) {
-                        srpc::shared_ptr<client_type> next
-                                = srpc::make_shared<client_type>(parent_, ep);
+
+                        srpc::shared_ptr<client_type> next =
+                                    client_type::create( parent_, ep, 100 );
+
                         parent_->clients_[ep] = next;
                         next->read_queue_.push_back( dat );
                         parent_->delegate_->on_accept_client( next.get( ),

@@ -42,6 +42,7 @@ class connector: public client_delegate {
         void on_connect_error( const error_code &err )
         {
             std::cerr << "on_connect_error " << err.message( ) << std::endl;
+            throw std::runtime_error( err.message( ) );
         }
 
         void on_close( )

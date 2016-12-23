@@ -21,7 +21,6 @@ namespace srpc { namespace server { namespace acceptor {
             virtual void on_accept_client( common::transport::interface *,
                                            const std::string &,
                                            srpc::uint16_t  ) = 0;
-            //virtual void on_close_client( common::transport::interface * ) = 0;
             virtual void on_accept_error( const error_code & ) = 0;
             virtual void on_close( ) = 0;
         };
