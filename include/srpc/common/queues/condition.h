@@ -91,6 +91,8 @@ namespace srpc { namespace common { namespace queues {
                 return ( flag_ & CANCELED );
             }
 
+        private:
+
             struct not_empty {
                 const slot_type *parent;
 
@@ -115,7 +117,6 @@ namespace srpc { namespace common { namespace queues {
                 }
             };
 
-        private:
             queue_type               data_;
             mutable srpc::mutex      lock_;
             srpc::condition_variable cond_;
