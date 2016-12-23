@@ -12,6 +12,7 @@
 #include "srpc/common/transport/delegates/message.h"
 #include "srpc/common/sizepack/varint.h"
 #include "srpc/common/sizepack/fixint.h"
+#include "srpc/common/sizepack/zigzag.h"
 #include "srpc/common/timers/once.h"
 #include "srpc/common/timers/periodical.h"
 #include "srpc/common/timers/ticks.h"
@@ -282,6 +283,15 @@ private:
 int main( int argc, char *argv[ ] )
 {
     try {
+
+        common::sizepack::zigzag<int> ss;
+
+        for( int i=-10; i<=10; i++ ) {
+            auto us = ss.to_unsigned( i );
+            auto  s = ss.to_signed( us );
+            std::cout << "s\t" << s << "\tus\t" << us << "\n";
+        }
+
         listener::io_service ios;
 
         common::timers::periodical tt(ios);

@@ -14,7 +14,6 @@ namespace srpc { namespace common { namespace sizepack {
         typedef srpc::uint8_t       unsigned_type;
         static const unsigned_type  top_bit         = 0x80;
         static const unsigned_type  top_bit_shift   = 7;
-
     };
 
     template<>
@@ -37,7 +36,7 @@ namespace srpc { namespace common { namespace sizepack {
     struct types<sizeof(srpc::uint64_t)> {
         typedef srpc::int64_t       signed_type;
         typedef srpc::uint64_t      unsigned_type;
-        static const unsigned_type  top_bit         = 0x8000000000000000ul;
+        static const unsigned_type  top_bit         = 0x8000000000000000;
         static const unsigned_type  top_bit_shift   = 63;
     };
 
