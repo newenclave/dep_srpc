@@ -13,7 +13,7 @@ using namespace srpc;
 
 using iface_ptr       = common::transport::interface *;
 using client_sptr     = srpc::shared_ptr<common::transport::interface>;
-using connector_type  = client::connector::async::udp;
+using connector_type  = client::connector::async::tcp;
 using connector_sptr  = srpc::shared_ptr<connector_type>;
 using size_policy     = common::sizepack::varint<size_t>;
 using client_delegate = common::transport::delegates::message<size_policy>;
@@ -117,13 +117,15 @@ public:
         char block[max_length];
 
         srpc::shared_ptr<std::string> r = get_str( );
+        r->resize( max_length );
+        msg.AppendToString( r.get( ) );
 
-        r->assign( msg.SerializeAsString( ) );
+        size_t packed = pack_size( r->size( ) - max_length, block );
+        std::copy( &block[0], &block[packed],
+                    r->begin( ) + (max_length - packed) );
 
-        size_t packed = pack_size( r->size( ), block );
-        r->insert( r->begin( ), &block[0], &block[packed] );
-
-        client_->write( &(*r)[0], r->size( ),
+        client_->write( &(*r)[max_length - packed],
+                        r->size( ) - max_length + packed,
             cb::post( [r, this](...)
             {
                 if( cache_.size( ) < 10 ) {
@@ -161,6 +163,13 @@ int main( int argc, char *argv[] )
 
         connector ctr(ios, "127.0.0.1", 23456);
         ctr.start( );
+
+        std::string test;
+        for( int i=0; i<43000; i++ ) {
+            test.push_back( (char)((i % 10) + '0') );
+        }
+
+        ctr.send_message( test );
 
         while( !std::cin.eof( ) ) {
             std::string d;
