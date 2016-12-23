@@ -44,8 +44,6 @@ class protocol_client: public client_delegate {
 
     static const size_t max_length = client_delegate::size_policy::max_length;
 
-    SRPC_OBSERVER_DEFINE( on_connect, void(void) );
-
 public:
 
     protocol_client( io_service &ios, iface_ptr iface )
@@ -72,7 +70,6 @@ private:
         last_message_ = ticks::now( );
         std::cout << "rcv message " << len << "\n";
         process_call( message, len );
-        on_connect( );
     }
 
     void on_need_read( )
@@ -203,6 +200,7 @@ private:
     using message_delegate_sptr = srpc::shared_ptr<message_delegate>;
 
     struct impl: public srpc::enable_shared_from_this<impl> {
+
         acceptor_sptr                               acceptor_;
         srpc::unique_ptr<accept_delegate>           deleg_;
         io_service                                 &ios_;
@@ -237,7 +235,7 @@ private:
                 next->client_->set_delegate( next.get( ) );
                 next->client_->read( );
 
-                g_clients.insert( std::make_pair(c, next) );
+                //lck->on_connect( next->client_.get( ), next );
 
                 lck->acceptor_->start_accept( );
             }
@@ -289,14 +287,6 @@ int main( int argc, char *argv[ ] )
 {
     try {
 
-        common::sizepack::zigzag<int> ss;
-
-        for( int i=-10; i<=10; i++ ) {
-            auto us = ss.to_unsigned( i );
-            auto  s = ss.to_signed( us );
-            std::cout << "s\t" << s << "\tus\t" << us << "\n";
-        }
-
         listener::io_service ios;
 
         common::timers::periodical tt(ios);
@@ -306,6 +296,7 @@ int main( int argc, char *argv[ ] )
         }, srpc::chrono::milliseconds(10000) );
 
         listener l(ios, "0.0.0.0", 23456);
+
         l.start( );
         ios.run( );
 
