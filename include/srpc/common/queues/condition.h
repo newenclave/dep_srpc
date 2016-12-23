@@ -171,8 +171,9 @@ namespace srpc { namespace common { namespace queues {
                 }
                 map_.erase( f );
                 return OK;
+            } else {
+                return NOTFOUND;
             }
-            return NOTFOUND;
         }
 
         result_enum cancel_slot( const KeyType &index )
@@ -182,8 +183,9 @@ namespace srpc { namespace common { namespace queues {
             if( f != map_.end( ) ) {
                 f->second->cancel( );
                 return OK;
+            } else {
+                return NOTFOUND;
             }
-            return NOTFOUND;
         }
 
         result_enum push_to_slot( const key_type &index,
@@ -193,8 +195,9 @@ namespace srpc { namespace common { namespace queues {
             if( slot ) {
                 slot->push( value );
                 return OK;
+            } else {
+                return NOTFOUND;
             }
-            return NOTFOUND;
         }
 
         template <typename TimeDuration>
