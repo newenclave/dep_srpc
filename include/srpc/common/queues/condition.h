@@ -114,6 +114,7 @@ namespace srpc { namespace common { namespace queues {
                     return !parent->empty( ) || parent->canceled( );
                 }
             };
+
         private:
             queue_type               data_;
             mutable srpc::mutex      lock_;
