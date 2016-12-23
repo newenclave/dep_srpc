@@ -14,7 +14,7 @@
                          Name##_slot_type;                                  \
         typedef typename Name##_type::scoped_subscription                   \
                          Name##_scoped_subscription;                        \
-        Name##_subscription Name##_subscribe( Name##_slot_type slot )       \
+        Name##_subscription subscribe_##Name( Name##_slot_type slot )       \
         {                                                                   \
             return Name.subscribe( slot );                                  \
         }                                                                   \
