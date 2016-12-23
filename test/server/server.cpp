@@ -22,6 +22,8 @@
 #include "srpc/server/acceptor/async/udp.h"
 #include "srpc/common/transport/delegates/message.h"
 
+#include "srpc/common/observers/define.h"
+
 #include "protocol/t.pb.h"
 
 using namespace srpc;
@@ -41,6 +43,8 @@ class protocol_client: public client_delegate {
     using io_service  = common::transport::io_service;
 
     static const size_t max_length = client_delegate::size_policy::max_length;
+
+    SRPC_OBSERVER_DEFINE( on_connect, void(void) );
 
 public:
 
@@ -68,6 +72,7 @@ private:
         last_message_ = ticks::now( );
         std::cout << "rcv message " << len << "\n";
         process_call( message, len );
+        on_connect( );
     }
 
     void on_need_read( )
