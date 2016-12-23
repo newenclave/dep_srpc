@@ -343,12 +343,7 @@ namespace srpc { namespace common { namespace observers {
             :impl_(srpc::make_shared<impl>( ))
         { }
 
-#if !CXX11_ENABLED
-    private:
-        common( const common & );
-        common& operator = ( const common & );
-    public:
-#else
+#if CXX11_ENABLED
         common( const common & )              = delete;
         common& operator = ( const common & ) = delete;
         common( common &&o )
@@ -363,6 +358,11 @@ namespace srpc { namespace common { namespace observers {
             o.impl_ = srpc::make_shared<impl>( );
             return *this;
         }
+#else
+    private:
+        common( const common & );
+        common& operator = ( const common & );
+    public:
 #endif
 
         //virtual
@@ -405,7 +405,29 @@ namespace srpc { namespace common { namespace observers {
             unsubscribe_all( );
         }
 
-#if !CXX11_ENABLED
+#if CXX11_ENABLED
+        template <typename ...Args>
+        void operator ( ) ( const Args& ...args )
+        {
+            guard_type l(impl_->list_lock_);
+            impl_->splice_added( );
+            typename impl::list_iterator b(impl_->list_.begin( ));
+            while( b ) {
+                if( impl_->is_removed( b->id_ ) ) {
+                    b = impl::itr_erase( impl_->list_, b );
+                } else {
+                    slot_traits::exec( b->slot_, args... );
+                    if( slot_traits::expired( b->slot_ ) ) {
+                        b = impl::itr_erase( impl_->list_, b );
+                    } else {
+                        ++b;
+                    }
+                }
+            }
+            impl_->clear_removed( );
+        }
+
+#else
 
 #define SRPC_OBSERVER_OPERATOR_PROLOGUE \
             guard_type l(impl_->list_lock_); \
@@ -564,28 +586,6 @@ namespace srpc { namespace common { namespace observers {
 
 #undef SRPC_OBSERVER_OPERATOR_PROLOGUE
 #undef SRPC_OBSERVER_OPERATOR_EPILOGUE
-
-#else
-        template <typename ...Args>
-        void operator ( ) ( const Args& ...args )
-        {
-            guard_type l(impl_->list_lock_);
-            impl_->splice_added( );
-            typename impl::list_iterator b(impl_->list_.begin( ));
-            while( b ) {
-                if( impl_->is_removed( b->id_ ) ) {
-                    b = impl::itr_erase( impl_->list_, b );
-                } else {
-                    slot_traits::exec( b->slot_, args... );
-                    if( slot_traits::expired( b->slot_ ) ) {
-                        b = impl::itr_erase( impl_->list_, b );
-                    } else {
-                        ++b;
-                    }
-                }
-            }
-            impl_->clear_removed( );
-        }
 
 #endif
     private:

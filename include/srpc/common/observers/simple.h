@@ -6,7 +6,10 @@
 
 namespace srpc { namespace common { namespace observers {
 
-#if CXX11_ENABLED == 0
+#if CXX11_ENABLED
+    template <typename T, typename MutexType = srpc::mutex>
+    using simple = common<traits::simple<T>, MutexType>;
+#else
     template <typename T,
               typename MutexType = srpc::mutex>
     class simple: public common<traits::simple<T>, MutexType> {
@@ -15,9 +18,6 @@ namespace srpc { namespace common { namespace observers {
         typedef typename parent_type::slot_type  slot_type;
         typedef typename parent_type::connection connection;
     };
-#else
-    template <typename T, typename MutexType = srpc::mutex>
-    using simple = common<traits::simple<T>, MutexType>;
 #endif
 }}}
 #endif // SIMPLE_H
