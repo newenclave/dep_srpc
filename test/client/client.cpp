@@ -18,7 +18,7 @@ using connector_sptr  = srpc::shared_ptr<connector_type>;
 using size_policy     = common::sizepack::varint<size_t>;
 using client_delegate = common::transport::delegates::message<size_policy>;
 
-class connector: public client_delegate {
+class connector: private client_delegate {
 
     using io_service     = common::transport::io_service;
     using error_code     = common::transport::error_code;
@@ -47,7 +47,7 @@ class connector: public client_delegate {
 
         void on_close( )
         {
-
+            std::cout << "Connector close\n";
         }
     };
 
