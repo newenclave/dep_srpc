@@ -2,7 +2,36 @@
 #define CONFIG_FUNCTIONAL_H
 
 
-#if CXX11_ENABLED == 0
+#if CXX11_ENABLED
+
+
+#include <functional>
+
+namespace CONFIG_TOPNAMESPACE {
+    using std::function;
+    using std::bind;
+    using std::ref;
+    using std::cref;
+
+    namespace placeholders {
+
+        using std::placeholders::_1;
+        using std::placeholders::_2;
+        using std::placeholders::_3;
+        using std::placeholders::_4;
+        using std::placeholders::_5;
+        using std::placeholders::_6;
+        using std::placeholders::_7;
+        using std::placeholders::_8;
+        using std::placeholders::_9;
+
+        static decltype( _1 ) &error             = _1;
+        static decltype( _2 ) &bytes_transferred = _2;
+
+    }
+}
+
+#else
 
 #include "boost/function.hpp"
 #include "boost/bind.hpp"
@@ -33,34 +62,6 @@ namespace CONFIG_TOPNAMESPACE {
     }
 }
 
-#else
-
-#include <functional>
-
-namespace CONFIG_TOPNAMESPACE {
-    using std::function;
-    using std::bind;
-    using std::ref;
-    using std::cref;
-
-    namespace placeholders {
-
-        using std::placeholders::_1;
-        using std::placeholders::_2;
-        using std::placeholders::_3;
-        using std::placeholders::_4;
-        using std::placeholders::_5;
-        using std::placeholders::_6;
-        using std::placeholders::_7;
-        using std::placeholders::_8;
-        using std::placeholders::_9;
-
-        static decltype( _1 ) &error             = _1;
-        static decltype( _2 ) &bytes_transferred = _2;
-
-    }
-}
-
 #endif
 
-#endif // VTRCFUNCTION_H
+#endif // CONFIG_FUNCTIONAL_H

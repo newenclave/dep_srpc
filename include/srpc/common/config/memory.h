@@ -1,7 +1,18 @@
 #ifndef CONFIG_MEMORY_H
 #define CONFIG_MEMORY_H
 
-#if CXX11_ENABLED == 0
+#if CXX11_ENABLED
+
+#include <memory>
+namespace CONFIG_TOPNAMESPACE {
+    using std::shared_ptr;
+    using std::weak_ptr;
+    using std::make_shared;
+    using std::enable_shared_from_this;
+    using std::unique_ptr;
+}
+
+#else
 
 #include "boost/shared_ptr.hpp"
 #include "boost/weak_ptr.hpp"
@@ -89,17 +100,6 @@ namespace CONFIG_TOPNAMESPACE {
 
 }
 
-#else
-
-#include <memory>
-namespace CONFIG_TOPNAMESPACE {
-    using std::shared_ptr;
-    using std::weak_ptr;
-    using std::make_shared;
-    using std::enable_shared_from_this;
-    using std::unique_ptr;
-}
-
 #endif
 
 namespace CONFIG_TOPNAMESPACE {
@@ -140,7 +140,6 @@ namespace CONFIG_TOPNAMESPACE {
             return t;
         }
     };
-
 }
 
 #endif // MEMORY_H
