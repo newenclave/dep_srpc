@@ -139,7 +139,7 @@ namespace srpc { namespace common { namespace queues {
         condition( )
         { }
 
-        slot_ptr get_slot( const KeyType &index )
+        slot_ptr get_slot( const key_type &index )
         {
             slot_ptr res;
             {
@@ -152,7 +152,7 @@ namespace srpc { namespace common { namespace queues {
             return res;
         }
 
-        slot_ptr add_slot( const KeyType &index )
+        slot_ptr add_slot( const key_type &index )
         {
             slot_ptr slot = srpc::make_shared<slot_type>( );
             {
@@ -162,7 +162,7 @@ namespace srpc { namespace common { namespace queues {
             return slot;
         }
 
-        result_enum erase_slot( const KeyType &index )
+        result_enum erase_slot( const key_type &index )
         {
             locker l(map_lock_);
             typename map_type::iterator f = map_.find( index );
@@ -177,7 +177,7 @@ namespace srpc { namespace common { namespace queues {
             }
         }
 
-        result_enum cancel_slot( const KeyType &index )
+        result_enum cancel_slot( const key_type &index )
         {
             locker l(map_lock_);
             typename map_type::iterator f = map_.find( index );
