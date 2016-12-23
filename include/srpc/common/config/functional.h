@@ -4,7 +4,6 @@
 
 #if CXX11_ENABLED
 
-
 #include <functional>
 
 namespace CONFIG_TOPNAMESPACE {
