@@ -33,13 +33,9 @@ namespace srpc { namespace common { namespace queues {
 
         struct slot_type {
 
-            queue_type               data_;
-            mutable srpc::mutex      lock_;
-            srpc::condition_variable cond_;
-            srpc::uint32_t           flag_;
-
             typedef condition<KeyType, ValueType, QueueTrait> parent_type;
             typedef typename parent_type::result_enum result_enum;
+
         public:
 
             typedef typename parent_type::value_type value_type;
@@ -118,6 +114,11 @@ namespace srpc { namespace common { namespace queues {
                     return !parent->empty( ) || parent->canceled( );
                 }
             };
+        private:
+            queue_type               data_;
+            mutable srpc::mutex      lock_;
+            srpc::condition_variable cond_;
+            srpc::uint32_t           flag_;
         };
 
         typedef srpc::shared_ptr<slot_type> slot_ptr;
