@@ -13,16 +13,15 @@ using namespace srpc;
 
 using iface_ptr       = common::transport::interface *;
 using client_sptr     = srpc::shared_ptr<common::transport::interface>;
-using connector_sptr  = srpc::shared_ptr<client::connector::async::tcp>;
+using connector_type  = client::connector::async::udp;
+using connector_sptr  = srpc::shared_ptr<connector_type>;
 using size_policy     = common::sizepack::varint<size_t>;
 using client_delegate = common::transport::delegates::message<size_policy>;
-
 
 class connector: public client_delegate {
 
     using io_service     = common::transport::io_service;
     using error_code     = common::transport::error_code;
-    using connector_type = client::connector::async::tcp;
 
     static const size_t max_length = client_delegate::size_policy::max_length;
 
@@ -163,7 +162,7 @@ int main( int argc, char *argv[] )
         connector ctr(ios, "127.0.0.1", 23456);
         ctr.start( );
 
-        while( 1 ) {
+        while( !std::cin.eof( ) ) {
             std::string d;
             std::cin >> d;
             ctr.send_message( d );

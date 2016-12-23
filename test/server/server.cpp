@@ -107,8 +107,6 @@ private:
         while( len-- ) {
             name->push_back( t.name( )[len] );
         }
-        std::cout << "resent " << name->size( )
-                  << " bytes of " << l << "\n" ;
         send_message( r );
     }
 
@@ -136,6 +134,8 @@ private:
 
     using tcp = server::acceptor::async::tcp;
     using udp = server::acceptor::async::udp;
+
+    using acceptro_type = udp;
 
     struct message_delegate;
     struct impl;
@@ -206,10 +206,11 @@ public:
 
     listener( io_service &ios, const std::string &addr, srpc::uint16_t svc )
     {
-        tcp::endpoint ep(SRPC_ASIO::ip::address::from_string(addr), svc);
+        acceptro_type::endpoint ep(
+                    SRPC_ASIO::ip::address::from_string(addr), svc);
 
         impl_ = srpc::make_shared<impl>( );
-        impl_->acceptor_ = tcp::create( ios, 45000, ep );
+        impl_->acceptor_ = acceptro_type::create( ios, 45000, ep );
         impl_->deleg_.reset( new accept_delegate(impl_) );
         impl_->acceptor_->set_delegate( impl_->deleg_.get( ) );
     }
@@ -226,7 +227,7 @@ private:
 };
 
 
-int main( int argc, char *argv[] )
+int main( int argc, char *argv[ ] )
 {
     try {
         listener::io_service ios;
