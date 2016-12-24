@@ -51,6 +51,16 @@ namespace srpc { namespace common { namespace sizepack {
             res.assign( &tmp[0], &tmp[max_length] );
         }
 
+        static void append( size_type size, std::string &res )
+        {
+            size_t last = res.size( );
+            res.resize(last + max_length);
+            for( size_t current =  max_length; current > 0; --current ) {
+                res[last + current-1]  = static_cast<char>( size & 0xFF );
+                size >>= 8;
+            }
+        }
+
         static size_t pack( size_type size, void *result )
         {
             srpc::uint8_t *res  = reinterpret_cast<srpc::uint8_t *>(result);

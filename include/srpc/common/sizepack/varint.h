@@ -56,13 +56,17 @@ namespace srpc { namespace common { namespace sizepack {
         static void pack( size_type size, std::string &res )
         {
             std::string tmp;
-            tmp.reserve(max_length);
-            for( ; size > 0x7F; size >>= 7 ) {
-                tmp.push_back(static_cast<char>((size & 0x7F) | 0x80));
-            }
-            tmp.push_back(static_cast<char>(size));
-
+            append( size, tmp );
             res.swap(tmp);
+        }
+
+        static void append( size_type size, std::string &res )
+        {
+            res.reserve(res.size( ) + max_length);
+            for( ; size > 0x7F; size >>= 7 ) {
+                res.push_back(static_cast<char>((size & 0x7F) | 0x80));
+            }
+            res.push_back(static_cast<char>(size));
         }
 
         static size_t pack( size_type size, void *result )

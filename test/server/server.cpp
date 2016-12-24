@@ -56,7 +56,7 @@ public:
             {
                 if( !e ) {
                     std::uint32_t now = ticks::now( );
-                    if( now - last_message_ > 1000 ) {
+                    if( now - last_message_ > 10000 ) {
                         client_->close( );
                     }
                 }
@@ -107,19 +107,23 @@ private:
 
     void send_message( const gpb::MessageLite &msg )
     {
+        static const size_t max = max_length + 1;
+
         typedef common::transport::interface::write_callbacks cb;
-        char block[max_length];
+        char block[max];
 
         srpc::shared_ptr<std::string> r = get_str( );
-        r->resize( max_length );
+        r->resize( max );
         msg.AppendToString( r.get( ) );
 
-        size_t packed = pack_size( r->size( ) - max_length, block );
-        std::copy( &block[0], &block[packed],
-                    r->begin( ) + (max_length - packed) );
+        size_t packed = pack_size( r->size( ) - max, block );
+        block[packed++] = 1;
 
-        client_->write( &(*r)[max_length - packed],
-                        r->size( ) - max_length + packed,
+        std::copy( &block[0], &block[packed],
+                    r->begin( ) + (max - packed) );
+
+        client_->write( &(*r)[max - packed],
+                        r->size( ) - max + packed,
             cb::post( [r, this](...)
             {
                 if( cache_.size( ) < 10 ) {
@@ -235,6 +239,7 @@ private:
                 next->client_->set_delegate( next.get( ) );
                 next->client_->read( );
 
+                g_clients[next->client_.get( )] = next;
                 //lck->on_connect( next->client_.get( ), next );
 
                 lck->acceptor_->start_accept( );
@@ -285,15 +290,16 @@ private:
 
 int main0( int argc, char *argv[ ] )
 {
+
     try {
 
         listener::io_service ios;
 
         common::timers::periodical tt(ios);
 
-        tt.call( [&ios](...) {
-            ios.stop( );
-        }, srpc::chrono::milliseconds(10000) );
+//        tt.call( [&ios](...) {
+//            ios.stop( );
+//        }, srpc::chrono::milliseconds(10000) );
 
         listener l(ios, "0.0.0.0", 23456);
 

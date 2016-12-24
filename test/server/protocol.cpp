@@ -5,6 +5,7 @@
 #include "srpc/common/transport/delegates/message.h"
 #include "srpc/common/transport/interface.h"
 #include "srpc/common/sizepack/varint.h"
+#include "srpc/common/sizepack/fixint.h"
 
 using namespace srpc::common;
 
@@ -119,11 +120,51 @@ private:
     transport_sptr              transport_;
 };
 
+using sizepol = sizepack::varint<size_t>;
+using sizepol0 = sizepack::fixint<size_t>;
+
+void pack( const std::string &data, size_t tag1, size_t tag2 )
+{
+    size_t size_max = sizepol::max_length;
+
+    std::string res;
+    res.resize( size_max );
+    sizepol0::append( tag1, res );
+    sizepol0::append( tag2, res );
+    res.append( data.begin( ), data.end( ) );
+
+    size_t packed = sizepol::packed_length( res.size( ) - size_max );
+    sizepol::pack(res.size( ) - size_max, &res[size_max - packed]);
+
+    size_t full_size = res.size( ) - size_max + packed;
+
+    char *begin = &res[size_max - packed];
+    std::string tmp(begin, full_size);
+
+    for( auto &d: tmp ) {
+        std::cout << std::hex
+                  << (std::uint32_t)(unsigned char)(d)
+                  << " ";
+    }
+    std::cout << "\n";
+
+}
+
 int main( int argc, char *argv[ ] )
 {
+
     try {
 
-        message_processor<std::string> pp(NULL, 0);
+        pack("1234567890", 1, 1000);
+        pack("1234567890", 10000, 0);
+        pack("1234567890"
+             "1234567890"
+             "1234567890"
+             "1234567890"
+             "1234567890"
+             "1234567890", 0, 0);
+
+        //message_processor<std::string> pp(NULL, 0);
 
     } catch ( const std::exception &ex ) {
         std::cout << "Error " << ex.what( ) << "\n";

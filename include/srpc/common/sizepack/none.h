@@ -40,6 +40,9 @@ namespace srpc { namespace common { namespace sizepack {
         static void pack( size_type, std::string & )
         { }
 
+        static void append( size_type, std::string & )
+        { }
+
         static size_t pack( size_type, void * )
         {
             return max_length;

@@ -62,6 +62,7 @@ class connector: private client_delegate {
 
     bool validate_length( size_t len )
     {
+        std::cout << "Validate len: " << len << "\n";
         return len <= 44000;
     }
 
@@ -111,22 +112,27 @@ public:
 
     void send_message( const std::string &data )
     {
+        static const size_t max = max_length + 1;
+
         test::run msg;
         msg.set_name( data );
 
+
         typedef common::transport::interface::write_callbacks cb;
-        char block[max_length];
+        char block[max];
 
         srpc::shared_ptr<std::string> r = get_str( );
-        r->resize( max_length );
+        r->resize( max );
         msg.AppendToString( r.get( ) );
 
-        size_t packed = pack_size( r->size( ) - max_length, block );
-        std::copy( &block[0], &block[packed],
-                    r->begin( ) + (max_length - packed) );
+        size_t packed = pack_size( r->size( ) - max_length + 1, block );
+        block[packed++] = 1;
 
-        client_->write( &(*r)[max_length - packed],
-                        r->size( ) - max_length + packed,
+        std::copy( &block[0], &block[packed],
+                    r->begin( ) + (max - packed)  );
+
+        client_->write( &(*r)[max - packed],
+                        r->size( ) - max + packed,
             cb::post( [r, this](...)
             {
                 if( cache_.size( ) < 10 ) {
@@ -164,6 +170,8 @@ int main( int argc, char *argv[] )
 
         connector ctr(ios, "127.0.0.1", 23456);
         ctr.start( );
+
+        std::this_thread::sleep_for( std::chrono::milliseconds(100));
 
         std::string test;
         for( int i=0; i<43000; i++ ) {
