@@ -10,8 +10,15 @@ using namespace srpc::common;
 
 typedef transport::delegates::message<sizepack::varint<size_t> > mess_delegate;
 
+typedef srpc::shared_ptr<std::string> send_buffer_type;
+
 template <typename MessageType>
 class message_processor: public mess_delegate {
+
+    typedef message_processor<MessageType>        this_type;
+    typedef transport::interface::write_callbacks cb_type;
+
+protected:
 
 public:
 
@@ -24,7 +31,7 @@ public:
     typedef srpc::common::queues::condition<
                     slot_key_type,
                     message_type,
-                    srpc::common::queues::traits::simple<message_type>
+                    queues::traits::simple<message_type>
             > queue_type;
 
     typedef typename queue_type::result_enum result_enum;
@@ -34,10 +41,10 @@ public:
         :next_id_(init_id)
     {
         transport_ = t->shared_from_this( );
+        transport_->read( );
     }
 
-    virtual
-    ~message_processor( ) { }
+    virtual ~message_processor( ) { }
 
     slot_key_type next_id( )
     {
@@ -55,12 +62,17 @@ public:
         queues_.erase_slot( slot );
     }
 
+protected:
+
+    virtual send_buffer_type buffer_alloc(  )
+    {
+        return srpc::make_shared<std::string>( );
+    }
+
     transport_ptr get_transport( )
     {
         return transport_.get( );
     }
-
-protected:
 
     void on_message( const char *message, size_t len )
     { }
@@ -87,12 +99,12 @@ protected:
 
     void on_write_error( const error_code &)
     {
-
+        transport_->close( );
     }
 
     void on_close( )
     {
-        //transport_
+        // transport_.reset( );
     }
 
     bool push_to_slot( slot_key_type id, const message_type &msg )
@@ -111,6 +123,7 @@ int main( int argc, char *argv[ ] )
 {
     try {
 
+        message_processor<std::string> pp(NULL, 0);
 
     } catch ( const std::exception &ex ) {
         std::cout << "Error " << ex.what( ) << "\n";
