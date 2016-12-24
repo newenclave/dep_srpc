@@ -283,7 +283,7 @@ private:
 };
 
 
-int main( int argc, char *argv[ ] )
+int main0( int argc, char *argv[ ] )
 {
     try {
 

@@ -6,6 +6,7 @@
 #include "srpc/common/config/memory.h"
 #include "srpc/common/config/condition-variable.h"
 #include "srpc/common/config/stdint.h"
+#include "srpc/common/config/functional.h"
 
 #include "srpc/common/queues/traits/simple.h"
 #include "srpc/common/queues/traits/priority.h"
@@ -39,14 +40,16 @@ namespace srpc { namespace common { namespace queues {
         public:
 
             typedef typename parent_type::value_type value_type;
+            typedef typename parent_type::key_type   key_type;
 
             enum flags {
                 NONE      = 0x00,
                 CANCELED  = 0x01,
             };
 
-            slot_type( )
-                :flag_(NONE)
+            slot_type( const key_type &key )
+                :key_(key)
+                ,flag_(NONE)
             { }
 
             void cancel( )
@@ -91,6 +94,11 @@ namespace srpc { namespace common { namespace queues {
                 return ( flag_ & CANCELED );
             }
 
+            const key_type &key( ) const
+            {
+                return key_;
+            }
+
         private:
 
             struct not_empty {
@@ -117,6 +125,7 @@ namespace srpc { namespace common { namespace queues {
                 }
             };
 
+            key_type                 key_;
             queue_type               data_;
             mutable srpc::mutex      lock_;
             srpc::condition_variable cond_;
@@ -155,10 +164,16 @@ namespace srpc { namespace common { namespace queues {
 
         slot_ptr add_slot( const key_type &index )
         {
-            slot_ptr slot = srpc::make_shared<slot_type>( );
+            slot_ptr slot;
             {
                 locker l(map_lock_);
-                map_.insert( std::make_pair( index, slot ) );
+                typename map_type::iterator f = map_.find( index );
+                if( f != map_.end( ) ) {
+                    slot = f->second;
+                } else {
+                    slot = srpc::make_shared<slot_type>( srpc::ref( index ) );
+                    map_[index] = slot;
+                }
             }
             return slot;
         }
@@ -178,6 +193,11 @@ namespace srpc { namespace common { namespace queues {
             }
         }
 
+        result_enum erase_slot( slot_ptr slot )
+        {
+            return erase_slot( slot->key( ) );
+        }
+
         result_enum cancel_slot( const key_type &index )
         {
             locker l(map_lock_);
@@ -188,6 +208,11 @@ namespace srpc { namespace common { namespace queues {
             } else {
                 return NOTFOUND;
             }
+        }
+
+        result_enum cancel_slot( slot_ptr slot )
+        {
+            return cancel_slot( slot->key( ) );
         }
 
         result_enum push_to_slot( const key_type &index,
@@ -202,6 +227,11 @@ namespace srpc { namespace common { namespace queues {
             }
         }
 
+        result_enum push_to_slot( slot_ptr slot, const value_type &value )
+        {
+            return slot->push( value );
+        }
+
         template <typename TimeDuration>
         result_enum read_slot( const key_type &id, value_type &result,
                                const TimeDuration &td )
@@ -212,6 +242,13 @@ namespace srpc { namespace common { namespace queues {
             } else {
                 return NOTFOUND;
             }
+        }
+
+        template <typename TimeDuration>
+        result_enum read_slot( slot_ptr slot, value_type &result,
+                               const TimeDuration &td )
+        {
+            return slot->read_for( result, td );
         }
 
     };

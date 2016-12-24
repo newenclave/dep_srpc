@@ -12,6 +12,7 @@ list( APPEND src_dirs
       ${INCLUDE_DIR}/srpc/common/observers/traits
       ${INCLUDE_DIR}/srpc/common/details
       ${INCLUDE_DIR}/srpc/common/queues
+      ${INCLUDE_DIR}/srpc/common/protocol
       ${INCLUDE_DIR}/srpc/common/queues/traits
       ${INCLUDE_DIR}/srpc/common/transport
       ${INCLUDE_DIR}/srpc/common/transport/delegates

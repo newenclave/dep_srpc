@@ -22,10 +22,10 @@
         Name##_type Name
 
 #define SRPC_OBSERVER_DEFINE_SAFE( Name, Sig ) \
-      SRPC_OBSERVER_DEFINE_COMMON( Name, Sig, protected, srpc::recursive_mutex )
+    SRPC_OBSERVER_DEFINE_COMMON( Name, Sig, protected, srpc::recursive_mutex )
 
 #define SRPC_OBSERVER_DEFINE_UNSAFE( Name, Sig ) \
-        SRPC_OBSERVER_DEFINE_COMMON( Name, Sig, protected, srpc::dummy_mutex )
+    SRPC_OBSERVER_DEFINE_COMMON( Name, Sig, protected, srpc::dummy_mutex )
 
 #define SRPC_OBSERVER_DEFINE SRPC_OBSERVER_DEFINE_SAFE
 
