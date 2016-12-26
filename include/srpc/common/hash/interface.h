@@ -11,6 +11,7 @@ namespace srpc { namespace common { namespace hash {
         virtual ~interface( ) { }
         virtual size_t length( ) const = 0;
         virtual void get( const char *data, size_t len, char *out ) = 0;
+        virtual bool check( const char *data, size_t len, const char *res ) = 0;
         virtual std::string name( ) const = 0;
     };
 

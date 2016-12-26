@@ -101,6 +101,20 @@ namespace srpc { namespace common { namespace hash {
             return "crc32";
         }
 
+        bool check( const char *data, size_t len, const char *res )
+        {
+            register srpc::uint32_t oldcrc = 0xFFFFFFFF;
+            for( size_t i = 0; i<len; ++i ) {
+                oldcrc = traits::crc32::update( oldcrc,
+                                     static_cast<srpc::uint8_t>(data[i]) );
+            }
+            oldcrc = ~oldcrc;
+            return  res[0] == static_cast<char>((oldcrc >> 24) & 0xFF)
+                &&  res[1] == static_cast<char>((oldcrc >> 16) & 0xFF)
+                &&  res[2] == static_cast<char>((oldcrc >>  8) & 0xFF)
+                &&  res[3] == static_cast<char>((oldcrc      ) & 0xFF);
+        }
+
         void get( const char *data, size_t len, char *out )
         {
             register srpc::uint32_t oldcrc = 0xFFFFFFFF;

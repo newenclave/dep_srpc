@@ -6,6 +6,7 @@
 #include "srpc/common/transport/interface.h"
 #include "srpc/common/sizepack/varint.h"
 #include "srpc/common/sizepack/fixint.h"
+#include "srpc/common/sizepack/none.h"
 #include "srpc/common/const_buffer.h"
 #include "srpc/common/hash/interface.h"
 #include "srpc/common/hash/crc32.h"
@@ -14,19 +15,30 @@
 
 using namespace srpc::common;
 
-typedef transport::delegates::message<sizepack::varint<size_t> > mess_delegate;
+typedef sizepack::varint<srpc::uint32_t> tag1pack_type;
+typedef sizepack::fixint<std::uint16_t> tag2pack_type;
+
+typedef transport::delegates::message<
+                        sizepack::varint<srpc::uint32_t>
+                    > mess_delegate;
 
 typedef srpc::shared_ptr<std::string> send_buffer_type;
 
-template <typename MessageType>
+template <typename MessageType, typename Tag1Policy, typename Tag2Policy>
 class message_processor: public mess_delegate {
 
-    typedef message_processor<MessageType>        this_type;
-    typedef transport::interface::write_callbacks cb_type;
+    typedef message_processor<MessageType, Tag1Policy, Tag2Policy> this_type;
+    typedef transport::interface::write_callbacks                  cb_type;
 
 protected:
 
 public:
+
+    typedef Tag1Policy tag1_policy;
+    typedef Tag2Policy tag2_policy;
+
+    typedef typename tag1_policy::size_type tag1_type;
+    typedef typename tag2_policy::size_type tag2_type;
 
     typedef transport::interface::error_code        error_code;
     typedef transport::interface *                  transport_ptr;
@@ -87,10 +99,12 @@ public:
         b->append( m );
     }
 
-    template <typename Itr>
-    bool get_next_item( Itr &begin, const Itr &end, srpc::uint64_t *res )
+    template <typename Policy, typename Itr>
+    static
+    bool get_next_item( Itr &begin, const Itr &end,
+                        typename Policy::size_type *res )
     {
-        typedef mess_delegate::size_policy size_policy;
+        typedef Policy size_policy;
 
         size_t len;
 
@@ -109,31 +123,46 @@ public:
         typedef mess_delegate::size_policy size_policy;
 
         const char *end = m + len;
+        const size_t hash_size = hash_->length( );
 
-        srpc::uint64_t t1;
-        srpc::uint64_t t2;
+        tag1_type t1 = tag1_type( );
+        tag2_type t2 = tag2_type( );
 
-        if( !get_next_item( m, end, &t1 ) ) {
+        if( !get_next_item<tag1_policy>( m, end, &t1 ) ) {
             on_error( "Tag1. Bad serialized block." );
             return;
         }
 
-        if( !get_next_item(m, end, &t2 ) ) {
+        if( !get_next_item<tag2_policy>(m, end, &t2 ) ) {
             on_error( "Tag2. Bad serialized block." );
             return;
         }
 
-        on_message( t1, t2, const_buffer(m, end - m) );
+        size_t mess_len = end - m;
+
+        if( mess_len >= hash_size ) {
+            const char * checksum = m + mess_len - hash_size;
+            if( !hash_->check( m, mess_len - hash_size, checksum ) ) {
+                on_error( "Checksum. Bad serialized block." );
+                return;
+            }
+        } else {
+            on_error( "Bad length. Bad serialized block." );
+            return;
+        }
+
+        on_message( t1, t2, const_buffer(m, (end - m) - hash_size) );
     }
 
-    virtual void on_message( srpc::uint64_t tag1, srpc::uint64_t tag2,
+    virtual void on_message( tag1_type tag1, tag2_type tag2,
                              const_buffer message )
     {
-
+        std::cout << "tag1 " << tag1 << " tag2 " << tag2
+                  << " msg " << message.size( ) << "\n";
     }
 
     const_buffer pack_message( send_buffer_type buf,
-                               srpc::uint64_t tag1, srpc::uint64_t tag2,
+                               tag1_type tag1, tag2_type tag2,
                                const message_type &mess )
     {
         typedef mess_delegate::size_policy size_policy;
@@ -142,13 +171,17 @@ public:
 
         buf->resize( size_policy::max_length );
 
-        size_policy::append( tag1, *buf );
-        size_policy::append( tag2, *buf );
+        tag1_policy::append( tag1, *buf );
+        tag2_policy::append( tag2, *buf );
+
+        size_t old_len = buf->size( );
 
         append_message( buf, mess );
+
         buf->resize( buf->size( ) + hash_->length( ) );
-        hash_->get( buf->c_str( ) + size_max,
-                    buf->size( )  - size_max - hash_->length( ),
+
+        hash_->get( buf->c_str( ) + old_len,
+                    buf->size( )  - old_len - hash_->length( ),
                     &(*buf)[buf->size( ) - hash_->length( )]);
 
         size_t packed = size_policy::packed_length( buf->size( ) - size_max );
@@ -165,9 +198,10 @@ public:
         return true;
     }
 
-    void on_error( const char * /*message*/ )
+    void on_error( const char * message )
     {
-        transport_->close( );
+        std::cout << "Failed: " << message << "\n";
+        //transport_->close( );
     }
 
     void on_need_read( )
@@ -203,7 +237,7 @@ private:
     hash::interface_uptr        hash_;
 };
 
-using sizepol = sizepack::varint<size_t>;
+using sizepol  = sizepack::varint<size_t>;
 using sizepol0 = sizepack::fixint<size_t>;
 
 std::string pack( const std::string &data, size_t tag1, size_t tag2 )
@@ -242,7 +276,7 @@ uint64_result get_next( Itr &begin, const Itr &end )
     typedef mess_delegate::size_policy size_policy;
 
     size_t len;
-    srpc::uint64_t res;
+    srpc::uint64_t res = 0;
     len = size_policy::size_length(begin, end);
     if( size_policy::valid_length(len) ) {
 
@@ -282,11 +316,15 @@ int main( int argc, char *argv[ ] )
 
     try {
 
-        message_processor<std::string> msg(NULL, 100);
+        message_processor< std::string,
+                           sizepack::none,
+                           sizepack::fixint<std::uint16_t> > msg(NULL, 100);
 
         auto b = std::make_shared<std::string>( );
 
-        auto rr = msg.pack_message( b, 1, 1, "1234567980" );
+        auto rr = msg.pack_message( b, 1, 1, "" );
+
+        msg.on_message( rr.begin( ) + 1, rr.size( ) - 1 );
 
         std::cout << rr.size( ) << "\n";
 
