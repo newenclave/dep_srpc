@@ -8,7 +8,7 @@
 #include "srpc/common/sizepack/fixint.h"
 #include "srpc/common/const_buffer.h"
 
-#include "srpc/common/result/result.h"
+#include "srpc/common/result.h"
 
 using namespace srpc::common;
 
@@ -164,11 +164,50 @@ void pack( const std::string &data, size_t tag1, size_t tag2 )
                   << " ";
     }
     std::cout << "\n";
+}
 
+using result_type = result<std::string, int>;
+
+std::string test1( )
+{
+    if(rand( ) % 2) {
+        return "Hello!";
+    } else {
+        return "";
+    }
+}
+
+result_type test2( )
+{
+    if(rand( ) % 2) {
+        return result_type::ok( "Hello!" );
+    } else {
+        return result_type::fail( -1 );
+    }
 }
 
 int main( int argc, char *argv[ ] )
 {
+
+    std::uint64_t failed = 0;
+
+//    for( int i=0; i<100000000; i++ ) {
+//        auto r = test1( );
+//        if( r.empty( ) ) {
+//            failed ++;
+//        }
+//    }
+
+    for( int i=0; i<100000000; i++ ) {
+        auto r = test2( );
+        if( !r ) {
+            failed ++;
+        }
+    }
+
+    std::cout << failed << "\n";
+
+    return 0;
 
     try {
 
