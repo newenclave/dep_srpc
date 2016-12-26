@@ -163,7 +163,8 @@ public:
 
     const_buffer pack_message( send_buffer_type buf,
                                tag1_type tag1, tag2_type tag2,
-                               const message_type &mess )
+                               const message_type &mess,
+                               size_t *length_size = NULL)
     {
         typedef mess_delegate::size_policy size_policy;
 
@@ -184,9 +185,14 @@ public:
                     buf->size( )  - old_len - hash_->length( ),
                     &(*buf)[buf->size( ) - hash_->length( )]);
 
-        size_t packed = size_policy::packed_length( buf->size( ) - size_max );
-        size_policy::pack( buf->size( ) - size_max,
-                          &(*buf)[size_max - packed]);
+        size_t packed = 0;
+
+        if( length_size ) {
+            packed = size_policy::packed_length( buf->size( ) - size_max );
+            size_policy::pack( buf->size( ) - size_max,
+                            &(*buf)[size_max - packed]);
+            *length_size = packed;
+        }
 
         return const_buffer( buf->c_str( ) + size_max - packed,
                              buf->size( ) - size_max + packed );
@@ -243,14 +249,14 @@ int main( int argc, char *argv[ ] )
     try {
 
         message_processor< std::string,
-                           sizepack::none,
+                           sizepack::varint<std::uint64_t>,
                            sizepack::none > msg(NULL, 100);
 
         auto b = std::make_shared<std::string>( );
 
-        auto rr = msg.pack_message( b, 1, 1, "" );
+        auto rr = msg.pack_message( b, 0x5465678, 1, "" );
 
-        msg.on_message( rr.begin( ) + 1, rr.size( ) - 1 );
+        msg.on_message( rr.begin( ), rr.size( ) );
 
         std::cout << rr.size( ) << "\n";
 

@@ -104,7 +104,8 @@ namespace srpc { namespace common {
 
         void swap( result &other )
         {
-            value_.swap( other );
+            std::swap( value_.first,  other.value_.first );
+            std::swap( value_.second, other.value_.second );
         }
 
     private:
