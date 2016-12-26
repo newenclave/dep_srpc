@@ -11,7 +11,7 @@
 namespace srpc { namespace common { namespace observers {
 
     template <typename SlotType, typename MutexType>
-    class common {
+    class base {
     public:
 
         typedef SlotType slot_traits;
@@ -184,10 +184,10 @@ namespace srpc { namespace common { namespace observers {
 
         class subscription {
 
-            friend class observers::common<SlotType, MutexType>;
+            friend class observers::base<SlotType, MutexType>;
             friend class scoped_subscription;
 
-            typedef observers::common<SlotType, MutexType> parent_type;
+            typedef observers::base<SlotType, MutexType> parent_type;
 
             subscription( const typename parent_type::impl_sptr &parent,
                           size_t me )
@@ -244,8 +244,8 @@ namespace srpc { namespace common { namespace observers {
         };
 
         class scoped_subscription {
-            friend class observers::common<SlotType, MutexType>;
-            typedef observers::common<SlotType, MutexType> parent_type;
+            friend class observers::base<SlotType, MutexType>;
+            typedef observers::base<SlotType, MutexType> parent_type;
 
             typename parent_type::impl_wptr parent_list_;
             size_t                           me_;
@@ -339,20 +339,20 @@ namespace srpc { namespace common { namespace observers {
 
         typedef subscription connection;
 
-        common( )
+        base( )
             :impl_(srpc::make_shared<impl>( ))
         { }
 
 #if CXX11_ENABLED
-        common( const common & )              = delete;
-        common& operator = ( const common & ) = delete;
-        common( common &&o )
+        base( const base & )              = delete;
+        base& operator = ( const base & ) = delete;
+        base( base &&o )
         {
             impl_.swap( o.impl_ );
             o.impl_ = srpc::make_shared<impl>( );
         }
 
-        common & operator = ( common &&o )
+        base & operator = ( base &&o )
         {
             impl_.swap( o.impl_ );
             o.impl_ = srpc::make_shared<impl>( );
@@ -366,7 +366,7 @@ namespace srpc { namespace common { namespace observers {
 #endif
 
         //virtual
-        ~common( )
+        ~base( )
         {
         }
 

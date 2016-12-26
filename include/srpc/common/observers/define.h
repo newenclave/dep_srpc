@@ -1,7 +1,7 @@
 #ifndef SRPC_COMMON_OBSERVERS_DEFINE_H
 #define SRPC_COMMON_OBSERVERS_DEFINE_H
 
-#include "srpc/common/observers/common.h"
+#include "srpc/common/observers/base.h"
 #include "srpc/common/observers/simple.h"
 #include "srpc/common/config/mutex.h"
 

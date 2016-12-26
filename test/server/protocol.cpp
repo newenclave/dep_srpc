@@ -6,6 +6,9 @@
 #include "srpc/common/transport/interface.h"
 #include "srpc/common/sizepack/varint.h"
 #include "srpc/common/sizepack/fixint.h"
+#include "srpc/common/const_buffer.h"
+
+#include "srpc/common/result/result.h"
 
 using namespace srpc::common;
 
@@ -75,8 +78,22 @@ protected:
         return transport_.get( );
     }
 
-    void on_message( const char *message, size_t len )
-    { }
+    void on_message( const char *m, size_t len )
+    {
+        typedef mess_delegate::size_policy size_policy;
+        //size_policy::
+
+        size_t tag1_up = size_policy::unpack(m, m + len);
+        //if( tag1_up >=  )
+
+
+    }
+
+    virtual void on_message( srpc::uint64_t tag1, srpc::uint64_t tag2,
+                             srpc::common::const_buffer<char> message )
+    {
+
+    }
 
     bool validate_length( size_t len )
     {
@@ -154,17 +171,6 @@ int main( int argc, char *argv[ ] )
 {
 
     try {
-
-        pack("1234567890", 1, 1000);
-        pack("1234567890", 10000, 0);
-        pack("1234567890"
-             "1234567890"
-             "1234567890"
-             "1234567890"
-             "1234567890"
-             "1234567890", 0, 0);
-
-        //message_processor<std::string> pp(NULL, 0);
 
     } catch ( const std::exception &ex ) {
         std::cout << "Error " << ex.what( ) << "\n";
