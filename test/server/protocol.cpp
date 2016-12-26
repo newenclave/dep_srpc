@@ -204,7 +204,7 @@ public:
         return true;
     }
 
-    void on_error( const char * message )
+    virtual void on_error( const char * message )
     {
         std::cout << "Failed: " << message << "\n";
         //transport_->close( );
