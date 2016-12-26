@@ -26,6 +26,12 @@ namespace srpc { namespace common { namespace sizepack {
             return std::distance(begin, end) < max_length ? 0 : max_length;
         }
 
+        template <typename IterT>
+        static bool valid_packed( const IterT &begin, const IterT &end )
+        {
+            return valid_length( size_length(begin, end) );
+        }
+
         static size_t packed_length( size_type input )
         {
             return max_length;

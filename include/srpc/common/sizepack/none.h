@@ -27,6 +27,12 @@ namespace srpc { namespace common { namespace sizepack {
             return 0;
         }
 
+        template <typename IterT>
+        static bool valid_packed( const IterT &, const IterT & )
+        {
+            return true;
+        }
+
         static size_t packed_length( size_type )
         {
             return max_length;

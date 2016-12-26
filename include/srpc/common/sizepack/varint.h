@@ -35,6 +35,12 @@ namespace srpc { namespace common { namespace sizepack {
             return (last & 0x80) ? 0 : length;
         }
 
+        template <typename IterT>
+        static bool valid_packed( const IterT &begin, const IterT &end )
+        {
+            return valid_length( size_length(begin, end) );
+        }
+
         static size_t packed_length( size_type input )
         {
             size_t res = 0;
