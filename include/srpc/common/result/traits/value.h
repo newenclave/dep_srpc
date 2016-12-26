@@ -14,12 +14,6 @@ namespace traits {
             v = from;
         }
 
-        static
-        value_type create(  )
-        {
-            return value_type( );
-        }
-
 #if CXX11_ENABLED
         template <typename ...Args>
         static

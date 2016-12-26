@@ -2,6 +2,7 @@
 #define SRPC_COMMON_RESULT_BASE_H
 
 #include "srpc/common/config/memory.h"
+#include "srpc/common/config/functional.h"
 
 namespace srpc { namespace common { namespace result {
 
@@ -29,8 +30,8 @@ namespace srpc { namespace common { namespace result {
 
         base &operator = ( const base &other )
         {
-            error_ = other.error_;
             Trait::copy( value_, other.value_ );
+            error_ = other.error_;
             return *this;
         }
 
@@ -137,21 +138,21 @@ namespace srpc { namespace common { namespace result {
         static
         base ok( const P0 &p0 )
         {
-            return base(p0);
+            return base( p0 );
         }
 
         template <typename P0, typename P1>
         static
         base ok( const P0 &p0, const P1 &p1 )
         {
-            return base(p0, p1 );
+            return base( p0, p1 );
         }
 
         template <typename P0, typename P1, typename P2>
         static
         base ok( const P0 &p0, const P1 &p1, const P2 &p2 )
         {
-            return base(p0, p1, p2 );
+            return base( p0, p1, p2 );
         }
 
         //// FAIL ctor
@@ -168,7 +169,7 @@ namespace srpc { namespace common { namespace result {
         base fail( const P0 &p0 )
         {
             base res;
-            res.error_ = srpc::make_shared<E>( p0 );
+            res.error_ = srpc::make_shared<E>( srpc::ref(p0) );
             return res;
         }
 
@@ -177,7 +178,7 @@ namespace srpc { namespace common { namespace result {
         base fail( const P0 &p0, const P1 &p1 )
         {
             base res;
-            res.error_ = srpc::make_shared<E>( p0, p1 );
+            res.error_ = srpc::make_shared<E>( srpc::ref(p0), srpc::ref(p1) );
             return res;
         }
 
@@ -186,7 +187,8 @@ namespace srpc { namespace common { namespace result {
         base fail( const P0 &p0, const P1 &p1, const P2 &p2 )
         {
             base res;
-            res.error_ = srpc::make_shared<E>( p0, p1, p2 );
+            res.error_ = srpc::make_shared<E>( srpc::ref(p0), srpc::ref(p1),
+                                               srpc::ref(p2) );
             return res;
         }
 

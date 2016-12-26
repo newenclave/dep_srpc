@@ -2,6 +2,7 @@
 #define SRPC_COMMON_RESULT_TRAIT_SHARED_H
 
 #include "srpc/common/config/memory.h"
+#include "srpc/common/config/functional.h"
 
 namespace srpc { namespace common { namespace result {
 
@@ -17,12 +18,6 @@ namespace traits {
             v = from;
         }
 
-        static
-        value_type create(  )
-        {
-            return srpc::make_shared<T>( );
-        }
-
 #if CXX11_ENABLED
         template <typename ...Args>
         static
@@ -32,7 +27,7 @@ namespace traits {
         }
 #else
         static
-        value_type create( )
+        value_type create(  )
         {
             return srpc::make_shared<T>( );
         }
@@ -41,21 +36,22 @@ namespace traits {
         static
         value_type create( const P0 &p0 )
         {
-            return srpc::make_shared<T>( p0 );
+            return srpc::make_shared<T>( srpc::ref(p0) );
         }
 
         template <typename P0, typename P1>
         static
         value_type create( const P0 &p0, const P1 &p1 )
         {
-            return srpc::make_shared<T>( p0, p1 );
+            return srpc::make_shared<T>( srpc::ref(p0), srpc::ref(p1) );
         }
 
         template <typename P0, typename P1, typename P2>
         static
         value_type create( const P0 &p0, const P1 &p1, const P2 &p2 )
         {
-            return srpc::make_shared<T>( p0, p1, p2 );
+            return srpc::make_shared<T>( srpc::ref(p0), srpc::ref(p1),
+                                         srpc::ref(p2) );
         }
 #endif
         static
