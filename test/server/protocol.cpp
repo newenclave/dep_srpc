@@ -237,80 +237,6 @@ private:
     hash::interface_uptr        hash_;
 };
 
-using sizepol  = sizepack::varint<size_t>;
-using sizepol0 = sizepack::fixint<size_t>;
-
-std::string pack( const std::string &data, size_t tag1, size_t tag2 )
-{
-    size_t size_max = sizepol::max_length;
-
-    std::string res;
-    res.resize( size_max );
-    sizepol::append( tag1, res );
-    sizepol::append( tag2, res );
-    res.append( data.begin( ), data.end( ) );
-
-    size_t packed = sizepol::packed_length( res.size( ) - size_max );
-    sizepol::pack(res.size( ) - size_max, &res[size_max - packed]);
-
-    size_t full_size = res.size( ) - size_max + packed;
-
-    char *begin = &res[size_max - packed];
-    std::string tmp(begin, full_size);
-
-    for( auto &d: tmp ) {
-        std::cout << std::hex
-                  << (std::uint32_t)(unsigned char)(d)
-                  << " ";
-    }
-
-    std::cout << "\n";
-    return tmp;
-}
-
-using uint64_result = result<srpc::uint64_t, bool>;
-
-template <typename Itr>
-uint64_result get_next( Itr &begin, const Itr &end )
-{
-    typedef mess_delegate::size_policy size_policy;
-
-    size_t len;
-    srpc::uint64_t res = 0;
-    len = size_policy::size_length(begin, end);
-    if( size_policy::valid_length(len) ) {
-
-        res = size_policy::unpack(begin, end);
-        begin += len;
-
-        return uint64_result::ok(res);
-    }
-
-    return uint64_result::fail(false);
-}
-
-void unpack( const char *m, size_t len )
-{
-    typedef mess_delegate::size_policy size_policy;
-
-    const char *end = m + len;
-
-    uint64_result t1 = get_next(m, end);
-    if( !t1 ) {
-        std::cout << "Bad serialized block\n";
-        return;
-    }
-
-    uint64_result t2 = get_next(m, end);
-    if( !t2 ) {
-        std::cout << "Bad serialized block\n";
-        return;
-    }
-
-    std::cout << std::dec << "t1 " << *t1 << " t2 " << *t2 << "\n";
-    std::cout << std::string(m, end) << "\n";
-}
-
 int main( int argc, char *argv[ ] )
 {
 
@@ -318,7 +244,7 @@ int main( int argc, char *argv[ ] )
 
         message_processor< std::string,
                            sizepack::none,
-                           sizepack::fixint<std::uint16_t> > msg(NULL, 100);
+                           sizepack::none > msg(NULL, 100);
 
         auto b = std::make_shared<std::string>( );
 
