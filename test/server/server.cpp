@@ -108,7 +108,7 @@ private:
     using tcp = server::acceptor::async::tcp;
     using udp = server::acceptor::async::udp;
 
-    using acceptor_type = tcp;
+    using acceptor_type = udp;
 
     struct message_delegate;
     struct impl;
@@ -123,8 +123,8 @@ private:
 
     struct impl: public srpc::enable_shared_from_this<impl> {
 
-        acceptor_sptr                               acceptor_;
         srpc::unique_ptr<accept_delegate>           deleg_;
+        acceptor_sptr                               acceptor_;
         io_service                                 &ios_;
         impl( io_service &ios )
             :ios_(ios)
@@ -183,6 +183,11 @@ private:
 
 public:
 
+    ~listener( )
+    {
+        impl_->acceptor_.reset( );
+    }
+
     listener( io_service &ios, const std::string &addr, srpc::uint16_t svc )
     {
         acceptor_type::endpoint ep(
@@ -219,10 +224,14 @@ int main( int argc, char *argv[ ] )
             ios.stop( );
         }, srpc::chrono::milliseconds(10000) );
 
-        listener l(ios, "0.0.0.0", 23456);
+        {
+            listener l(ios, "0.0.0.0", 23456);
 
-        l.start( );
-        ios.run( );
+            l.start( );
+            ios.run( );
+        }
+
+        g_clients.clear( );
 
         google::protobuf::ShutdownProtobufLibrary( );
 
