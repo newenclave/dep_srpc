@@ -1,4 +1,4 @@
-include/srpc/common/protocol
+include/srpc/common/protocol/*.pb.*
 *.user
 *.autosave
 *.user.*

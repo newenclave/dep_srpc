@@ -13,7 +13,11 @@
 
 #include "srpc/common/result.h"
 
+#include "google/protobuf/message.h"
+#include "google/protobuf/descriptor.h"
+
 using namespace srpc::common;
+namespace gpb = google::protobuf;
 
 typedef sizepack::varint<srpc::uint32_t> tag1pack_type;
 typedef sizepack::fixint<std::uint16_t> tag2pack_type;
@@ -22,23 +26,20 @@ typedef transport::delegates::message<
                         sizepack::varint<srpc::uint32_t>
                     > mess_delegate;
 
-typedef srpc::shared_ptr<std::string> send_buffer_type;
+typedef srpc::shared_ptr<std::string> buffer_type;
 
-template <typename MessageType, typename Tag1Policy, typename Tag2Policy>
+template <typename MessageType, typename TagPolicy>
 class message_processor: public mess_delegate {
 
-    typedef message_processor<MessageType, Tag1Policy, Tag2Policy> this_type;
-    typedef transport::interface::write_callbacks                  cb_type;
+    typedef message_processor<MessageType, TagPolicy> this_type;
+    typedef transport::interface::write_callbacks     cb_type;
 
 protected:
 
 public:
 
-    typedef Tag1Policy tag1_policy;
-    typedef Tag2Policy tag2_policy;
-
-    typedef typename tag1_policy::size_type tag1_type;
-    typedef typename tag2_policy::size_type tag2_type;
+    typedef TagPolicy tag_policy;
+    typedef typename tag_policy::size_type tag_type;
 
     typedef transport::interface::error_code        error_code;
     typedef transport::interface *                  transport_ptr;
@@ -54,7 +55,7 @@ public:
             > queue_type;
 
     typedef typename queue_type::result_enum result_enum;
-    typedef typename queue_type::slot_ptr slot_ptr;
+    typedef typename queue_type::slot_ptr    slot_ptr;
 
     message_processor( transport_ptr t, slot_key_type init_id )
         :next_id_(init_id)
@@ -64,7 +65,8 @@ public:
         //transport_->read( );
     }
 
-    virtual ~message_processor( ) { }
+    virtual ~message_processor( )
+    { }
 
     slot_key_type next_id( )
     {
@@ -84,17 +86,21 @@ public:
 
 protected:
 public:
-    virtual send_buffer_type buffer_alloc(  )
+
+    virtual buffer_type buffer_alloc(  )
     {
         return srpc::make_shared<std::string>( );
     }
+
+    virtual void buffer_free( buffer_type )
+    { }
 
     transport_ptr get_transport( )
     {
         return transport_.get( );
     }
 
-    virtual void append_message( send_buffer_type b, const message_type &m )
+    virtual void append_message( buffer_type b, const message_type &m )
     {
         b->append( m );
     }
@@ -111,7 +117,7 @@ public:
         len = size_policy::size_length(begin, end);
         if( size_policy::valid_length(len) ) {
 
-            *res = size_policy::unpack(begin, end);
+            *res = size_policy::unpack(begin, begin + len);
             begin += len;
             return true;
         }
@@ -124,19 +130,6 @@ public:
 
         const char *end = m + len;
         const size_t hash_size = hash_->length( );
-
-        tag1_type t1 = tag1_type( );
-        tag2_type t2 = tag2_type( );
-
-        if( !get_next_item<tag1_policy>( m, end, &t1 ) ) {
-            on_error( "Tag1. Bad serialized block." );
-            return;
-        }
-
-        if( !get_next_item<tag2_policy>(m, end, &t2 ) ) {
-            on_error( "Tag2. Bad serialized block." );
-            return;
-        }
 
         size_t mess_len = end - m;
 
@@ -151,51 +144,53 @@ public:
             return;
         }
 
-        on_message( t1, t2, const_buffer(m, (end - m) - hash_size) );
+        tag_type tag = tag_type( );
+
+        if( !get_next_item<tag_policy>( m, end, &tag ) ) {
+            on_error( "Tag. Bad serialized block." );
+            return;
+        }
+
+        on_message( tag, const_buffer(m, (end - m) - hash_size) );
     }
 
-    virtual void on_message( tag1_type tag1, tag2_type tag2,
-                             const_buffer message )
+    virtual void on_message( tag_type tag, const_buffer message )
     {
-        std::cout << "tag1 " << tag1 << " tag2 " << tag2
+        std::cout << "tag " << tag
                   << " msg " << message.size( ) << "\n";
     }
 
-    const_buffer pack_message( send_buffer_type buf,
-                               tag1_type tag1, tag2_type tag2,
-                               const message_type &mess,
-                               size_t *length_size = NULL)
+    const_buffer pack_message( buffer_type buf,
+                               tag_type tag, const message_type &mess,
+                               size_t *length_size = NULL )
     {
         typedef mess_delegate::size_policy size_policy;
 
-        const size_t size_max = size_policy::max_length;
-
-        buf->resize( size_policy::max_length );
-
-        tag1_policy::append( tag1, *buf );
-        tag2_policy::append( tag2, *buf );
+        buf->resize( buf->size( ) + size_policy::max_length );
 
         size_t old_len = buf->size( );
+
+        tag_policy::append( tag, *buf );
 
         append_message( buf, mess );
 
         buf->resize( buf->size( ) + hash_->length( ) );
 
         hash_->get( buf->c_str( ) + old_len,
-                    buf->size( )  - old_len - hash_->length( ),
+                    buf->size( ) - old_len - hash_->length( ),
                     &(*buf)[buf->size( ) - hash_->length( )]);
 
         size_t packed = 0;
 
         if( length_size ) {
-            packed = size_policy::packed_length( buf->size( ) - size_max );
-            size_policy::pack( buf->size( ) - size_max,
-                            &(*buf)[size_max - packed]);
+            packed = size_policy::packed_length( buf->size( ) - old_len );
+            size_policy::pack( buf->size( ) - old_len,
+                            &(*buf)[old_len - packed]);
             *length_size = packed;
         }
 
-        return const_buffer( buf->c_str( ) + size_max - packed,
-                             buf->size( ) - size_max + packed );
+        return const_buffer( buf->c_str( ) + old_len - packed,
+                             buf->size( )  - old_len + packed );
 
     }
 
@@ -243,22 +238,32 @@ private:
     hash::interface_uptr        hash_;
 };
 
+using message_sptr = srpc::shared_ptr<gpb::Message>;
+
+//class proto_message_message_processor: public message_processor<message_sptr> {
+//    typedef message_processor<message_sptr> parent_type;
+//public:
+//    proto_message_message_processor( )
+//        :parent_type(100)
+//    { }
+//};
+
 int main( int argc, char *argv[ ] )
 {
 
     try {
 
         message_processor< std::string,
-                           sizepack::varint<std::uint64_t>,
-                           sizepack::none > msg(NULL, 100);
+                           sizepack::varint<std::uint64_t> > msg(NULL, 100);
 
         auto b = std::make_shared<std::string>( );
 
-        auto rr = msg.pack_message( b, 0x5465678, 1, "" );
+        auto rr = msg.pack_message( b, 0xFFFF, "Hello!" );
 
         msg.on_message( rr.begin( ), rr.size( ) );
 
-        std::cout << rr.size( ) << "\n";
+        std::cout << rr.size( )
+                  << " " <<  rr.data( ) << "\n";
 
     } catch ( const std::exception &ex ) {
         std::cout << "Error " << ex.what( ) << "\n";
