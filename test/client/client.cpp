@@ -12,9 +12,9 @@
 #include "srpc/common/protocol/binary.h"
 
 using namespace srpc;
-namespace gdb = google::protobuf;
+namespace gpb = google::protobuf;
 
-using message_sptr = srpc::shared_ptr<gdb::Message>;
+using message_sptr = srpc::shared_ptr<gpb::Message>;
 
 using iface_ptr       = common::transport::interface *;
 using client_sptr     = srpc::shared_ptr<common::transport::interface>;
@@ -67,10 +67,9 @@ class connector: private client_delegate {
 
     bool validate_length( size_t len )
     {
-        std::cout << "Validate len: " << len << "\n";
+        //std::cout << "Validate len: " << len << "\n";
         return len <= 44000;
     }
-
 
 public:
 
@@ -96,6 +95,15 @@ public:
     void append_message( buffer_type buf, const message_type &m )
     {
         m->AppendToString( buf.get( ) );
+    }
+
+    void on_message_ready( tag_type tag, buffer_type buff,
+                           const_buffer_slice slice )
+    {
+        std::cout << "Got message " << slice.size( )
+                  << " with tag " << tag
+                  << " buf alocated " << (buff ? "true" : "false")
+                  << "\n";
     }
 
     void send_message( const std::string &data )

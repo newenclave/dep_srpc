@@ -29,9 +29,9 @@
 #include "protocol/t.pb.h"
 
 using namespace srpc;
-namespace gdb = google::protobuf;
+namespace gpb = google::protobuf;
 
-using message_sptr = srpc::shared_ptr<gdb::Message>;
+using message_sptr = srpc::shared_ptr<gpb::Message>;
 
 using size_policy     = common::sizepack::varint<size_t>;
 using client_delegate = common::protocol::binary<message_sptr>;
@@ -42,6 +42,7 @@ class protocol_client: public client_delegate {
     typedef typename client_delegate::buffer_type buffer_type;
     typedef typename client_delegate::const_buffer_slice const_buffer_slice;
     typedef SRPC_ASIO::io_service io_service;
+    typedef common::transport::interface::write_callbacks cb_type;
 
 public:
 
@@ -58,9 +59,21 @@ public:
     void on_message_ready( tag_type tag, buffer_type buff,
                            const_buffer_slice slice )
     {
-        test::run msg;
-        msg.ParseFromArray( slice.data( ), slice.size( ) );
-        std::cout << msg.DebugString( );
+        srpc::shared_ptr<test::run> msg = srpc::make_shared<test::run>( );
+
+        msg->ParseFromArray( slice.data( ), slice.size( ) );
+        std::cout << msg->DebugString( )
+                  << "^---- " << slice.size( ) << "\n";
+        if( !buff ) {
+            buff = buffer_alloc( );
+        } else {
+            buff->clear( );
+        }
+
+        size_t len = 0;
+        slice = prepare_buffer( buff, 10, msg, &len );
+        get_transport( )->write( slice.begin( ), slice.size( ),
+                                 cb_type::post([buff](...){ } ) );
     }
 
     void on_close( );
@@ -202,9 +215,9 @@ int main( int argc, char *argv[ ] )
 
         common::timers::periodical tt(ios);
 
-//        tt.call( [&ios](...) {
-//            ios.stop( );
-//        }, srpc::chrono::milliseconds(10000) );
+        tt.call( [&ios](...) {
+            ios.stop( );
+        }, srpc::chrono::milliseconds(10000) );
 
         listener l(ios, "0.0.0.0", 23456);
 
