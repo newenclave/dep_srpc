@@ -22,151 +22,56 @@
 #include "srpc/server/acceptor/async/udp.h"
 #include "srpc/common/transport/delegates/message.h"
 
+#include "srpc/common/protocol/binary.h"
+
 #include "srpc/common/observers/define.h"
 
 #include "protocol/t.pb.h"
 
 using namespace srpc;
+namespace gdb = google::protobuf;
+
+using message_sptr = srpc::shared_ptr<gdb::Message>;
 
 using size_policy     = common::sizepack::varint<size_t>;
-using client_delegate = common::transport::delegates::message<size_policy>;
-
-namespace gpb = google::protobuf;
+using client_delegate = common::protocol::binary<message_sptr>;
 
 class protocol_client: public client_delegate {
 
-    using iface_ptr   = common::transport::interface *;
-    using client_sptr = srpc::shared_ptr<common::transport::interface>;
-    using error_code  = common::transport::error_code;
-    using timer       = common::timers::periodical;
-    using ticks       = common::timers::ticks<srpc::chrono::milliseconds>;
-    using io_service  = common::transport::io_service;
-
-    static const size_t max_length = client_delegate::size_policy::max_length;
+    typedef typename client_delegate::tag_type tag_type;
+    typedef typename client_delegate::buffer_type buffer_type;
+    typedef typename client_delegate::const_buffer_slice const_buffer_slice;
+    typedef SRPC_ASIO::io_service io_service;
 
 public:
 
-    protocol_client( io_service &ios, iface_ptr iface )
-        :client_(iface->shared_from_this( ))
-        ,keep_alive_(ios)
+    protocol_client( io_service &ios )
+        :client_delegate(100)
+        ,ios_(ios)
+    { }
+
+    void append_message( buffer_type buf, const message_type &m )
     {
-        last_message_ = ticks::now( );
-        keep_alive_.call(
-            [this]( const error_code &e )
-            {
-                if( !e ) {
-                    std::uint32_t now = ticks::now( );
-                    if( now - last_message_ > 10000 ) {
-                        client_->close( );
-                    }
-                }
-            }, srpc::chrono::milliseconds(1000) );
+        m->AppendToString( buf.get( ) );
     }
 
-private:
-
-    void on_message( const char *message, size_t len )
+    void on_message_ready( tag_type tag, buffer_type buff,
+                           const_buffer_slice slice )
     {
-        last_message_ = ticks::now( );
-        std::cout << "rcv message " << len << "\n";
-        process_call( message, len );
-    }
-
-    void on_need_read( )
-    {
-        client_->read( );
-    }
-
-    bool validate_length( size_t len )
-    {
-        if( len >= 44000 ) {
-            client_->close( );
-        }
-
-        return (len < 44000);
-    }
-
-    void on_error( const char *message )
-    {
-        std::cerr << "on_error " << message << "\n";
-    }
-
-    void on_read_error( const error_code &e )
-    {
-        std::cerr << "on_read_error " << e.message( ) << "\n";
-        client_->close( );
-    }
-
-    void on_write_error( const error_code &e)
-    {
-        std::cerr << "on_write_error " << e.message( ) << "\n";
-        client_->close( );
+        test::run msg;
+        msg.ParseFromArray( slice.data( ), slice.size( ) );
+        std::cout << msg.DebugString( );
     }
 
     void on_close( );
-
-    void send_message( const gpb::MessageLite &msg )
+    void on_error( const char *mess )
     {
-        static const size_t max = max_length + 1;
-
-        typedef common::transport::interface::write_callbacks cb;
-        char block[max];
-
-        srpc::shared_ptr<std::string> r = get_str( );
-        r->resize( max );
-        msg.AppendToString( r.get( ) );
-
-        size_t packed = pack_size( r->size( ) - max, block );
-        block[packed++] = 1;
-
-        std::copy( &block[0], &block[packed],
-                    r->begin( ) + (max - packed) );
-
-        client_->write( &(*r)[max - packed],
-                        r->size( ) - max + packed,
-            cb::post( [r, this](...)
-            {
-                if( cache_.size( ) < 10 ) {
-                    cache_.push( r );
-                }
-            } ) );
+        std::cerr << "Proto error: " << mess << "\n";
+        get_transport( )->close( );
     }
 
-    srpc::shared_ptr<std::string> get_str( )
-    {
-        if(cache_.empty( )) {
-            return srpc::make_shared<std::string>( );
-        } else {
-            srpc::shared_ptr<std::string> n = cache_.front( );
-            cache_.pop( );
-            return n;
-        }
-    }
-
-    void process_call( const char *message, size_t len )
-    {
-        test::run t;
-        t.ParseFromArray( message, len );
-
-        test::run r;
-        std::string *name = r.mutable_name( );
-
-        size_t l = len = t.name( ).size( );
-
-        while( len-- ) {
-            name->push_back( t.name( )[len] );
-        }
-        send_message( r );
-    }
-
-public:
-
-    client_sptr     client_;
-    timer           keep_alive_;
-    srpc::uint32_t  last_message_;
-
-    std::queue<srpc::shared_ptr<std::string> > cache_;
-
+private:
+    io_service &ios_;
 };
 
 using protocol_client_sptr = srpc::shared_ptr<protocol_client>;
@@ -174,8 +79,8 @@ std::map<common::transport::interface *, protocol_client_sptr> g_clients;
 
 void protocol_client::on_close( )
 {
-    std::cout << "Erase client " << client_.get( ) << std::endl;
-    g_clients.erase( client_.get( ) );
+    std::cout << "Erase client " << get_transport( ) << std::endl;
+    g_clients.erase( get_transport( ) );
 }
 
 
@@ -232,14 +137,14 @@ private:
                 std::cout << "New client " << addr << ":" << svc << "\n";
 
                 protocol_client_sptr next =
-                        srpc::make_shared<protocol_client>( lck->ios_, c );
+                        srpc::make_shared<protocol_client>( lck->ios_ );
 
-                next->client_ = c->shared_from_this( );
+                next->assign_transport( c );
 
-                next->client_->set_delegate( next.get( ) );
-                next->client_->read( );
+                next->get_transport( )->set_delegate( next.get( ) );
+                next->get_transport( )->read( );
 
-                g_clients[next->client_.get( )] = next;
+                g_clients[next->get_transport( )] = next;
                 //lck->on_connect( next->client_.get( ), next );
 
                 lck->acceptor_->start_accept( );
@@ -288,7 +193,7 @@ private:
 };
 
 
-int main0( int argc, char *argv[ ] )
+int main( int argc, char *argv[ ] )
 {
 
     try {

@@ -9,14 +9,20 @@
 
 #include "protocol/t.pb.h"
 
+#include "srpc/common/protocol/binary.h"
+
 using namespace srpc;
+namespace gdb = google::protobuf;
+
+using message_sptr = srpc::shared_ptr<gdb::Message>;
 
 using iface_ptr       = common::transport::interface *;
 using client_sptr     = srpc::shared_ptr<common::transport::interface>;
 using connector_type  = client::connector::async::tcp;
 using connector_sptr  = srpc::shared_ptr<connector_type>;
 using size_policy     = common::sizepack::varint<size_t>;
-using client_delegate = common::transport::delegates::message<size_policy>;
+
+using client_delegate = common::protocol::binary<message_sptr>;
 
 class connector: private client_delegate {
 
@@ -24,6 +30,12 @@ class connector: private client_delegate {
     using error_code     = common::transport::error_code;
 
     static const size_t max_length = client_delegate::size_policy::max_length;
+
+    typedef typename client_delegate::buffer_type         buffer_type;
+    typedef typename client_delegate::const_buffer_slice  const_buffer_slice;
+    typedef typename client_delegate::tag_type            tag_type;
+    typedef typename client_delegate::message_type        message_type;
+    typedef typename common::transport::interface::write_callbacks cb_type;
 
     struct connector_delegate: public client::connector::interface::delegate {
 
@@ -34,7 +46,7 @@ class connector: private client_delegate {
 
         void on_connect( iface_ptr i )
         {
-            parent_->client_ = i->shared_from_this( );
+            parent_->assign_transport( i );
             i->set_delegate( parent_ );
             i->read( );
         }
@@ -53,47 +65,17 @@ class connector: private client_delegate {
 
     friend class connector_delegate;
 
-    void on_message( const char *message, size_t len )
-    {
-        test::run r;
-        r.ParseFromArray(message, len);
-        std::cout << r.name( ) << std::endl;
-    }
-
     bool validate_length( size_t len )
     {
         std::cout << "Validate len: " << len << "\n";
         return len <= 44000;
     }
 
-    void on_error( const char *message )
-    {
-        std::cerr << "on_error " << message << std::endl;
-    }
-
-    void on_need_read( )
-    {
-        client_->read( );
-    }
-
-    void on_read_error( const error_code &err )
-    {
-        std::cerr << "on_read_error " << err.message( ) << std::endl;
-    }
-
-    void on_write_error( const error_code &err )
-    {
-        std::cerr << "on_write_error " << err.message( ) << std::endl;
-    }
-
-    void on_close( )
-    {
-
-    }
 
 public:
 
     connector( io_service &ios, const std::string &addr, srpc::uint16_t svc )
+        :client_delegate(101)
     {
 
         connector_type::endpoint ep(
@@ -104,41 +86,32 @@ public:
         connector_->set_delegate( &delegate_ );
     }
 
+
     void start( )
     {
         connector_->open( );
         connector_->connect( );
     }
 
+    void append_message( buffer_type buf, const message_type &m )
+    {
+        m->AppendToString( buf.get( ) );
+    }
+
     void send_message( const std::string &data )
     {
         static const size_t max = max_length + 1;
 
-        test::run msg;
-        msg.set_name( data );
+        srpc::shared_ptr<test::run> msg = srpc::make_shared<test::run>( );
+        buffer_type buff = get_str( );
+        msg->set_name( data );
 
-
-        typedef common::transport::interface::write_callbacks cb;
-        char block[max];
-
-        srpc::shared_ptr<std::string> r = get_str( );
-        r->resize( max );
-        msg.AppendToString( r.get( ) );
-
-        size_t packed = pack_size( r->size( ) - max_length + 1, block );
-        block[packed++] = 1;
-
-        std::copy( &block[0], &block[packed],
-                    r->begin( ) + (max - packed)  );
-
-        client_->write( &(*r)[max - packed],
-                        r->size( ) - max + packed,
-            cb::post( [r, this](...)
-            {
-                if( cache_.size( ) < 10 ) {
-                    cache_.push( r );
-                }
-            } ) );
+        size_t length_size = 0;
+        const_buffer_slice slice = prepare_buffer( buff, 0, msg, &length_size );
+        get_transport( )->write( slice.begin( ), slice.size( ),
+            cb_type::post( [this, buff](...) {
+                cache_.push( buff );
+            } ));
     }
 
     srpc::shared_ptr<std::string> get_str( )

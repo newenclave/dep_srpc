@@ -16,11 +16,12 @@
 #include "srpc/common/config/stdint.h"
 #include "srpc/common/config/atomic.h"
 
-namespace srpc { namespace common { namespace ptotocol {
+namespace srpc { namespace common { namespace protocol {
 
     template <typename MessageType,
-              typename SizePolicy,
-              typename TagPolicy = sizepack::none>
+              typename SizePolicy  = sizepack::varint<srpc::uint32_t>,
+              typename QueueIdType = srpc::uint64_t,
+              typename TagPolicy   = sizepack::none>
     class binary: public transport::delegates::message<SizePolicy> {
 
         typedef transport::delegates::message<SizePolicy> parent_type;
@@ -28,7 +29,6 @@ namespace srpc { namespace common { namespace ptotocol {
     protected:
 
         typedef srpc::shared_ptr<std::string>           buffer_type;
-        typedef srpc::uint64_t                          key_type;
 
     public:
 
@@ -44,6 +44,7 @@ namespace srpc { namespace common { namespace ptotocol {
         typedef TagPolicy                               tag_policy;
         typedef typename tag_policy::size_type          tag_type;
         typedef MessageType                             message_type;
+        typedef QueueIdType                             key_type;
 
         typedef srpc::common::queues::condition<
                         key_type,
@@ -68,7 +69,7 @@ namespace srpc { namespace common { namespace ptotocol {
             return n - 2;
         }
 
-        slot_ptr add_slot( slot_key_type id )
+        slot_ptr add_slot( key_type id )
         {
             return queues_.add_slot( id );
         }
@@ -198,8 +199,7 @@ namespace srpc { namespace common { namespace ptotocol {
 
         virtual buffer_type buffer_alloc(  )
         {
-            typedef typename buffer_type::value_name buffer_value;
-            return srpc::make_shared<buffer_value>( );
+            return srpc::make_shared<std::string>( );
         }
 
         virtual void buffer_free( buffer_type )
@@ -236,7 +236,7 @@ namespace srpc { namespace common { namespace ptotocol {
         void on_close( )
         { }
 
-        bool push_to_slot( slot_key_type id, const message_type &msg )
+        bool push_to_slot( key_type id, const message_type &msg )
         {
             return queues_.push_to_slot( id, msg ) == result_enum::OK;
         }
