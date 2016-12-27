@@ -76,6 +76,23 @@ public:
                                  cb_type::post([buff](...){ } ) );
     }
 
+//    buffer_type unpack_message( const_buffer_slice &slice )
+//    {
+//        buffer_type r = buffer_alloc( );
+//        r->resize( slice.size( ) );
+//        for( size_t i=0; i<slice.size( ); i++ ) {
+//            (*r)[i] = slice.data( )[i] ^ 0xE4;
+//        }
+//        slice = const_buffer_slice(r->c_str( ), r->size( ));
+//        return r;
+//    }
+
+//    const_buffer_slice pack_message( buffer_type buf, const_buffer_slice slice )
+//    {
+
+//        return slice;
+//    }
+
     void on_close( );
     void on_error( const char *mess )
     {
@@ -205,6 +222,11 @@ public:
         impl_->acceptor_->start_accept( );
     }
 
+    void stop( )
+    {
+        impl_->acceptor_->close( );
+    }
+
 private:
 
     impl_sptr impl_;
@@ -224,12 +246,11 @@ int main( int argc, char *argv[ ] )
             ios.stop( );
         }, srpc::chrono::milliseconds(10000) );
 
-        {
-            listener l(ios, "0.0.0.0", 23456);
+        listener l(ios, "0.0.0.0", 23456);
 
-            l.start( );
-            ios.run( );
-        }
+        l.start( );
+        ios.run( );
+        l.stop( );
 
         g_clients.clear( );
 

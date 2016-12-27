@@ -258,6 +258,16 @@ namespace async {
 
         struct key { };
 
+        void clean_clients( )
+        {
+            client_map::iterator b(clients_.begin( ));
+            for( ; b!= clients_.end( ); ++b ) {
+                b->second->delegate_->on_close( );
+                b->second->parent_ = NULL; /// for debug purposes
+            }
+            clients_.clear( );
+        }
+
     public:
 
         typedef parent_transport::native_handle_type native_handle_type;
@@ -274,11 +284,7 @@ namespace async {
         ~udp( )
         {
             acceptor_->close( );
-            client_map::iterator b(clients_.begin( ));
-            for( ; b!= clients_.end( ); ++b ) {
-                b->second->delegate_->on_close( );
-                b->second->parent_ = NULL; /// for debug purposes
-            }
+            clean_clients( );
         }
 
         static
@@ -313,6 +319,7 @@ namespace async {
         {
             delegate_->on_close( );
             acceptor_->close( );
+            clean_clients( );
         }
 
         void start_accept( )
