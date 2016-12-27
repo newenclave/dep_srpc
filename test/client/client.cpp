@@ -33,6 +33,7 @@ class connector: private client_delegate {
 
     typedef typename client_delegate::buffer_type         buffer_type;
     typedef typename client_delegate::const_buffer_slice  const_buffer_slice;
+    typedef typename client_delegate::buffer_slice        buffer_slice;
     typedef typename client_delegate::tag_type            tag_type;
     typedef typename client_delegate::message_type        message_type;
     typedef typename common::transport::interface::write_callbacks cb_type;
@@ -105,6 +106,27 @@ public:
                   << " buf alocated " << (buff ? "true" : "false")
                   << "\n";
     }
+
+//    buffer_type unpack_message( const_buffer_slice &slice )
+//    {
+//        buffer_type r = buffer_alloc( );
+//        r->resize( slice.size( ) );
+//        for( size_t i=0; i<slice.size( ); i++ ) {
+//            (*r)[i] = slice.data( )[i] ^ 0xE4;
+//        }
+//        slice = const_buffer_slice(r->c_str( ), r->size( ));
+//        return r;
+//    }
+
+//    const_buffer_slice pack_message( buffer_type, buffer_slice slice )
+//    {
+//        char *p = slice.begin( );
+//        while( p != slice.end( ) ) {
+//            *p = *p ^ 0xE4;
+//            p++;
+//        }
+//        return slice;
+//    }
 
     void send_message( const std::string &data )
     {

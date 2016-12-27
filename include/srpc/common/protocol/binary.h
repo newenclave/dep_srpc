@@ -19,9 +19,9 @@
 namespace srpc { namespace common { namespace protocol {
 
     template <typename MessageType,
+              typename TagPolicy   = sizepack::none,
               typename SizePolicy  = sizepack::varint<srpc::uint32_t>,
-              typename QueueIdType = srpc::uint64_t,
-              typename TagPolicy   = sizepack::none>
+              typename QueueIdType = srpc::uint64_t>
     class binary: public transport::delegates::message<SizePolicy> {
 
         typedef transport::delegates::message<SizePolicy> parent_type;
@@ -115,7 +115,7 @@ namespace srpc { namespace common { namespace protocol {
         }
 
         virtual const_buffer_slice pack_message( buffer_type,
-                                                 const_buffer_slice slice )
+                                                 buffer_slice slice )
         {
             return slice;
         }
@@ -186,8 +186,8 @@ namespace srpc { namespace common { namespace protocol {
                 *length_size = packed;
             }
 
-            const_buffer_slice res( buf->c_str( ) + old_len - packed,
-                                    buf->size( )  - old_len + packed );
+            buffer_slice res( &(*buf)[0]   + old_len - packed,
+                              buf->size( ) - old_len + packed );
 
             return pack_message( buf, res );
 

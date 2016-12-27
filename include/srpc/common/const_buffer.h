@@ -2,6 +2,7 @@
 #define SRPC_CONST_BUFFER_H
 
 #include "srpc/common/config/stdint.h"
+#include "srpc/common/buffer.h"
 
 namespace srpc { namespace common {
 
@@ -28,6 +29,11 @@ namespace srpc { namespace common {
         const_buffer( const const_buffer &other )
             :data_(other.data_)
             ,length_(other.length_)
+        { }
+
+        const_buffer( const buffer<T> &other )
+            :data_(other.data( ))
+            ,length_(other.size( ))
         { }
 
         const value_type *data( ) const

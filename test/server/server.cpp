@@ -40,7 +40,10 @@ class protocol_client: public client_delegate {
 
     typedef typename client_delegate::tag_type tag_type;
     typedef typename client_delegate::buffer_type buffer_type;
+
     typedef typename client_delegate::const_buffer_slice const_buffer_slice;
+    typedef typename client_delegate::buffer_slice       buffer_slice;
+
     typedef SRPC_ASIO::io_service io_service;
     typedef common::transport::interface::write_callbacks cb_type;
 
@@ -63,7 +66,8 @@ public:
 
         msg->ParseFromArray( slice.data( ), slice.size( ) );
         std::cout << msg->DebugString( )
-                  << "^---- " << slice.size( ) << "\n";
+                  << "^---- " << slice.size( )
+                  << "Tag: " << tag << "\n";
         if( !buff ) {
             buff = buffer_alloc( );
         } else {
@@ -87,9 +91,13 @@ public:
 //        return r;
 //    }
 
-//    const_buffer_slice pack_message( buffer_type buf, const_buffer_slice slice )
+//    const_buffer_slice pack_message( buffer_type, buffer_slice slice )
 //    {
-
+//        char *p = slice.begin( );
+//        while( p != slice.end( ) ) {
+//            *p = *p ^ 0xE4;
+//            p++;
+//        }
 //        return slice;
 //    }
 
@@ -242,9 +250,9 @@ int main( int argc, char *argv[ ] )
 
         common::timers::periodical tt(ios);
 
-        tt.call( [&ios](...) {
-            ios.stop( );
-        }, srpc::chrono::milliseconds(10000) );
+//        tt.call( [&ios](...) {
+//            ios.stop( );
+//        }, srpc::chrono::milliseconds(10000) );
 
         listener l(ios, "0.0.0.0", 23456);
 
