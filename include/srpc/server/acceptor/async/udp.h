@@ -104,7 +104,7 @@ namespace async {
             {
                 parent_->acceptor_->get_dispatcher( ).post(
                     srpc::bind( &client_type::set_read_impl, this,
-                                              weak_from_this( ) ) );
+                                 weak_from_this( ) ) );
             }
 
             void set_delegate( delegate *val )
@@ -140,6 +140,13 @@ namespace async {
                 parent_->acceptor_->get_dispatcher( ).post(
                             srpc::bind( &client_type::push_data_impl, this,
                                          weak_from_this( ), data ) );
+            }
+
+            void push_data( const char *data, size_t len )
+            {
+                buffer_type b = cache_.get( );
+                b->assign( data, data + len );
+                push_data( b );
             }
 
             buffer_type get_buffer( )
@@ -201,9 +208,7 @@ namespace async {
                 client_map::iterator f = parent_->clients_.find( ep );
 
                 if( f != parent_->clients_.end( ) ) {
-                    client_type::buffer_type dat = f->second->get_buffer( );
-                    dat->assign( data, len );
-                    f->second->push_data( dat );
+                    f->second->push_data( data, len );
                 } else {
                     if( parent_->accept_ ) {
 
