@@ -14,10 +14,9 @@ namespace srpc { namespace common { namespace cache {
 
     public:
 
-        typedef typename cache_impl::value_type         value_type;
-        typedef typename cache_impl::value_shared_type  value_shared_type;
-        typedef typename cache_impl::mutex_type         mutex_type;
-        typedef srpc::shared_ptr<shared>                shared_type;
+        typedef typename cache_impl::value_type value_type;
+        typedef typename cache_impl::mutex_type mutex_type;
+        typedef srpc::shared_ptr<shared>        shared_type;
 
         shared( size_t maximum, key )
             :impl_(maximum)
@@ -65,7 +64,7 @@ namespace srpc { namespace common { namespace cache {
             return impl_.get(p0, p1, p2);
         }
 #endif
-        void push( value_shared_type val )
+        void push( value_type val )
         {
             impl_.push( val );
         }

@@ -109,6 +109,7 @@ namespace srpc { namespace common { namespace cache {
                 return n;
             }
         }
+
 #endif
 
         void push( value_type val )
