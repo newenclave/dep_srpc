@@ -83,26 +83,26 @@ public:
                                  cb_type::post([buff](...){ } ) );
     }
 
-//    buffer_type unpack_message( const_buffer_slice &slice )
-//    {
-//        buffer_type r = buffer_alloc( );
-//        r->resize( slice.size( ) );
-//        for( size_t i=0; i<slice.size( ); i++ ) {
-//            (*r)[i] = slice.data( )[i] ^ 0xE4;
-//        }
-//        slice = const_buffer_slice(r->c_str( ), r->size( ));
-//        return r;
-//    }
+    buffer_type unpack_message( const_buffer_slice &slice )
+    {
+        buffer_type r = buffer_alloc( );
+        r->resize( slice.size( ) );
+        for( size_t i=0; i<slice.size( ); i++ ) {
+            (*r)[i] = slice.data( )[i] ^ 0xE4;
+        }
+        slice = const_buffer_slice(r->c_str( ), r->size( ));
+        return r;
+    }
 
-//    buffer_slice pack_message( buffer_type, buffer_slice slice )
-//    {
-//        char *p = slice.begin( );
-//        while( p != slice.end( ) ) {
-//            *p = *p ^ 0xE4;
-//            p++;
-//        }
-//        return slice;
-//    }
+    buffer_slice pack_message( buffer_type, buffer_slice slice )
+    {
+        char *p = slice.begin( );
+        while( p != slice.end( ) ) {
+            *p = *p ^ 0xE4;
+            p++;
+        }
+        return slice;
+    }
 
     void on_close( );
     void on_error( const char *mess )
