@@ -8,6 +8,8 @@
 #include "srpc/common/transport/async/udp.h"
 #include "srpc/server/acceptor/interface.h"
 
+#include "srpc/common/cache/shared.h"
+
 namespace srpc { namespace server { namespace acceptor {
 
 namespace async {
@@ -24,10 +26,17 @@ namespace async {
 
         class client_type: public common::transport::interface {
 
-            typedef std::deque<srpc::shared_ptr<std::string> > queue_type;
-            typedef common::transport::interface parent_type;
-
         public:
+
+            typedef srpc::shared_ptr<std::string>   buffer_type;
+            typedef std::deque<buffer_type>         queue_type;
+            typedef common::transport::interface    parent_type;
+            typedef SRPC_ASIO::io_service           io_service;
+
+            typedef common::cache::shared<std::string,
+                                          srpc::dummy_mutex> cache_type;
+
+            typedef typename cache_type::shared_type cache_sptr;
 
             client_type( udp *parent, endpoint ep, size_t max_cache )
                 :parent_(parent)
@@ -36,6 +45,7 @@ namespace async {
                 ,ep_(ep)
                 ,delegate_(NULL)
                 ,max_cache_(max_cache)
+                ,cache_(cache_type::create(max_cache))
             {
 
             }
@@ -84,6 +94,7 @@ namespace async {
                         if( !read_queue_.empty( ) ) {
                             std::string &data(*read_queue_.front( ));
                             delegate_->on_data( data.c_str( ), data.size( ) );
+                            cache_->push(read_queue_.front( ));
                             read_queue_.pop_front( );
                             read_ = false;
                         }
@@ -104,16 +115,18 @@ namespace async {
             }
 
             void push_data_impl( srpc::weak_ptr<parent_type> inst,
-                                 srpc::shared_ptr<std::string> data )
+                                 buffer_type data )
             {
                 srpc::shared_ptr<parent_type> lck(inst.lock( ));
                 if( lck ) {
                     if( read_ ) {
                         delegate_->on_data( data->c_str( ), data->size( ) );
+                        cache_->push( data );
                     } else {
-                        read_queue_.push_back( data );
-                        if( read_queue_.size( ) > max_cache_ ) {
-                            read_queue_.pop_front( );
+                        if( read_queue_.size( ) < max_cache_ ) {
+                            read_queue_.push_back( data );
+                        } else {
+                            cache_->push(data);
                         }
                     }
                 }
@@ -124,21 +137,26 @@ namespace async {
                 return srpc::invalid_handle_value;
             }
 
-            void push_data( srpc::shared_ptr<std::string> data )
+            void push_data( buffer_type data )
             {
                 parent_->acceptor_->get_dispatcher( ).post(
                             srpc::bind( &client_type::push_data_impl, this,
                                          weak_from_this( ), data ) );
             }
 
-            udp                            *parent_;
-            SRPC_ASIO::io_service::strand   dispatcher_;
-            bool                            read_;
-            queue_type                      read_queue_;
-            endpoint                        ep_;
-            delegate                       *delegate_;
-            size_t                          max_cache_;
+            buffer_type get_buffer( )
+            {
+                return cache_->get( );
+            }
 
+            udp                  *parent_;
+            io_service::strand    dispatcher_;
+            bool                  read_;
+            queue_type            read_queue_;
+            endpoint              ep_;
+            delegate             *delegate_;
+            size_t                max_cache_;
+            cache_sptr            cache_;
         };
 
         typedef srpc::shared_ptr<client_type>   client_sptr;
@@ -182,18 +200,20 @@ namespace async {
 
                 endpoint &ep(acc->get_endpoint( ));
 
-                srpc::shared_ptr<std::string> dat
-                        = srpc::make_shared<std::string>(data, len);
-
                 client_map::iterator f = parent_->clients_.find( ep );
 
                 if( f != parent_->clients_.end( ) ) {
+                    client_type::buffer_type dat = f->second->get_buffer( );
+                    dat->assign( data, len );
                     f->second->push_data( dat );
                 } else {
                     if( parent_->accept_ ) {
 
                         srpc::shared_ptr<client_type> next =
                                     client_type::create( parent_, ep, 100 );
+
+                        client_type::buffer_type dat = next->get_buffer( );
+                        dat->assign( data, len );
 
                         parent_->clients_[ep] = next;
                         next->read_queue_.push_back( dat );

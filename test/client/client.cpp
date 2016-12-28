@@ -105,6 +105,9 @@ public:
                   << " with tag " << tag
                   << " buf alocated " << (buff ? "true" : "false")
                   << "\n";
+        if( buff ) {
+            cache_.push( buff );
+        }
     }
 
     buffer_type unpack_message( const_buffer_slice &slice )
@@ -178,7 +181,7 @@ int main( int argc, char *argv[] )
         std::this_thread::sleep_for( std::chrono::milliseconds(100));
 
         std::string test;
-        for( int i=0; i<43000; i++ ) {
+        for( int i=0; i<3000; i++ ) {
             test.push_back( (char)((i % 10) + '0') );
         }
 

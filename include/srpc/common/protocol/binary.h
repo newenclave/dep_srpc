@@ -202,14 +202,6 @@ namespace srpc { namespace common { namespace protocol {
                                        const_buffer_slice )
         { }
 
-        virtual buffer_type buffer_alloc(  )
-        {
-            return srpc::make_shared<std::string>( );
-        }
-
-        virtual void buffer_free( buffer_type )
-        { }
-
         virtual void append_message( buffer_type, const message_type & )
         { }
 

@@ -69,7 +69,7 @@ public:
                   << "^---- " << slice.size( )
                   << "Tag: " << tag << "\n";
         if( !buff ) {
-            buff = buffer_alloc( );
+            buff = get_str( );
         } else {
             buff->clear( );
         }
@@ -80,12 +80,14 @@ public:
         sl = insert_size_prefix( buff, sl );
 
         get_transport( )->write( sl.begin( ), sl.size( ),
-                                 cb_type::post([buff](...){ } ) );
+            cb_type::post([this, buff](...) {
+                cache_.push( buff );
+            } ) );
     }
 
     buffer_type unpack_message( const_buffer_slice &slice )
     {
-        buffer_type r = buffer_alloc( );
+        buffer_type r = get_str( );
         r->resize( slice.size( ) );
         for( size_t i=0; i<slice.size( ); i++ ) {
             (*r)[i] = slice.data( )[i] ^ 0xE4;
@@ -111,7 +113,19 @@ public:
         get_transport( )->close( );
     }
 
+    buffer_type get_str( )
+    {
+        if(cache_.empty( )) {
+            return srpc::make_shared<std::string>( );
+        } else {
+            buffer_type n = cache_.front( );
+            cache_.pop( );
+            return n;
+        }
+    }
+
 private:
+    std::queue<buffer_type> cache_;
     io_service &ios_;
 };
 
@@ -253,9 +267,9 @@ int main( int argc, char *argv[ ] )
 
         common::timers::periodical tt(ios);
 
-//        tt.call( [&ios](...) {
-//            ios.stop( );
-//        }, srpc::chrono::milliseconds(10000) );
+        tt.call( [&ios](...) {
+            ios.stop( );
+        }, srpc::chrono::milliseconds(15000) );
 
         listener l(ios, "0.0.0.0", 23456);
 
