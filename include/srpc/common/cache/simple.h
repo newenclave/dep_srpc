@@ -43,6 +43,22 @@ namespace srpc { namespace common { namespace cache {
             clear_unsafe( );
         }
 
+#if CXX11_ENABLED
+
+        template <typename ...Args>
+        value_type get( Args && ...args )
+        {
+            locker_type l(cache_lock_);
+            if( cache_.empty( ) ) {
+                return ValueTrait::create(std::forward<Args>(args)...);
+            } else {
+                value_type n = cache_.front( );
+                cache_.pop( );
+                return n;
+            }
+        }
+#else
+
         value_type get( )
         {
             locker_type l(cache_lock_);
@@ -54,6 +70,46 @@ namespace srpc { namespace common { namespace cache {
                 return n;
             }
         }
+
+        template <typename P0>
+        value_type get( const P0& p0 )
+        {
+            locker_type l(cache_lock_);
+            if( cache_.empty( ) ) {
+                return ValueTrait::create( p0 );
+            } else {
+                value_type n = cache_.front( );
+                cache_.pop( );
+                return n;
+            }
+        }
+
+        template <typename P0, typename P1>
+        value_type get( const P0& p0, const P1& p1 )
+        {
+            locker_type l(cache_lock_);
+            if( cache_.empty( ) ) {
+                return ValueTrait::create( p0, p1 );
+            } else {
+                value_type n = cache_.front( );
+                cache_.pop( );
+                return n;
+            }
+        }
+
+        template <typename P0, typename P1, typename P2>
+        value_type get( const P0& p0, const P1& p1, const P2& p2 )
+        {
+            locker_type l(cache_lock_);
+            if( cache_.empty( ) ) {
+                return ValueTrait::create( p0, p1, p2 );
+            } else {
+                value_type n = cache_.front( );
+                cache_.pop( );
+                return n;
+            }
+        }
+#endif
 
         void push( value_type val )
         {

@@ -34,11 +34,37 @@ namespace srpc { namespace common { namespace cache {
             impl_.clear( );
         }
 
-        value_shared_type get( )
+
+#if CXX11_ENABLED
+        template <typename ...Args>
+        value_type get( Args && ...args )
+        {
+            return impl_.get(std::forward<Args>(args)...);
+        }
+#else
+        value_type get( )
         {
             return impl_.get( );
         }
 
+        template <typename P0>
+        value_type get( const P0& p0 )
+        {
+            return impl_.get(p0);
+        }
+
+        template <typename P0, typename P1>
+        value_type get( const P0& p0, const P1& p1)
+        {
+            return impl_.get(p0, p1);
+        }
+
+        template <typename P0, typename P1, typename P2>
+        value_type get( const P0& p0, const P1& p1, const P2& p2)
+        {
+            return impl_.get(p0, p1, p2);
+        }
+#endif
         void push( value_shared_type val )
         {
             impl_.push( val );
