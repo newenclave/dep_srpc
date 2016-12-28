@@ -91,7 +91,7 @@ public:
 //        return r;
 //    }
 
-//    const_buffer_slice pack_message( buffer_type, buffer_slice slice )
+//    buffer_slice pack_message( buffer_type, buffer_slice slice )
 //    {
 //        char *p = slice.begin( );
 //        while( p != slice.end( ) ) {

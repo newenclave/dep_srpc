@@ -114,8 +114,7 @@ namespace srpc { namespace common { namespace protocol {
             return buffer_type( );
         }
 
-        virtual const_buffer_slice pack_message( buffer_type,
-                                                 buffer_slice slice )
+        virtual buffer_slice pack_message( buffer_type, buffer_slice slice )
         {
             return slice;
         }

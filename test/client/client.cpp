@@ -118,7 +118,7 @@ public:
 //        return r;
 //    }
 
-//    const_buffer_slice pack_message( buffer_type, buffer_slice slice )
+//    buffer_slice pack_message( buffer_type, buffer_slice slice )
 //    {
 //        char *p = slice.begin( );
 //        while( p != slice.end( ) ) {
@@ -130,8 +130,6 @@ public:
 
     void send_message( const std::string &data )
     {
-        static const size_t max = max_length + 1;
-
         srpc::shared_ptr<test::run> msg = srpc::make_shared<test::run>( );
         buffer_type buff = get_str( );
         msg->set_name( data );

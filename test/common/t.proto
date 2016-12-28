@@ -2,7 +2,8 @@ package test;
 option cc_generic_services = true;
 
 message run {
-    optional bytes name     = 1;
-    optional bytes parans   = 2;
+    optional uint32 id       = 1;
+    optional bytes  name     = 2;
+    optional bytes  parans   = 3;
 }
 
