@@ -128,9 +128,9 @@ namespace srpc { namespace common { namespace cache {
 
     private:
 
+        size_t                 maximum_;
         std::queue<value_type> cache_;
         mutable mutex_type     cache_lock_;
-        size_t                 maximum_;
     };
 
 }}}
