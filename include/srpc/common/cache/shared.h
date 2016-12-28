@@ -1,9 +1,8 @@
 #ifndef SRPC_COMMON_CHACHE_SHARED_H
 #define SRPC_COMMON_CHACHE_SHARED_H
 
-#include <queue>
-#include "srpc/common/config/memory.h"
 #include "srpc/common/cache/simple.h"
+#include "srpc/common/config/memory.h"
 
 namespace srpc { namespace common { namespace cache {
 
@@ -28,6 +27,11 @@ namespace srpc { namespace common { namespace cache {
         shared_type create( size_t maximum = 0 )
         {
             return srpc::make_shared<shared>(maximum, key( ));
+        }
+
+        void clear( )
+        {
+            impl_.clear( );
         }
 
         value_shared_type get( )

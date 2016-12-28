@@ -2,43 +2,63 @@
 #define SRPC_COMMON_CHACHE_SIMPLE_H
 
 #include <queue>
-#include "srpc/common/config/memory.h"
 #include "srpc/common/config/mutex.h"
+#include "srpc/common/cache/traits/shared.h"
+#include "srpc/common/cache/traits/raw.h"
 
 namespace srpc { namespace common { namespace cache {
 
-    template <typename T, typename MutexType = srpc::mutex>
+    template <typename T,
+              typename MutexType  = srpc::mutex,
+              typename ValueTrait = traits::shared<T> >
     class simple
     {
         typedef srpc::lock_guard<MutexType> locker_type;
 
+        void clear_unsafe( )
+        {
+            while( !cache_.empty( ) ) {
+                ValueTrait::destroy( cache_.front( ) );
+                cache_.pop( );
+            }
+        }
+
     public:
 
-        typedef T                            value_type;
-        typedef srpc::shared_ptr<value_type> value_shared_type;
-        typedef MutexType                    mutex_type;
+        typedef typename ValueTrait::value_type value_type;
+        typedef MutexType                       mutex_type;
 
         simple( size_t maximum )
             :maximum_(maximum)
         { }
 
-        value_shared_type get( )
+        ~simple( )
+        {
+            clear_unsafe( );
+        }
+
+        void clear( )
+        {
+            locker_type l(cache_lock_);
+            clear_unsafe( );
+        }
+
+        value_type get( )
         {
             locker_type l(cache_lock_);
             if( cache_.empty( ) ) {
-                return srpc::make_shared<value_type>( );
+                return ValueTrait::create( );
             } else {
-                value_shared_type n = cache_.front( );
+                value_type n = cache_.front( );
                 cache_.pop( );
                 return n;
             }
         }
 
-        void push( value_shared_type val )
+        void push( value_type val )
         {
             locker_type l(cache_lock_);
             if( (maximum_ > 0) && (cache_.size( ) < maximum_) ) {
-                std::cout << "Push value\n";
                 cache_.push( val );
             }
         }
@@ -51,11 +71,11 @@ namespace srpc { namespace common { namespace cache {
 
     private:
 
-        std::queue<value_shared_type> cache_;
-        mutable mutex_type            cache_lock_;
-        size_t                        maximum_;
+        std::queue<value_type> cache_;
+        mutable mutex_type     cache_lock_;
+        size_t                 maximum_;
     };
 
 }}}
 
-#endif // SRPC_COMMON_CHACHE_SHARED_H
+#endif // SRPC_COMMON_CHACHE_SIMPLE_H
