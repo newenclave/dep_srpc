@@ -213,7 +213,7 @@ namespace async {
                     if( parent_->accept_ ) {
 
                         srpc::shared_ptr<client_type> next =
-                                    client_type::create( parent_, ep, 100 );
+                                    client_type::create( parent_, ep, 10 );
 
                         client_type::buffer_type dat = next->get_buffer( );
                         dat->assign( data, len );
