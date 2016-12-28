@@ -4,8 +4,6 @@
 #include <atomic>
 #include <thread>
 
-#include "boost/asio.hpp"
-
 #include "srpc/common/config/memory.h"
 #include "srpc/common/config/mutex.h"
 #include "srpc/common/config/functional.h"
@@ -266,9 +264,10 @@ int main( int argc, char *argv[ ] )
 
         common::timers::periodical tt(ios);
 
-        tt.call( [&ios](...) {
+        tt.call( [&ios, &tt](...) {
             ios.stop( );
-        }, srpc::chrono::milliseconds(15000) );
+            tt.cancel( );
+        }, srpc::chrono::milliseconds(20000) );
 
         listener l(ios, "0.0.0.0", 23456);
 

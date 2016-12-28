@@ -40,10 +40,12 @@ if( CXX11_ENABLED )
     else( )
         find_package( Boost 1.53 COMPONENTS
                             system
+                            thread # test
                         REQUIRED)
     endif( ASIO_STANDALONE_DIR )
     find_package( Boost 1.53 COMPONENTS
                         system
+                        thread # test
                     REQUIRED)
 else( CXX11_ENABLED )
     find_package( Boost 1.53 COMPONENTS

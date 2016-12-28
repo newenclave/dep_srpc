@@ -1,9 +1,20 @@
 package test;
 option cc_generic_services = true;
 
+
+message empty { }
+
 message run {
     optional uint32 id       = 1;
     optional bytes  name     = 2;
     optional bytes  parans   = 3;
 }
 
+service test_service {
+    rpc call1(empty) returns (empty) { };
+    rpc call2(empty) returns (empty) { };
+    rpc call5(empty) returns (empty) { };
+    rpc last_call(empty) returns (empty) { };
+    rpc call3(empty) returns (empty) { };
+    rpc call4(empty) returns (empty) { };
+}

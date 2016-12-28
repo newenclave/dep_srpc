@@ -26,12 +26,9 @@ namespace srpc { namespace common { namespace protocol {
 
         typedef transport::delegates::message<SizePolicy> parent_type;
 
-    protected:
-
-        typedef srpc::shared_ptr<std::string>           buffer_type;
-
     public:
 
+        typedef srpc::shared_ptr<std::string>           buffer_type;
         typedef transport::interface::error_code        error_code;
         typedef common::buffer<char>                    buffer_slice;
         typedef common::const_buffer<char>              const_buffer_slice;

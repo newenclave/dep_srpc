@@ -38,6 +38,8 @@
 
 using namespace srpc;
 
+#include "boost/thread/tss.hpp"
+
 namespace ba = SRPC_ASIO;
 namespace bs = SRPC_SYSTEM;
 
