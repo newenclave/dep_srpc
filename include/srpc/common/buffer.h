@@ -32,6 +32,16 @@ namespace srpc { namespace common {
             return data_;
         }
 
+        value_type& operator []( size_t id )
+        {
+            return data_[id];
+        }
+
+        const value_type& operator []( size_t id ) const
+        {
+            return data_[id];
+        }
+
         const value_type *data( ) const
         {
             return data_;
