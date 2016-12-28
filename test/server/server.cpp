@@ -68,9 +68,11 @@ public:
         srpc::shared_ptr<test::run> msg = srpc::make_shared<test::run>( );
 
         msg->ParseFromArray( slice.data( ), slice.size( ) );
+
         std::cout << msg->DebugString( )
                   << "^---- " << slice.size( )
                   << " Tag: " << tag << "\n";
+
         if( !buff ) {
             buff = get_str( );
         } else {
