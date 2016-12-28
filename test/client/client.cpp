@@ -22,7 +22,8 @@ using connector_type  = client::connector::async::udp;
 using connector_sptr  = srpc::shared_ptr<connector_type>;
 using size_policy     = common::sizepack::varint<size_t>;
 
-using client_delegate = common::protocol::binary<message_sptr>;
+using client_delegate = common::protocol::binary<message_sptr,
+                                    common::sizepack::fixint<srpc::uint16_t> >;
 
 class connector: private client_delegate {
 
@@ -139,7 +140,7 @@ public:
 
         buff->resize( 4 );
 
-        buffer_slice slice = prepare_buffer( buff, 0, msg );
+        buffer_slice slice = prepare_buffer( buff, 666, msg );
         slice = insert_size_prefix( buff, slice );
 
         get_transport( )->write( slice.begin( ), slice.size( ),

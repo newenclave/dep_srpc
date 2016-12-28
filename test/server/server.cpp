@@ -21,6 +21,7 @@
 #include "srpc/server/acceptor/async/tcp.h"
 #include "srpc/server/acceptor/async/udp.h"
 #include "srpc/common/transport/delegates/message.h"
+#include "srpc/common/cache/simple.h"
 
 #include "srpc/common/protocol/binary.h"
 
@@ -34,7 +35,8 @@ namespace gpb = google::protobuf;
 using message_sptr = srpc::shared_ptr<gpb::Message>;
 
 using size_policy     = common::sizepack::varint<size_t>;
-using client_delegate = common::protocol::binary<message_sptr>;
+using client_delegate = common::protocol::binary<message_sptr,
+                                    common::sizepack::fixint<srpc::uint16_t> >;
 
 class protocol_client: public client_delegate {
 
@@ -44,6 +46,8 @@ class protocol_client: public client_delegate {
     typedef typename client_delegate::const_buffer_slice const_buffer_slice;
     typedef typename client_delegate::buffer_slice       buffer_slice;
 
+    typedef common::cache::simple<std::string> cache_type;
+
     typedef SRPC_ASIO::io_service io_service;
     typedef common::transport::interface::write_callbacks cb_type;
 
@@ -52,6 +56,7 @@ public:
     protocol_client( io_service &ios )
         :client_delegate(100)
         ,ios_(ios)
+        ,cache_(10)
     { }
 
     void append_message( buffer_type buf, const message_type &m )
@@ -67,7 +72,7 @@ public:
         msg->ParseFromArray( slice.data( ), slice.size( ) );
         std::cout << msg->DebugString( )
                   << "^---- " << slice.size( )
-                  << "Tag: " << tag << "\n";
+                  << " Tag: " << tag << "\n";
         if( !buff ) {
             buff = get_str( );
         } else {
@@ -115,18 +120,12 @@ public:
 
     buffer_type get_str( )
     {
-        if(cache_.empty( )) {
-            return srpc::make_shared<std::string>( );
-        } else {
-            buffer_type n = cache_.front( );
-            cache_.pop( );
-            return n;
-        }
+        return cache_.get( );
     }
 
 private:
-    std::queue<buffer_type> cache_;
     io_service &ios_;
+    cache_type cache_;
 };
 
 using protocol_client_sptr = srpc::shared_ptr<protocol_client>;
@@ -165,9 +164,9 @@ private:
 
     struct impl: public srpc::enable_shared_from_this<impl> {
 
-        srpc::unique_ptr<accept_delegate>           deleg_;
-        acceptor_sptr                               acceptor_;
-        io_service                                 &ios_;
+        srpc::unique_ptr<accept_delegate>   deleg_;
+        acceptor_sptr                       acceptor_;
+        io_service                         &ios_;
         impl( io_service &ios )
             :ios_(ios)
         { }
