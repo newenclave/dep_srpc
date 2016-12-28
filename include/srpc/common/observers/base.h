@@ -358,17 +358,18 @@ namespace srpc { namespace common { namespace observers {
             o.impl_ = srpc::make_shared<impl>( );
             return *this;
         }
+
+        ~base( ) = default;
 #else
     private:
         common( const common & );
         common& operator = ( const common & );
     public:
+
+        virtual ~base( )
+        { }
 #endif
 
-        //virtual
-        ~base( )
-        {
-        }
 
         subscription subscribe( slot_type call )
         {
