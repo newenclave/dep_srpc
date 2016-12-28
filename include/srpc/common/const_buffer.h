@@ -9,9 +9,6 @@ namespace srpc { namespace common {
     template <typename T>
     class const_buffer {
 
-        const T *data_;
-        size_t   length_;
-
     public:
 
         typedef T value_type;
@@ -31,7 +28,7 @@ namespace srpc { namespace common {
             ,length_(other.length_)
         { }
 
-        const_buffer( const buffer<T> &other )
+        const_buffer( const buffer<value_type> &other )
             :data_(other.data( ))
             ,length_(other.size( ))
         { }
@@ -55,6 +52,11 @@ namespace srpc { namespace common {
         {
             return data_ + length_;
         }
+
+    private:
+
+        const value_type *data_;
+        size_t            length_;
     };
 }}
 

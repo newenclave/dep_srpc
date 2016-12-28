@@ -134,8 +134,11 @@ public:
         buffer_type buff = get_str( );
         msg->set_name( data );
 
-        size_t length_size = 0;
-        const_buffer_slice slice = prepare_buffer( buff, 0, msg, &length_size );
+        buff->resize( 4 );
+
+        buffer_slice slice = prepare_buffer( buff, 0, msg );
+        slice = insert_size_prefix( buff, slice );
+
         get_transport( )->write( slice.begin( ), slice.size( ),
             cb_type::post( [this, buff](...) {
                 cache_.push( buff );

@@ -156,13 +156,28 @@ namespace srpc { namespace common { namespace protocol {
                               const_buffer_slice(m, (end - m) - hash_size) );
         }
 
-        const_buffer_slice prepare_buffer( buffer_type buf, tag_type tag,
-                                           const message_type &mess,
-                                           size_t *length_size = NULL )
+        buffer_slice insert_size_prefix( buffer_type buf, buffer_slice slice )
+        {
+            typedef typename parent_type::size_policy size_policy;
+            const size_t cap = slice.data( ) - buf->c_str( );
+            const size_t pak = size_policy::packed_length( slice.size( ) );
+            if( cap >= pak ) {
+                size_policy::pack( slice.size( ), slice.data( ) - pak );
+                return buffer_slice( slice.data( ) - pak,
+                                     slice.size( ) + pak );
+            } else {
+                buf->insert( buf->begin( ), pak - cap, '\0' );
+                size_policy::pack( slice.size( ), &(*buf)[0] );
+                return buffer_slice( &(*buf)[0], slice.size( ) + pak );
+            }
+        }
+
+        buffer_slice prepare_buffer( buffer_type buf, tag_type tag,
+                                     const message_type &mess )
         {
             typedef typename parent_type::size_policy size_policy;
 
-            buf->resize( buf->size( ) + size_policy::max_length );
+            //buf->resize( buf->size( ) + size_policy::max_length );
 
             const size_t old_len = buf->size( );
 
@@ -173,20 +188,11 @@ namespace srpc { namespace common { namespace protocol {
             buf->resize( buf->size( ) + hash_->length( ) );
 
             hash_->get( buf->c_str( ) + old_len,
-                        buf->size( ) - old_len - hash_->length( ),
-                        &(*buf)[buf->size( ) - hash_->length( )]);
+                        buf->size( )  - old_len - hash_->length( ),
+                        &(*buf)[buf->size( )    - hash_->length( )]);
 
-            size_t packed = 0;
-
-            if( length_size ) {
-                packed = size_policy::packed_length( buf->size( ) - old_len );
-                size_policy::pack( buf->size( ) - old_len,
-                                &(*buf)[old_len - packed]);
-                *length_size = packed;
-            }
-
-            buffer_slice res( &(*buf)[0]   + old_len - packed,
-                              buf->size( ) - old_len + packed );
+            buffer_slice res( &(*buf)[0]   + old_len,
+                              buf->size( ) - old_len );
 
             return pack_message( buf, res );
 

@@ -8,9 +8,6 @@ namespace srpc { namespace common {
     template <typename T>
     class buffer {
 
-        T       *data_;
-        size_t   length_;
-
     public:
 
         typedef T value_type;
@@ -65,6 +62,10 @@ namespace srpc { namespace common {
             return data_ + length_;
         }
 
+    public:
+
+        value_type *data_;
+        size_t      length_;
     };
 }}
 

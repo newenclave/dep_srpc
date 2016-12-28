@@ -75,14 +75,15 @@ namespace srpc { namespace common { namespace sizepack {
 
         static size_t pack( size_type size, void *result )
         {
+            typedef srpc::uint8_t u8;
             size_t index = 0;
 
-            srpc::uint8_t *res = reinterpret_cast<srpc::uint8_t *>(result);
+            u8 *res = reinterpret_cast<u8 *>(result);
 
             for( ; size > 0x7F; size >>= 7 ) {
-                res[index++] = (static_cast<char>((size & 0x7F) | 0x80));
+                res[index++] = (static_cast<u8>((size & 0x7F) | 0x80));
             }
-            res[index++] = (static_cast<char>(size));
+            res[index++] = (static_cast<u8>(size));
             return index;
         }
 

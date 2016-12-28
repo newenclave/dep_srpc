@@ -74,9 +74,12 @@ public:
             buff->clear( );
         }
 
-        size_t len = 0;
-        slice = prepare_buffer( buff, 10, msg, &len );
-        get_transport( )->write( slice.begin( ), slice.size( ),
+        buff->resize( 4 );
+
+        buffer_slice sl = prepare_buffer( buff, 0, msg );
+        sl = insert_size_prefix( buff, sl );
+
+        get_transport( )->write( sl.begin( ), sl.size( ),
                                  cb_type::post([buff](...){ } ) );
     }
 
