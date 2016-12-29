@@ -24,7 +24,7 @@ using size_policy     = common::sizepack::varint<size_t>;
 
 using client_delegate = common::protocol::binary<message_sptr,
                                     common::sizepack::fixint<srpc::uint16_t>,
-                                    common::sizepack::fixint<srpc::uint16_t> >;
+                                    common::sizepack::fixint<srpc::uint32_t> >;
 
 class connector: private client_delegate {
 

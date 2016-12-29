@@ -35,7 +35,7 @@ using message_sptr = srpc::shared_ptr<gpb::Message>;
 using size_policy     = common::sizepack::varint<size_t>;
 using client_delegate = common::protocol::binary<message_sptr,
                                     common::sizepack::fixint<srpc::uint16_t>,
-                                    common::sizepack::fixint<srpc::uint16_t> >;
+                                    common::sizepack::fixint<srpc::uint32_t> >;
 
 class protocol_client: public client_delegate {
 
@@ -273,9 +273,10 @@ int main( int argc, char *argv[ ] )
         listener l(ios, "0.0.0.0", 23456);
 
         l.start( );
-        ios.run( );
-        l.stop( );
 
+        ios.run( );
+
+        l.stop( );
         g_clients.clear( );
 
         google::protobuf::ShutdownProtobufLibrary( );
