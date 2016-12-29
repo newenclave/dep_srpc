@@ -1,5 +1,5 @@
-#ifndef SRPC_ACCEPTOR_INTERFACE_H
-#define SRPC_ACCEPTOR_INTERFACE_H
+#ifndef SRPC_SERVER_ACCEPTOR_INTERFACE_H
+#define SRPC_SERVER_ACCEPTOR_INTERFACE_H
 
 #include <string>
 #include "srpc/common/config/memory.h"
@@ -20,13 +20,14 @@ namespace srpc { namespace server { namespace acceptor {
             virtual ~delegate( ) { }
             virtual void on_accept_client( common::transport::interface *,
                                            const std::string &,
-                                           srpc::uint16_t  ) = 0;
+                                           srpc::uint16_t ) = 0;
             virtual void on_accept_error( const error_code & ) = 0;
             virtual void on_close( ) = 0;
         };
 
-        virtual void open( )         = 0;
-        virtual void close( )        = 0;
+        virtual void open( ) = 0;
+        virtual void bind( ) = 0;
+        virtual void close( ) = 0;
         virtual void start_accept( ) = 0;
         virtual srpc::handle_type native_handle( ) = 0;
         virtual void set_delegate( delegate * ) = 0;

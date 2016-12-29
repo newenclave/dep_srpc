@@ -323,16 +323,13 @@ namespace async {
             ep_.address( ).is_v6( )
                 ? acceptor_->get_socket( ).open( SRPC_ASIO::ip::udp::v6( ) )
                 : acceptor_->get_socket( ).open( SRPC_ASIO::ip::udp::v4( ) );
-            bind( true );
         }
 
-        void bind( bool reuse = true )
+        void bind( )
         {
 
-            if( reuse ) {
-                SRPC_ASIO::socket_base::reuse_address opt(true);
-                acceptor_->get_socket( ).set_option( opt );
-            }
+            SRPC_ASIO::socket_base::reuse_address opt(true);
+            acceptor_->get_socket( ).set_option( opt );
 
             acceptor_->get_socket( ).bind( ep_ );
             acceptor_->read_from( endpoint( ) );

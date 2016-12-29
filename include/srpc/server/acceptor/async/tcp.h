@@ -92,20 +92,12 @@ namespace async {
             ep_.address( ).is_v6( )
                     ? acceptor_.open( asio_tcp::v6( ) )
                     : acceptor_.open( asio_tcp::v4( ) );
-            bind( true );
         }
 
-//        void listen( int backlog )
-//        {
-//            acceptor_.listen( backlog );
-//        }
-
-        void bind( bool reuseaddr = false )
+        void bind( )
         {
             typedef SRPC_ASIO::socket_base socket_base;
-            if( reuseaddr ) {
-                acceptor_.set_option( socket_base::reuse_address(true) );
-            }
+            acceptor_.set_option( socket_base::reuse_address(true) );
 
             acceptor_.bind( ep_ );
             acceptor_.listen( 5 );

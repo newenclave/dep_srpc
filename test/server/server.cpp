@@ -35,7 +35,7 @@ using message_sptr = srpc::shared_ptr<gpb::Message>;
 using size_policy     = common::sizepack::varint<size_t>;
 using client_delegate = common::protocol::binary<message_sptr,
                                     common::sizepack::fixint<srpc::uint16_t>,
-                                    common::sizepack::none >;
+                                    common::sizepack::fixint<srpc::uint16_t> >;
 
 class protocol_client: public client_delegate {
 
@@ -149,7 +149,7 @@ private:
     using tcp = server::acceptor::async::tcp;
     using udp = server::acceptor::async::udp;
 
-    using acceptor_type = udp;
+    using acceptor_type = tcp;
 
     struct message_delegate;
     struct impl;
@@ -243,6 +243,7 @@ public:
     void start( )
     {
         impl_->acceptor_->open( );
+        impl_->acceptor_->bind( );
         impl_->acceptor_->start_accept( );
     }
 

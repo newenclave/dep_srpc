@@ -215,16 +215,16 @@ namespace async {
 
     protected:
         virtual void on_read_from_error( const error_code & ) { }
-        virtual void on_write_to_error( const error_code &,
-                                        const asio_udp::endpoint & ) { }
+        virtual void  on_write_to_error( const error_code &,
+                                         const asio_udp::endpoint & ) { }
 
     public:
 
         static const bool is_stream = false;
         static const bool is_safe   = false;
 
-        typedef asio_udp::endpoint      endpoint;
-        typedef parent_type::delegate   delegate;
+        typedef asio_udp::endpoint    endpoint;
+        typedef parent_type::delegate delegate;
 
         udp( io_service &ios, std::uint32_t buflen )
             :parent_type(ios, buflen)

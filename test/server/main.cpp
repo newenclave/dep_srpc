@@ -346,7 +346,7 @@ int main_( )
         std::cout << std::endl;
 #endif
 
-        acc->bind( true );
+        acc->bind( );
 
         acc->start_accept( );
 
