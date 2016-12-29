@@ -18,30 +18,30 @@
 
 namespace srpc { namespace common { namespace protocol {
 
-    template <typename MessageType,
-              typename TagPolicy   = sizepack::none,
-              typename SizePolicy  = sizepack::varint<srpc::uint32_t>,
-              typename QueueIdType = srpc::uint64_t>
+    template < typename MessageType,
+               typename TagPolicy   = sizepack::none,
+               typename SizePolicy  = sizepack::varint<srpc::uint32_t>,
+               typename QueueIdType = srpc::uint64_t >
     class binary: public transport::delegates::message<SizePolicy> {
 
-        typedef transport::delegates::message<SizePolicy> parent_type;
+        typedef transport::delegates::message<SizePolicy>  parent_type;
 
     public:
 
-        typedef srpc::shared_ptr<std::string>           buffer_type;
-        typedef transport::interface::error_code        error_code;
-        typedef common::buffer<char>                    buffer_slice;
-        typedef common::const_buffer<char>              const_buffer_slice;
+        typedef srpc::shared_ptr<std::string>              buffer_type;
+        typedef transport::interface::error_code           error_code;
+        typedef common::buffer<char>                       buffer_slice;
+        typedef common::const_buffer<char>                 const_buffer_slice;
 
-        typedef transport::interface *                  transport_ptr;
-        typedef srpc::weak_ptr<transport::interface>    transport_wptr;
-        typedef srpc::shared_ptr<transport::interface>  transport_sptr;
+        typedef transport::interface *                     transport_ptr;
+        typedef srpc::weak_ptr<transport::interface>       transport_wptr;
+        typedef srpc::shared_ptr<transport::interface>     transport_sptr;
 
-        typedef SizePolicy                              size_policy;
-        typedef TagPolicy                               tag_policy;
-        typedef typename tag_policy::size_type          tag_type;
-        typedef MessageType                             message_type;
-        typedef QueueIdType                             key_type;
+        typedef SizePolicy                                 size_policy;
+        typedef TagPolicy                                  tag_policy;
+        typedef typename tag_policy::size_type             tag_type;
+        typedef MessageType                                message_type;
+        typedef QueueIdType                                key_type;
 
         typedef srpc::common::queues::condition<
                         key_type,
@@ -49,12 +49,13 @@ namespace srpc { namespace common { namespace protocol {
                         queues::traits::simple<message_type>
                 > queue_type;
 
-        typedef typename queue_type::result_enum        result_enum;
-        typedef typename queue_type::slot_ptr           slot_ptr;
+        typedef typename queue_type::result_enum           result_enum;
+        typedef typename queue_type::slot_ptr              slot_ptr;
 
-        binary( key_type init_id )
+        binary( key_type init_id, size_t max_length )
             :next_id_(init_id)
             ,hash_(new hash::crc32)
+            ,max_length_(max_length)
         { }
 
         virtual ~binary( )
@@ -153,6 +154,21 @@ namespace srpc { namespace common { namespace protocol {
                               const_buffer_slice(m, (end - m) - hash_size) );
         }
 
+        buffer_slice insert_prefix( buffer_type buf, buffer_slice dst,
+                                    const_buffer_slice src )
+        {
+            const size_t cap = dst.data( ) - buf->c_str( );
+            const size_t pak = src.size( );
+
+            if( cap >= pak ) {
+                std::copy( src.begin( ), src.end( ), &(*buf)[cap - pak] );
+                return buffer_slice( &(*buf)[cap - pak], src.size( ) + pak );
+            } else {
+                buf->insert( buf->begin( ), src.begin( ), src.end( ) );
+                return buffer_slice( &(*buf)[0], src.size( ) + pak );
+            }
+        }
+
         buffer_slice insert_size_prefix( buffer_type buf, buffer_slice slice )
         {
             typedef typename parent_type::size_policy size_policy;
@@ -202,9 +218,19 @@ namespace srpc { namespace common { namespace protocol {
         virtual void append_message( buffer_type, const message_type & )
         { }
 
-        bool validate_length( size_t )
+        void set_max_length( size_t len )
         {
-            return true;
+            max_length_ = len;
+        }
+
+        void max_length( ) const
+        {
+            return max_length_;
+        }
+
+        virtual bool validate_length( size_t len )
+        {
+            return len <= max_length_;
         }
 
         virtual void on_error( const char * )
@@ -212,23 +238,26 @@ namespace srpc { namespace common { namespace protocol {
             transport_->close( );
         }
 
-        void on_need_read( )
+        virtual void on_need_read( )
         {
             transport_->read( );
         }
 
-        void on_read_error( const error_code & )
+        virtual void on_read_error( const error_code & )
         {
             transport_->close( );
         }
 
-        void on_write_error( const error_code &)
+        virtual void on_write_error( const error_code &)
         {
             transport_->close( );
         }
 
-        void on_close( )
-        { }
+        virtual void on_close( )
+        {
+            //// ?
+            transport_.reset( );
+        }
 
         bool push_to_slot( key_type id, const message_type &msg )
         {
@@ -241,6 +270,7 @@ namespace srpc { namespace common { namespace protocol {
         queue_type              queues_;
         transport_sptr          transport_;
         hash::interface_uptr    hash_;
+        size_t                  max_length_;
 
     };
 

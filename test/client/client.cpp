@@ -23,7 +23,8 @@ using connector_sptr  = srpc::shared_ptr<connector_type>;
 using size_policy     = common::sizepack::varint<size_t>;
 
 using client_delegate = common::protocol::binary<message_sptr,
-                                    common::sizepack::fixint<srpc::uint16_t> >;
+                                    common::sizepack::fixint<srpc::uint16_t>,
+                                    common::sizepack::none >;
 
 class connector: private client_delegate {
 
@@ -76,7 +77,7 @@ class connector: private client_delegate {
 public:
 
     connector( io_service &ios, const std::string &addr, srpc::uint16_t svc )
-        :client_delegate(101)
+        :client_delegate(101, 44000)
     {
 
         connector_type::endpoint ep(

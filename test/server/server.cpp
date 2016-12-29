@@ -34,17 +34,17 @@ using message_sptr = srpc::shared_ptr<gpb::Message>;
 
 using size_policy     = common::sizepack::varint<size_t>;
 using client_delegate = common::protocol::binary<message_sptr,
-                                    common::sizepack::fixint<srpc::uint16_t> >;
+                                    common::sizepack::fixint<srpc::uint16_t>,
+                                    common::sizepack::none >;
 
 class protocol_client: public client_delegate {
 
-    typedef typename client_delegate::tag_type tag_type;
-    typedef typename client_delegate::buffer_type buffer_type;
-
+    typedef typename client_delegate::tag_type           tag_type;
+    typedef typename client_delegate::buffer_type        buffer_type;
     typedef typename client_delegate::const_buffer_slice const_buffer_slice;
     typedef typename client_delegate::buffer_slice       buffer_slice;
 
-    typedef common::cache::simple<std::string> cache_type;
+    typedef common::cache::simple<std::string>           cache_type;
 
     typedef SRPC_ASIO::io_service io_service;
     typedef common::transport::interface::write_callbacks cb_type;
@@ -52,7 +52,7 @@ class protocol_client: public client_delegate {
 public:
 
     protocol_client( io_service &ios )
-        :client_delegate(100)
+        :client_delegate(100, 44000)
         ,ios_(ios)
         ,cache_(10)
     { }
@@ -172,7 +172,7 @@ private:
         { }
     };
 
-    using client_delegate = common::transport::delegates::message<size_policy>;
+    typedef common::transport::delegates::message<size_policy> client_delegate;
 
     struct accept_delegate: public server::acceptor::interface::delegate {
 
@@ -256,10 +256,8 @@ private:
     impl_sptr impl_;
 };
 
-
 int main( int argc, char *argv[ ] )
 {
-
     try {
 
         listener::io_service ios;

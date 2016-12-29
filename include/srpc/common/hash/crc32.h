@@ -91,6 +91,7 @@ namespace srpc { namespace common { namespace hash {
     }
 
     struct crc32: public hash::interface {
+
         size_t length( ) const
         {
             return sizeof(srpc::uint32_t);
@@ -109,10 +110,10 @@ namespace srpc { namespace common { namespace hash {
                                      static_cast<srpc::uint8_t>(data[i]) );
             }
             oldcrc = ~oldcrc;
-            return  res[0] == static_cast<char>((oldcrc >> 24) & 0xFF)
-                &&  res[1] == static_cast<char>((oldcrc >> 16) & 0xFF)
-                &&  res[2] == static_cast<char>((oldcrc >>  8) & 0xFF)
-                &&  res[3] == static_cast<char>((oldcrc      ) & 0xFF);
+            return res[0] == static_cast<char>((oldcrc >> 24) & 0xFF)
+                && res[1] == static_cast<char>((oldcrc >> 16) & 0xFF)
+                && res[2] == static_cast<char>((oldcrc >>  8) & 0xFF)
+                && res[3] == static_cast<char>((oldcrc      ) & 0xFF);
         }
 
         void get( const char *data, size_t len, char *out )

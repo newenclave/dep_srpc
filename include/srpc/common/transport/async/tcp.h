@@ -23,6 +23,10 @@ namespace async {
 
     public:
 
+        static const bool is_stream = true;
+        static const bool is_safe   = true;
+
+
         typedef asio_tcp::endpoint              endpoint;
         typedef parent_type::delegate           delegate;
         typedef parent_type::native_handle_type native_handle_type;

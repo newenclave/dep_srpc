@@ -220,6 +220,9 @@ namespace async {
 
     public:
 
+        static const bool is_stream = false;
+        static const bool is_safe   = false;
+
         typedef asio_udp::endpoint      endpoint;
         typedef parent_type::delegate   delegate;
 
