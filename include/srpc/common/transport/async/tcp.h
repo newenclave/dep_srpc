@@ -10,13 +10,14 @@ namespace async {
 
     class tcp: public stream<SRPC_ASIO::ip::tcp::socket> {
 
-        typedef stream<SRPC_ASIO::ip::tcp::socket> parent_type;
-        typedef SRPC_ASIO::ip::tcp asio_tcp;
+        typedef stream<SRPC_ASIO::ip::tcp::socket>  parent_type;
+        typedef SRPC_ASIO::ip::tcp                  asio_tcp;
+        typedef SRPC_ASIO::socket_base              socket_base;
 
         void set_buffers( size_t len )
         {
-            SRPC_ASIO::socket_base::send_buffer_size snd( len );
-            SRPC_ASIO::socket_base::send_buffer_size rcv( len );
+            socket_base::send_buffer_size snd( len );
+            socket_base::send_buffer_size rcv( len );
             get_socket( ).set_option(snd);
             get_socket( ).set_option(rcv);
         }
@@ -25,7 +26,6 @@ namespace async {
 
         static const bool is_stream = true;
         static const bool is_safe   = true;
-
 
         typedef asio_tcp::endpoint              endpoint;
         typedef parent_type::delegate           delegate;
@@ -55,7 +55,6 @@ namespace async {
         {
             return ep_;
         }
-
 
     private:
 

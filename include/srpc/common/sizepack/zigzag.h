@@ -9,10 +9,10 @@ namespace srpc { namespace common { namespace sizepack {
     template <typename SignType>
     struct zigzag {
 
-        typedef SignType value_type;
-        typedef types<sizeof(value_type)> type_trait;
-        typedef typename type_trait::signed_type   signed_type;
-        typedef typename type_trait::unsigned_type unsigned_type;
+        typedef SignType                            value_type;
+        typedef types<sizeof(value_type)>           type_trait;
+        typedef typename type_trait::signed_type    signed_type;
+        typedef typename type_trait::unsigned_type  unsigned_type;
 
         static
         unsigned_type to_unsigned( signed_type val )
