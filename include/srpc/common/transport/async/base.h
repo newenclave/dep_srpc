@@ -14,10 +14,8 @@ namespace async {
         typedef base<SocketType>           this_type;
         typedef interface::write_callbacks write_callbacks;
 
-        virtual void start_read_impl(  ) { }
-
-        virtual void set_buffers( size_t )
-        { }
+        virtual void start_read_impl( )    { }
+        virtual void set_buffers( size_t ) { }
 
         void close_impl( weak_type inst )
         {
