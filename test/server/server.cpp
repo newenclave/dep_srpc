@@ -142,46 +142,25 @@ void protocol_client::on_close( )
     g_clients.erase( get_transport( ) );
 }
 
-
-struct listener {
-
-    using size_policy = common::sizepack::varint<size_t>;
+template <typename Acceptor>
+class lister: public srpc::enable_shared_from_this<lister<Acceptor> >
+{
+public:
     using error_code  = common::transport::error_code;
     using io_service  = common::transport::io_service;
-
 private:
 
-    using tcp = server::acceptor::async::tcp;
-    using udp = server::acceptor::async::udp;
-
-    using acceptor_type = tcp;
-
-    struct message_delegate;
-    struct impl;
-    struct accept_delegate;
-
-    using iface_ptr     = common::transport::interface *;
-    using client_sptr   = srpc::shared_ptr<common::transport::interface>;
-    using acceptor_sptr = srpc::shared_ptr<server::acceptor::interface>;
-    using impl_sptr     = srpc::shared_ptr<impl>;
-
-    using message_delegate_sptr = srpc::shared_ptr<message_delegate>;
-
-    struct impl: public srpc::enable_shared_from_this<impl> {
-
-        srpc::unique_ptr<accept_delegate>   deleg_;
-        acceptor_sptr                       acceptor_;
-        io_service                         &ios_;
-        impl( io_service &ios )
-            :ios_(ios)
-        { }
-    };
-
-    typedef common::transport::delegates::message<size_policy> client_delegate;
+    SRPC_OBSERVER_DEFINE( on_accept,
+                          void (common::transport::interface *,
+                                const std::string &addr, srpc::uint16_t svc ) );
+    SRPC_OBSERVER_DEFINE( on_accept_error, void (const error_code &) );
+    SRPC_OBSERVER_DEFINE( on_close, void ( ) );
 
     struct accept_delegate: public server::acceptor::interface::delegate {
 
-        accept_delegate( srpc::shared_ptr<impl> lst )
+        typedef lister<Acceptor> parent_type;
+
+        accept_delegate( srpc::shared_ptr<parent_type> lst )
             :lst_(lst)
         { }
 
@@ -189,78 +168,82 @@ private:
                                const std::string &addr, srpc::uint16_t svc )
         {
 
-            srpc::shared_ptr<impl> lck(lst_.lock( ));
-
+            srpc::shared_ptr<parent_type> lck(lst_.lock( ));
             if( lck ) {
-
-                std::cout << "New client " << addr << ":" << svc << "\n";
-
-                protocol_client_sptr next =
-                        srpc::make_shared<protocol_client>( lck->ios_ );
-
-                next->assign_transport( c );
-
-                next->get_transport( )->set_delegate( next.get( ) );
-                next->get_transport( )->read( );
-
-                g_clients[next->get_transport( )] = next;
-                //lck->on_connect( next->client_.get( ), next );
-
+                lck->on_accept( c, addr, svc );
                 lck->acceptor_->start_accept( );
             }
         }
 
         void on_accept_error( const error_code &e )
         {
-            std::cerr << "on_accept_error " << e.message( ) << "\n";
+            srpc::shared_ptr<parent_type> lck(lst_.lock( ));
+            if( lck ) {
+                lck->on_accept_error( e );
+            }
         }
 
         void on_close( )
         {
-
+            srpc::shared_ptr<parent_type> lck(lst_.lock( ));
+            if( lck ) {
+                lck->on_close( );
+            }
         }
 
-        srpc::weak_ptr<impl> lst_;
+        srpc::weak_ptr<parent_type> lst_;
     };
 
-
     friend class accept_delegate;
-    friend class message_delegate;
+
+    struct key { };
 
 public:
 
-    ~listener( )
+    typedef Acceptor acceptor_type;
+    typedef srpc::shared_ptr<Acceptor> acceptor_sptr;
+
+
+    lister( io_service &ios, const std::string &addr, srpc::uint16_t svc, key )
     {
-        impl_->acceptor_.reset( );
+        typename acceptor_type::endpoint ep(
+                    SRPC_ASIO::ip::address::from_string(addr), svc );
+
+        acceptor_ = acceptor_type::create( ios, 45000, ep );
     }
 
-    listener( io_service &ios, const std::string &addr, srpc::uint16_t svc )
+    static
+    srpc::shared_ptr<lister> create( io_service &ios,
+                                     const std::string &addr,
+                                     srpc::uint16_t svc )
     {
-        acceptor_type::endpoint ep(
-                    SRPC_ASIO::ip::address::from_string(addr), svc);
+        srpc::shared_ptr<lister> inst =
+                srpc::make_shared<lister>(srpc::ref(ios), addr, svc, key( ));
 
-        impl_ = srpc::make_shared<impl>( ios );
-        impl_->acceptor_ = acceptor_type::create( ios, 45000, ep );
-        impl_->deleg_.reset( new accept_delegate(impl_) );
-        impl_->acceptor_->set_delegate( impl_->deleg_.get( ) );
+        inst->delegate_.reset( new accept_delegate(inst) );
+        inst->acceptor_->set_delegate( inst->delegate_.get( ) );
+        return inst;
     }
 
     void start( )
     {
-        impl_->acceptor_->open( );
-        impl_->acceptor_->bind( );
-        impl_->acceptor_->start_accept( );
+        acceptor_->open( );
+        acceptor_->bind( );
+        acceptor_->start_accept( );
     }
 
     void stop( )
     {
-        impl_->acceptor_->close( );
+        acceptor_->close( );
     }
 
 private:
-
-    impl_sptr impl_;
+    srpc::unique_ptr<accept_delegate> delegate_;
+    acceptor_sptr                     acceptor_;
 };
+
+using listener = lister<server::acceptor::async::udp>;
+//using listener = lister<server::acceptor::async::tcp>;
 
 int main( int argc, char *argv[ ] )
 {
@@ -275,13 +258,33 @@ int main( int argc, char *argv[ ] )
             tt.cancel( );
         }, srpc::chrono::milliseconds(20000) );
 
-        listener l(ios, "0.0.0.0", 23456);
+        auto l = listener::create( ios, "0.0.0.0", 23456 );
 
-        l.start( );
+        l->subscribe_on_accept_error(
+                    [](const SRPC_SYSTEM::error_code &e)
+                    { } );
+
+        l->subscribe_on_accept(
+            [&ios](common::transport::interface *c,
+               const std::string &addr, srpc::uint16_t svc)
+            {
+                std::cout << "New client " << addr << ":" << svc << "\n";
+
+                protocol_client_sptr next =
+                        srpc::make_shared<protocol_client>(srpc::ref(ios) );
+
+                next->assign_transport( c );
+                next->get_transport( )->set_delegate( next.get( ) );
+                next->get_transport( )->read( );
+
+                g_clients[next->get_transport( )] = next;
+            } );
+
+        l->start( );
 
         ios.run( );
 
-        l.stop( );
+        l->stop( );
         g_clients.clear( );
 
         google::protobuf::ShutdownProtobufLibrary( );

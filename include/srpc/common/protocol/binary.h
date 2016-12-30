@@ -256,7 +256,7 @@ namespace srpc { namespace common { namespace protocol {
         virtual void on_close( )
         {
             //// ?
-            transport_.reset( );
+            /// transport_.reset( );
         }
 
         bool push_to_slot( key_type id, const message_type &msg )
