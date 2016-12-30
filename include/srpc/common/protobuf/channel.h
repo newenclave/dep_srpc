@@ -3,7 +3,8 @@
 
 #include "google/protobuf/service.h"
 #include "google/protobuf/descriptor.h"
-#include "srpc/common/config/memory.h"
+
+#include "srpc/common/config/stdint.h"
 
 namespace srpc { namespace common { namespace protobuf {
 
@@ -13,6 +14,8 @@ namespace srpc { namespace common { namespace protobuf {
 //                                const Message* request,
 //                                Message* response,
 //                                Closure* done) = 0;
+    private:
+
     };
 
 }}}
