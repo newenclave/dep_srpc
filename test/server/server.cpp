@@ -217,8 +217,8 @@ public:
                                      const std::string &addr,
                                      srpc::uint16_t svc )
     {
-        srpc::shared_ptr<lister> inst =
-                srpc::make_shared<lister>(srpc::ref(ios), addr, svc, key( ));
+        srpc::shared_ptr<lister> inst
+            = srpc::make_shared<lister>( srpc::ref(ios), addr, svc, key( ) );
 
         inst->delegate_.reset( new accept_delegate(inst) );
         inst->acceptor_->set_delegate( inst->delegate_.get( ) );
@@ -249,20 +249,27 @@ int main( int argc, char *argv[ ] )
 {
     try {
 
+        srpc::uint16_t port = 23456;
+        if( argc >= 2 ) {
+            port = atoi(argv[1]);
+        }
+
         listener::io_service ios;
 
         common::timers::periodical tt(ios);
 
-        tt.call( [&ios, &tt](...) {
-            ios.stop( );
-            tt.cancel( );
-        }, srpc::chrono::milliseconds(20000) );
+//        tt.call( [&ios, &tt](...) {
+//            ios.stop( );
+//            tt.cancel( );
+//        }, srpc::chrono::milliseconds(20000) );
 
-        auto l = listener::create( ios, "0.0.0.0", 23456 );
+        auto l = listener::create( ios, "0.0.0.0", port );
 
         l->subscribe_on_accept_error(
-                    [](const SRPC_SYSTEM::error_code &e)
-                    { } );
+            [](const SRPC_SYSTEM::error_code &e)
+            {
+
+            } );
 
         l->subscribe_on_accept(
             [&ios](common::transport::interface *c,
