@@ -18,6 +18,8 @@ list( APPEND src_dirs
       ${INCLUDE_DIR}/srpc/common/queues
       ${INCLUDE_DIR}/srpc/common/protocol
       ${INCLUDE_DIR}/srpc/common/protocol/default
+      ${INCLUDE_DIR}/srpc/common/protobuf
+      ${INCLUDE_DIR}/srpc/common/protobuf/service
       ${INCLUDE_DIR}/srpc/common/queues/traits
       ${INCLUDE_DIR}/srpc/common/transport
       ${INCLUDE_DIR}/srpc/common/transport/delegates
