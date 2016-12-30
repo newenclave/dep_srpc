@@ -13,13 +13,14 @@ namespace srpc { namespace common {  namespace timers {
 
     class  periodical {
 
-        typedef chrono::steady_clock::duration duration_type;
-        periodical ( periodical& );
-        periodical &operator = ( periodical& );
+    public:
+        typedef SRPC_SYSTEM::error_code         error_code;
+    private:
+        typedef chrono::steady_clock::duration  duration_type;
 
-        typedef srpc::function<void (const SRPC_SYSTEM::error_code &)> hdl_type;
+        typedef srpc::function<void (const error_code &)> hdl_type;
 
-        void handler( const SRPC_SYSTEM::error_code &err, hdl_type userhdl )
+        void handler( const error_code &err, hdl_type userhdl )
         {
             userhdl( err );
             if( !err && enabled( ) ) {
@@ -47,9 +48,10 @@ namespace srpc { namespace common {  namespace timers {
             enabled_ = val;
         }
 
-    public:
+        periodical ( periodical& );
+        periodical &operator = ( periodical& );
 
-        typedef SRPC_SYSTEM::error_code        error_code;
+    public:
 
         periodical( SRPC_ASIO::io_service &ios )
             :timer_(ios)

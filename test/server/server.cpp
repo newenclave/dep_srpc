@@ -65,6 +65,8 @@ public:
     void on_message_ready( tag_type tag, buffer_type buff,
                            const_buffer_slice slice )
     {
+        namespace ph = srpc::placeholders;
+
         srpc::shared_ptr<test::run> msg = srpc::make_shared<test::run>( );
 
         msg->ParseFromArray( slice.data( ), slice.size( ) );
@@ -74,7 +76,7 @@ public:
                   << " Tag: " << tag << "\n";
 
         if( !buff ) {
-            buff = get_str( );
+            buff = cache_.get( );
         } else {
             buff->clear( );
         }
@@ -84,15 +86,17 @@ public:
         buffer_slice sl = prepare_buffer( buff, 0, msg );
         sl = insert_size_prefix( buff, sl );
 
+        cb_type::post_call_type callback =
+                srpc::bind( &protocol_client::cache_back, this,
+                             ph::_1, buff );
+
         get_transport( )->write( sl.begin( ), sl.size( ),
-            cb_type::post([this, buff](...) {
-                cache_.push( buff );
-            } ) );
+                                 cb_type::post( callback ) );
     }
 
     buffer_type unpack_message( const_buffer_slice &slice )
     {
-        buffer_type r = get_str( );
+        buffer_type r = cache_.get( );
         r->resize( slice.size( ) );
         for( size_t i=0; i<slice.size( ); i++ ) {
             (*r)[i] = slice.data( )[i] ^ 0xE4;
@@ -118,12 +122,13 @@ public:
         get_transport( )->close( );
     }
 
-    buffer_type get_str( )
+private:
+
+    void cache_back( const error_code &err, buffer_type buf )
     {
-        return cache_.get( );
+        cache_.push( buf );
     }
 
-private:
     io_service &ios_;
     cache_type cache_;
 };

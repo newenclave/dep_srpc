@@ -126,6 +126,7 @@ namespace srpc { namespace common { namespace details {
         };
 
     private:
+
         void cerase( iterator itr )
         {
             if( itr.node_->prev_ ) {
@@ -155,6 +156,28 @@ namespace srpc { namespace common { namespace details {
             ,back_(NULL)
             ,size_(0)
         { }
+
+        list( const list &other )
+            :front_(NULL)
+            ,back_(NULL)
+            ,size_(0)
+        {
+            list l(other.begin( ), other.end( ));
+            swap( l );
+        }
+
+        template <typename Itr>
+        list( Itr begin, Itr end )
+            :front_(NULL)
+            ,back_(NULL)
+            ,size_(0)
+        {
+            list l;
+            for( ; begin != end; ++begin ) {
+                l.push_back( *begin );
+            }
+            swap( l );
+        }
 
         ~list( )
         {
@@ -280,9 +303,9 @@ namespace srpc { namespace common { namespace details {
 
     private:
 
-        node *front_;
-        node *back_;
-        size_t size_;
+        node   *front_;
+        node   *back_;
+        size_t  size_;
     };
 
 

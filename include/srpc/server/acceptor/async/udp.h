@@ -18,10 +18,12 @@ namespace async {
 
         typedef common::transport::async::udp   parent_transport;
         typedef server::acceptor::interface     parent_acceptor;
-        typedef SRPC_ASIO::io_service           io_service;
 
     public:
-        typedef parent_transport::endpoint endpoint;
+
+        typedef SRPC_ASIO::io_service           io_service;
+        typedef parent_transport::endpoint      endpoint;
+
     private:
 
         class client_type: public common::transport::interface {
@@ -320,9 +322,10 @@ namespace async {
 
         void open( )
         {
+            typedef SRPC_ASIO::ip::udp asio_udp;
             ep_.address( ).is_v6( )
-                ? acceptor_->get_socket( ).open( SRPC_ASIO::ip::udp::v6( ) )
-                : acceptor_->get_socket( ).open( SRPC_ASIO::ip::udp::v4( ) );
+                ? acceptor_->get_socket( ).open( asio_udp::v6( ) )
+                : acceptor_->get_socket( ).open( asio_udp::v4( ) );
         }
 
         void bind( )
@@ -362,12 +365,12 @@ namespace async {
             acceptor_->resize_buffer( new_size );
         }
 
-        SRPC_ASIO::io_service &get_io_service( )
+        io_service &get_io_service( )
         {
             return acceptor_->get_io_service( );
         }
 
-        const SRPC_ASIO::io_service &get_io_service( ) const
+        const io_service &get_io_service( ) const
         {
             return acceptor_->get_io_service( );
         }
