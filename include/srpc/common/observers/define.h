@@ -21,6 +21,7 @@
     Visible:                                                                \
         Name##_type Name
 
+
 #define SRPC_OBSERVER_DEFINE_SAFE( Name, Sig ) \
     SRPC_OBSERVER_DEFINE_COMMON( Name, Sig, protected, srpc::recursive_mutex )
 
