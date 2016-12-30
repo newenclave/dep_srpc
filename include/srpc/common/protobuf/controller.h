@@ -1,7 +1,6 @@
 #ifndef SRPC_COMMON_PROTOBUF_CONTROLLER_H
 #define SRPC_COMMON_PROTOBUF_CONTROLLER_H
 
-
 #include "google/protobuf/service.h"
 #include "google/protobuf/descriptor.h"
 
