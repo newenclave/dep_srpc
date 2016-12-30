@@ -25,7 +25,7 @@
 #include "srpc/common/protocol/binary.h"
 
 #include "srpc/common/observers/define.h"
-#include "srpc/common/protobuf/service/wrapper.h"
+#include "srpc/common/protobuf/service.h"
 
 #include "protocol/t.pb.h"
 
@@ -40,7 +40,7 @@ using client_delegate = common::protocol::binary<message_sptr,
                                     common::sizepack::fixint<srpc::uint16_t>,
                                     common::sizepack::fixint<srpc::uint32_t> >;
 
-using service_wrapper = spb::service::wrapper;
+using service_wrapper = spb::service;
 
 class protocol_client: public client_delegate {
 
@@ -256,8 +256,7 @@ private:
 };
 
 using listener = lister<server::acceptor::async::udp>;
-using factory  = common::factory<std::string,
-                                 srpc::shared_ptr<spb::service::wrapper> >;
+using factory  = common::factory<std::string, srpc::shared_ptr<spb::service> >;
 
 //using listener = lister<server::acceptor::async::tcp>;
 
@@ -265,10 +264,10 @@ class test_service: public test::test_service {
 
 };
 
-srpc::shared_ptr<spb::service::wrapper> create( )
+srpc::shared_ptr<spb::service> create( )
 {
     srpc::shared_ptr<test_service> svc = srpc::make_shared<test_service>( );
-    return srpc::make_shared<spb::service::wrapper>(svc);
+    return srpc::make_shared<spb::service>(svc);
 }
 
 int main( int argc, char *argv[ ] )

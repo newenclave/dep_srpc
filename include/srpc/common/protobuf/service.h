@@ -1,5 +1,5 @@
-#ifndef SRPC_COMMON_PROIOBUF_SERVICE_WRAPPER_H
-#define SRPC_COMMON_PROIOBUF_SERVICE_WRAPPER_H
+#ifndef SRPC_COMMON_PROTOBUF_SERVICE_H
+#define SRPC_COMMON_PROTOBUF_SERVICE_H
 
 #include "google/protobuf/service.h"
 #include "google/protobuf/descriptor.h"
@@ -7,9 +7,7 @@
 
 namespace srpc { namespace common { namespace protobuf {
 
-namespace service {
-
-    class wrapper {
+    class service {
 
     public:
 
@@ -17,22 +15,22 @@ namespace service {
         typedef google::protobuf::MethodDescriptor  method_type;
         typedef srpc::shared_ptr<service_type>      service_sptr;
 
-        explicit wrapper( service_sptr svc )
+        explicit service( service_sptr svc )
             :service_(svc)
         { }
 
-        explicit wrapper( service_type *svc )
+        explicit service( service_type *svc )
             :service_(svc)
         { }
 
-        virtual ~wrapper( ) { }
+        virtual ~service( ) { }
 
-        service_type *service( )
+        service_type *get( )
         {
             return service_.get( );
         }
 
-        const service_type *service( ) const
+        const service_type *get( ) const
         {
             return service_.get( );
         }
@@ -70,7 +68,6 @@ namespace service {
     private:
         service_sptr service_;
     };
-}
 
 }}}
 
