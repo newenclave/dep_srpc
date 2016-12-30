@@ -1,8 +1,33 @@
-package srpc.rpc.lowlevel;
+package srpc.rpc;
 option cc_generic_services = true;
 
-message options {
+message call_options {
+    enum type_enum {
 
+        MESSAGE_NONE            = 0; // value for internal usage only
+
+        MESSAGE_CLIENT_CALL     = 1; // from client
+        MESSAGE_SERVER_CALL     = 2; // from server
+
+        MESSAGE_CLIENT_CALLBACK = 3; // from client
+        MESSAGE_SERVER_CALLBACK = 4; // from server
+
+        MESSAGE_SERVICE         = 5; // internal
+        MESSAGE_INTERNAL        = 6; // internal
+    }
+
+    enum flags_enum {
+        FLAG_CALLBACK_ALONE  = 0x01;
+    }
+
+    optional uint32 message_type    = 1; //[default = 0]; // @message_type_enum
+    optional uint32 message_flags   = 2; //[default = 0]; // @message_flags_enum
+
+}
+
+message call_info {
+    optional bytes service_id = 1;
+    optional bytes method_id  = 2;
 }
 
 message lowlevel {
