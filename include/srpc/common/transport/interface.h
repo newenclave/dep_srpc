@@ -78,7 +78,6 @@ namespace srpc { namespace common { namespace transport {
             return srpc::weak_ptr<interface const>( shared_from_this( ));
         }
 
-
         virtual void open( )  = 0;
         virtual void close( ) = 0;
 

@@ -24,11 +24,13 @@
 #include "srpc/common/protocol/binary.h"
 
 #include "srpc/common/observers/define.h"
+#include "srpc/common/protobuf/service/wrapper.h"
 
 #include "protocol/t.pb.h"
 
 using namespace srpc;
 namespace gpb = google::protobuf;
+namespace spb = srpc::common::protobuf;
 
 using message_sptr = srpc::shared_ptr<gpb::Message>;
 
@@ -37,7 +39,7 @@ using client_delegate = common::protocol::binary<message_sptr,
                                     common::sizepack::fixint<srpc::uint16_t>,
                                     common::sizepack::fixint<srpc::uint32_t> >;
 
-
+using service_wrapper = spb::service::wrapper;
 
 class protocol_client: public client_delegate {
 
@@ -51,13 +53,21 @@ class protocol_client: public client_delegate {
     typedef SRPC_ASIO::io_service io_service;
     typedef common::transport::interface::write_callbacks cb_type;
 
+protected:
+    struct key { };
 public:
 
-    protocol_client( io_service &ios )
+    protocol_client( io_service &ios, key )
         :client_delegate(100, 44000)
         ,ios_(ios)
         ,cache_(10)
     { }
+
+    static
+    srpc::shared_ptr<protocol_client> create( io_service &ios )
+    {
+        srpc::make_shared<protocol_client>( srpc::ref(ios), key( ) );
+    }
 
     void append_message( buffer_type buf, const message_type &m )
     {
@@ -279,8 +289,8 @@ int main( int argc, char *argv[ ] )
             {
                 std::cout << "New client " << addr << ":" << svc << "\n";
 
-                protocol_client_sptr next =
-                        srpc::make_shared<protocol_client>(srpc::ref(ios) );
+                protocol_client_sptr next
+                        = protocol_client::create( srpc::ref(ios) );
 
                 next->assign_transport( c );
                 next->get_transport( )->set_delegate( next.get( ) );
