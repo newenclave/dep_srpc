@@ -14,6 +14,7 @@
 #include "srpc/common/timers/once.h"
 #include "srpc/common/timers/periodical.h"
 #include "srpc/common/timers/ticks.h"
+#include "srpc/common/factory.h"
 
 #include "srpc/common/observers/simple.h"
 #include "srpc/server/acceptor/async/tcp.h"
@@ -255,7 +256,20 @@ private:
 };
 
 using listener = lister<server::acceptor::async::udp>;
+using factory  = common::factory<std::string,
+                                 srpc::shared_ptr<spb::service::wrapper> >;
+
 //using listener = lister<server::acceptor::async::tcp>;
+
+class test_service: public test::test_service {
+
+};
+
+srpc::shared_ptr<spb::service::wrapper> create( )
+{
+    srpc::shared_ptr<test_service> svc = srpc::make_shared<test_service>( );
+    return srpc::make_shared<spb::service::wrapper>(svc);
+}
 
 int main( int argc, char *argv[ ] )
 {
@@ -276,6 +290,11 @@ int main( int argc, char *argv[ ] )
 //        }, srpc::chrono::milliseconds(20000) );
 
         auto l = listener::create( ios, "0.0.0.0", port );
+
+        factory fac;
+        fac.assign( "test", &create );
+
+        auto rrr = fac.create( "test" );
 
         l->subscribe_on_accept_error(
             [](const SRPC_SYSTEM::error_code &e)

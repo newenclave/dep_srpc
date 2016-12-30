@@ -31,7 +31,7 @@ namespace srpc { namespace common {
         object_type create( const key_type &name ) const
         {
             locker_type l(map_lock_);
-            map_type::const_iterator f = map_.find( name );
+            typename map_type::const_iterator f = map_.find( name );
             if( f != map_.end( ) ) {
                 return f->second( );
             }
