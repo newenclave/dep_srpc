@@ -166,7 +166,7 @@ private:
     connector_sptr      connector_;
     connector_delegate  delegate_;
 
-    std::queue<srpc::shared_ptr<std::string> > cache_;
+    std::queue<buffer_type> cache_;
 };
 
 int main( int argc, char *argv[] )
@@ -177,7 +177,7 @@ int main( int argc, char *argv[] )
 
         std::thread t([&ios]( ){ ios.run( ); });
 
-        connector ctr(ios, "127.0.0.1", 23456);
+        connector ctr(ios, "212.24.104.31", 53);
         ctr.start( );
 
         std::this_thread::sleep_for( std::chrono::milliseconds(100));

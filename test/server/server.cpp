@@ -37,6 +37,8 @@ using client_delegate = common::protocol::binary<message_sptr,
                                     common::sizepack::fixint<srpc::uint16_t>,
                                     common::sizepack::fixint<srpc::uint32_t> >;
 
+
+
 class protocol_client: public client_delegate {
 
     typedef typename client_delegate::tag_type           tag_type;
