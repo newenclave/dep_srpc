@@ -20,7 +20,7 @@ namespace srpc { namespace common {
         typedef ObjectType                       object_type;
         typedef MutexType                        mutex_type;
 
-        typedef srpc::function<object_type *( )> producer_type;
+        typedef srpc::function<object_type ( )> producer_type;
 
     private:
 
@@ -28,14 +28,14 @@ namespace srpc { namespace common {
 
     public:
 
-        object_type *create( const key_type &name ) const
+        object_type create( const key_type &name ) const
         {
             locker_type l(map_lock_);
             map_type::const_iterator f = map_.find( name );
             if( f != map_.end( ) ) {
                 return f->second( );
             }
-            return NULL;
+            return object_type( );
         }
 
         void assign( const key_type &name, producer_type producer )
