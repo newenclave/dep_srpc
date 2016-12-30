@@ -65,32 +65,32 @@ public:
 
     void on_message( const char *message, size_t len )
     {
-        auto ctx = std::make_shared<mess_delegate::pack_context>( );
-        if( cnt-- > 0 ) {
+//        auto ctx = std::make_shared<mess_delegate::pack_context>( );
+//        if( cnt-- > 0 ) {
 
-            if( 0 == cnt % 10000 ) {
-                std::cout << cnt << std::endl;
-            }
+//            if( 0 == cnt % 10000 ) {
+//                std::cout << cnt << std::endl;
+//            }
 
-            pack_begin( *ctx, 10 * 100 );
+//            pack_begin( *ctx, 10 * 100 );
 
-            for( int i=0; i<100; i++ )
-                pack_update( *ctx, "??????????", 10 );
-            pack_end( *ctx );
+//            for( int i=0; i<100; i++ )
+//                pack_update( *ctx, "??????????", 10 );
+//            pack_end( *ctx );
 
-            parent_->write( ctx->data( ).c_str( ), ctx->data( ).size( ),
-            cb::post([ctx]( const bs::error_code &err, size_t len )
-            {
-//                if( err ) {
-//                    throw SRPC_SYSTEM::system_error( err );
-//                };
-//                std::cout << "sent " << len << " bytes from "
-//                            << ctx->data( ).size( )
-//                          << " error " << err.message( ) << "\n";
-            } ));
-        } else {
-            parent_->close( );
-        }
+//            parent_->write( ctx->data( ).c_str( ), ctx->data( ).size( ),
+//            cb::post([ctx]( const bs::error_code &err, size_t len )
+//            {
+////                if( err ) {
+////                    throw SRPC_SYSTEM::system_error( err );
+////                };
+////                std::cout << "sent " << len << " bytes from "
+////                            << ctx->data( ).size( )
+////                          << " error " << err.message( ) << "\n";
+//            } ));
+//        } else {
+//            parent_->close( );
+//        }
     }
 
     bool validate_length( size_t len )

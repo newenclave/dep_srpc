@@ -84,7 +84,7 @@ public:
 
     srpc::shared_ptr<common::transport::interface> parent_;
     using cb = common::transport::interface::write_callbacks;
-    mess_delegate::pack_context ctx;
+    //mess_delegate::pack_context ctx;
     std::uint64_t last_tick_ = ticks_now( );
     common::timers::periodical timer_;
 
@@ -109,18 +109,18 @@ public:
     void on_message( const char *message, size_t len )
     {
         //std::cout << "Message " << std::string(message, len) << "\n";
-        ++messages;
-        bytes += len;
-        last_tick_ = ticks_now( );
+//        ++messages;
+//        bytes += len;
+//        last_tick_ = ticks_now( );
 
-        ctx.clear( );
+//        ctx.clear( );
 
-        last_tick_ = ticks_now( );
+//        last_tick_ = ticks_now( );
 
-        pack_begin( ctx, len );
-        pack_update( ctx, message, len );
-        pack_end( ctx );
-        parent_->write( ctx.data( ).c_str( ), ctx.data( ).size( ) );
+//        pack_begin( ctx, len );
+//        pack_update( ctx, message, len );
+//        pack_end( ctx );
+//        parent_->write( ctx.data( ).c_str( ), ctx.data( ).size( ) );
     }
 
     bool validate_length( size_t len )
@@ -175,16 +175,16 @@ public:
     void on_stream_update( const char *part, size_t len )
     {
         //std::cout << "stream update " << std::string(part, len) << "\n";
-        auto ctx = std::make_shared<stream_delegate::pack_context>( );
-        if( len_ > 0) {
-            pack_length( *ctx, len_ );
-            len_ = 0;
-            ctx->data( ).append( part, part + len );
-        } else {
-            ctx->data( ).assign( part, part + len );
-        }
-        parent_->write( ctx->data( ).c_str( ), ctx->data( ).size( ),
-                        cb::post( [ctx]( ... ){  } ));
+//        auto ctx = std::make_shared<stream_delegate::pack_context>( );
+//        if( len_ > 0) {
+//            pack_length( *ctx, len_ );
+//            len_ = 0;
+//            ctx->data( ).append( part, part + len );
+//        } else {
+//            ctx->data( ).assign( part, part + len );
+//        }
+//        parent_->write( ctx->data( ).c_str( ), ctx->data( ).size( ),
+//                        cb::post( [ctx]( ... ){  } ));
     }
 
     void on_stream_end( )

@@ -15,38 +15,20 @@ namespace delegates {
         typedef srpc::common::const_buffer<char> buffer_type;
 
     public:
-        typedef SizePackPolicy size_policy;
+
+        typedef SizePackPolicy                  size_policy;
         typedef typename size_policy::size_type size_type;
+
+        static const size_t max_length = size_policy::max_length;
+        static const size_t min_length = size_policy::min_length;
 
         stream( )
             :cursor_(0)
         { }
 
-        class pack_context {
-            friend class stream<SizePackPolicy>;
-            std::string data_;
-        public:
-            std::string &data( )
-            {
-                return data_;
-            }
-
-            void clear( )
-            {
-                data_.clear( );
-            }
-        };
-
-        void pack_length( pack_context &ctx, size_t len )
+        size_t pack_size( size_type len, char *data )
         {
-            static const size_t max = size_policy::max_length;
-            if( max > 0 ) {
-                size_t old_size = ctx.data_.size( );
-                ctx.data_.resize( old_size + max + 1 );
-                size_t pack_size = size_policy::pack( len,
-                                                      &ctx.data_[old_size] );
-                ctx.data_.resize( old_size + pack_size );
-            }
+            return size_policy::pack( len, data );
         }
 
     private:
