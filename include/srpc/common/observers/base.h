@@ -5,6 +5,7 @@
 #include <set>
 
 #include "srpc/common/config/mutex.h"
+#include "srpc/common/config/memory.h"
 #include "srpc/common/details/list.h"
 #include "srpc/common/observers/traits/simple.h"
 
