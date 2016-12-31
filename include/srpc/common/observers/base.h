@@ -363,8 +363,8 @@ namespace srpc { namespace common { namespace observers {
         ~base( ) = default;
 #else
     private:
-        common( const common & );
-        common& operator = ( const common & );
+        base( const base & );
+        base& operator = ( const base & );
     public:
 
         virtual ~base( )
