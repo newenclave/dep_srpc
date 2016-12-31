@@ -1,36 +1,55 @@
 package srpc.rpc;
 option cc_generic_services = true;
 
-message call_options {
+import "errors.proto";
+import "options.proto";
+
+message call_info {
     enum type_enum {
 
-        MESSAGE_NONE            = 0; // value for internal usage only
+        TYPE_NONE            = 0; // value for internal usage only
 
-        MESSAGE_CLIENT_CALL     = 1; // from client
-        MESSAGE_SERVER_CALL     = 2; // from server
+        TYPE_CLIENT_CALL     = 1; // from client
+        TYPE_SERVER_CALL     = 2; // from server
 
-        MESSAGE_CLIENT_CALLBACK = 3; // from client
-        MESSAGE_SERVER_CALLBACK = 4; // from server
+        TYPE_CLIENT_CALLBACK = 3; // from client
+        TYPE_SERVER_CALLBACK = 4; // from server
 
-        MESSAGE_SERVICE         = 5; // internal
-        MESSAGE_INTERNAL        = 6; // internal
+        TYPE_SERVICE         = 5; // internal
+        TYPE_INTERNAL        = 6; // internal
+
     }
 
     enum flags_enum {
         FLAG_CALLBACK_ALONE  = 0x01;
     }
 
-    optional uint32 message_type    = 1; //[default = 0]; // @message_type_enum
-    optional uint32 message_flags   = 2; //[default = 0]; // @message_flags_enum
+    optional uint32 call_type    = 1; //[default = 0]; // @message_type_enum
+    optional uint32 call_flags   = 2; //[default = 0]; // @message_flags_enum
 
 }
 
-message call_info {
+message call_name {
     optional bytes service_id = 1;
     optional bytes method_id  = 2;
 }
 
 message lowlevel {
-    optional uint64 id = 1;
+
+    // --- header --- //
+    optional uint64                         id  = 1;
+    optional uint64                  target_id  = 2;
+    optional call_info                    info  = 3;
+    optional call_name                    call  = 4;
+    optional srpc.rpc.errors.container   error  = 5;
+    optional lowlevel_options              opt  = 6;
+    optional bytes                channel_data  = 7; // some optional data from
+                                                     // the OTHER side!
+    optional bytes               lowlevel_data  = 8; // some optional data
+                                                     // proto lowlevel can use
+
+    // --- //
+    optional bytes  request = 20;
+    optional bytes response = 21;
 }
 
