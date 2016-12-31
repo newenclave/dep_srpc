@@ -1,37 +1,13 @@
 set( lib_name ${COMMON_LIB_NAME} )
 
+include( "../../srpc_files.cmake" )
+
+set(SRPC_DIR_LIST)
+srpc_all_headers_path( SRPC_DIR_LIST "../../include" )
+
 list( APPEND src_dirs
       .
-      ${INCLUDE_DIR}/srpc/server
-      ${INCLUDE_DIR}/srpc/common
-      ${INCLUDE_DIR}/srpc/common/hash
-      ${INCLUDE_DIR}/srpc/common/timers
-      ${INCLUDE_DIR}/srpc/common/timers/calls
-      ${INCLUDE_DIR}/srpc/common/sizepack
-      ${INCLUDE_DIR}/srpc/common/observers
-      ${INCLUDE_DIR}/srpc/common/observers/traits
-      ${INCLUDE_DIR}/srpc/common/details
-      ${INCLUDE_DIR}/srpc/common/cache
-      ${INCLUDE_DIR}/srpc/common/cache/traits
-      ${INCLUDE_DIR}/srpc/common/result
-      ${INCLUDE_DIR}/srpc/common/result/traits
-      ${INCLUDE_DIR}/srpc/common/queues
-      ${INCLUDE_DIR}/srpc/common/protocol
-      ${INCLUDE_DIR}/srpc/common/protocol/default
-      ${INCLUDE_DIR}/srpc/common/protobuf
-      ${INCLUDE_DIR}/srpc/common/protobuf/service
-      ${INCLUDE_DIR}/srpc/common/queues/traits
-      ${INCLUDE_DIR}/srpc/common/transport
-      ${INCLUDE_DIR}/srpc/common/transport/delegates
-      ${INCLUDE_DIR}/srpc/common/transport/async
-      ${INCLUDE_DIR}/srpc/common/config
-      ${INCLUDE_DIR}/srpc/server
-      ${INCLUDE_DIR}/srpc/server/acceptor
-      ${INCLUDE_DIR}/srpc/server/acceptor/async
-      ${INCLUDE_DIR}/srpc/client
-      ${INCLUDE_DIR}/srpc/client/connector
-      ${INCLUDE_DIR}/srpc/client/connector/async
-      ${INCLUDE_DIR}/srpc/client/connector/async/impl
+      ${SRPC_DIR_LIST}
       )
 
 foreach( src_dir ${src_dirs} )
