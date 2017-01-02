@@ -87,6 +87,16 @@ namespace srpc { namespace common { namespace protocol {
             return transport_.get( );
         }
 
+        void set_max_length( size_t len )
+        {
+            max_length_ = len;
+        }
+
+        void max_length( ) const
+        {
+            return max_length_;
+        }
+
     protected:
 
         template <typename Policy, typename Itr>
@@ -154,6 +164,7 @@ namespace srpc { namespace common { namespace protocol {
                               const_buffer_slice(m, (end - m) - hash_size) );
         }
 
+        static
         buffer_slice insert_prefix( buffer_type buf, buffer_slice dst,
                                     const_buffer_slice src )
         {
@@ -169,6 +180,7 @@ namespace srpc { namespace common { namespace protocol {
             }
         }
 
+        static
         buffer_slice insert_size_prefix( buffer_type buf, buffer_slice slice )
         {
             typedef typename parent_type::size_policy size_policy;
@@ -218,16 +230,6 @@ namespace srpc { namespace common { namespace protocol {
         virtual void append_message( buffer_type, const message_type & )
         { }
 
-        void set_max_length( size_t len )
-        {
-            max_length_ = len;
-        }
-
-        void max_length( ) const
-        {
-            return max_length_;
-        }
-
         virtual bool validate_length( size_t len )
         {
             return len <= max_length_;
@@ -262,6 +264,16 @@ namespace srpc { namespace common { namespace protocol {
         bool push_to_slot( key_type id, const message_type &msg )
         {
             return queues_.push_to_slot( id, msg ) == result_enum::OK;
+        }
+
+        queue_type &message_queue( )
+        {
+            return queues_;
+        }
+
+        const queue_type &message_queue( ) const
+        {
+            return queues_;
         }
 
     private:
