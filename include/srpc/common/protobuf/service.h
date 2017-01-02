@@ -12,8 +12,9 @@ namespace srpc { namespace common { namespace protobuf {
     public:
 
         typedef google::protobuf::Service           service_type;
-        typedef google::protobuf::MethodDescriptor  method_type;
         typedef srpc::shared_ptr<service_type>      service_sptr;
+        typedef srpc::shared_ptr<service>           shared_type;
+        typedef google::protobuf::MethodDescriptor  method_type;
 
         explicit service( service_sptr svc )
             :service_(svc)
@@ -33,6 +34,18 @@ namespace srpc { namespace common { namespace protobuf {
         const service_type *get( ) const
         {
             return service_.get( );
+        }
+
+        static
+        shared_type wrap( service_sptr serv )
+        {
+            return srpc::make_shared<service>( serv );
+        }
+
+        static
+        shared_type wrap( service_type *serv )
+        {
+            return srpc::make_shared<service>( serv );
         }
 
         virtual const std::string &name( )

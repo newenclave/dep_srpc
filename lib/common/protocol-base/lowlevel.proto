@@ -42,7 +42,7 @@ message lowlevel {
     optional call_info                    info  = 3;
     optional call_name                    call  = 4;
     optional srpc.rpc.errors.container   error  = 5;
-    optional lowlevel_options              opt  = 6;
+    optional srpc.rpc.options.lowlevel     opt  = 6;
     optional bytes                channel_data  = 7; // some optional data from
                                                      // the OTHER side!
     optional bytes               lowlevel_data  = 8; // some optional data

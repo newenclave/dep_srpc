@@ -3,12 +3,9 @@ import "google/protobuf/descriptor.proto";
 
 // index 56000
 
-package srpc.rpc;
+package srpc.rpc.options;
 
-message options {
-
-    /// client level "at least"
-    optional uint32     level            = 1;
+message channel {
 
     /// other side waits answer
     optional bool       wait             = 2; //[ default = true ];
@@ -20,13 +17,13 @@ message options {
     optional bool       accept_callbacks = 4; //[ default = true ];
 };
 
-message lowlevel_options {
+message lowlevel {
     optional bool   wait             = 2; //[default = true];
     optional bool   accept_callbacks = 4; //[default = true];
     optional bool   accept_response  = 5; //[default = true];
 }
 
-message session_options {
+message session {
     optional uint32 max_active_calls    = 1; //[default = 5];      //per user
     optional uint32 max_message_length  = 2; //[default = 65536];  //per user
 //    optional uint32 max_total_calls     = 3; //[default = 20];
@@ -36,10 +33,3 @@ message session_options {
                                                                    // per user
 }
 
-extend google.protobuf.ServiceOptions {
-    optional options service_options = 56001;
-}
-
-extend google.protobuf.MethodOptions {
-    optional options method_options = 56002;
-}
