@@ -15,10 +15,10 @@
 
 namespace srpc { namespace common { namespace protocol {
 
-    class noname: public binary<srpc::shared_ptr<srpc::rpc::lowlevel>,
-                                sizepack::none,
-                                sizepack::varint<srpc::uint32_t>,
-                                srpc::uint64_t>
+    class noname: public binary< srpc::shared_ptr<srpc::rpc::lowlevel>,
+                                 sizepack::none,
+                                 sizepack::varint<srpc::uint32_t>,
+                                 srpc::uint64_t >
     {
         typedef binary< srpc::shared_ptr<srpc::rpc::lowlevel>,
                         sizepack::none,
@@ -46,9 +46,12 @@ namespace srpc { namespace common { namespace protocol {
         typedef typename parent_type::buffer_type        buffer_type;
         typedef typename parent_type::const_buffer_slice const_buffer_slice;
         typedef typename parent_type::buffer_slice       buffer_slice;
+        typedef typename parent_type::error_code         error_code;
 
         typedef common::cache::simple<std::string>       cache_type;
         typedef common::cache::simple<message_type>      message_cache_type;
+
+        typedef google::protobuf::MessageLite            message_lite;
 
         typedef SRPC_ASIO::io_service io_service;
         typedef common::transport::interface::write_callbacks cb_type;
@@ -67,21 +70,83 @@ namespace srpc { namespace common { namespace protocol {
 
     protected:
 
-        void append_message( buffer_type buff, const message_type &mess )
-        {
-            mess->AppendToString( *buff );
-        }
-
         void on_message_ready( tag_type, buffer_type,
                                const_buffer_slice slice )
         {
             message_type mess = mess_cache_.get( );
             mess->ParseFromArray( slice.data( ), slice.size( ) );
+            bool callback = !!( mess->info( ).call_type( ) &
+                                srpc::rpc::call_info::TYPE_CALLBACK_MASK );
+
+            srpc::uint32_t call_type = mess->info( ).call_type( )
+                                & ~srpc::rpc::call_info::TYPE_CALLBACK_MASK;
+            if( callback ) {
+                //if(  )
+            } else {
+
+            }
+        }
+
+        buffer_slice prepare_message( buffer_type buf, tag_type tag,
+                                      const message_lite &mess )
+        {
+            typedef typename parent_type::size_policy size_policy;
+            const size_t old_len = buf->size( );
+
+            tag_policy::append( tag, *buf );
+
+            mess.AppendToString( *buf );
+
+            buf->resize( buf->size( ) + hash_->length( ) );
+
+            hash_->get( buf->c_str( ) + old_len,
+                        buf->size( )  - old_len - hash_->length( ),
+                        &(*buf)[buf->size( )    - hash_->length( )]);
+
+            buffer_slice res( &(*buf)[old_len], buf->size( ) - old_len );
+
+            return pack_message( buf, res );
+
+        }
+
+        static void default_cb( )
+        { }
+
+        void push_cache_back( const error_code &err,
+                              buffer_type buff, srpc::function<void ( )> cb )
+        {
+            if( !err ) {
+                buffer_cache_.push( buff );
+                cb( );
+            }
+        }
+
+        void send_message( const google::protobuf::MessageLite &mess,
+                           srpc::function<void ( )> cb )
+        {
+            namespace ph = srpc::placeholders;
+
+            buffer_type  buff  = buffer_cache_.get( );
+            buffer_slice slice = prepare_message( buff, 0, mess );
+
+            cb_type::post_call_type post_callback =
+                    srpc::bind( &noname::push_cache_back, this, ph::_1,
+                                buff, cb );
+
+            get_transport( )->write( slice.data( ), slice.size( ),
+                                     cb_type::post( post_callback ) );
+
+        }
+
+        void send_message( const google::protobuf::MessageLite &mess )
+        {
+            send_message( mess, &noname::default_cb );
         }
 
     private:
-        service_factory     factory_;
+
         message_cache_type  mess_cache_;
+        cache_type          buffer_cache_;
         srpc::uint32_t      call_type_;
         srpc::uint32_t      callback_type_;
     };

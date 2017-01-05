@@ -7,16 +7,17 @@ import "options.proto";
 message call_info {
     enum type_enum {
 
-        TYPE_NONE            = 0; // value for internal usage only
+        TYPE_NONE            = 0x00; // value for internal usage only
 
-        TYPE_CLIENT_CALL     = 1; // from client
-        TYPE_SERVER_CALL     = 2; // from server
+        TYPE_CLIENT_CALL     = 0x01; // from client bin(00001)
+        TYPE_SERVER_CALL     = 0x02; // from server bin(00010)
 
-        TYPE_CLIENT_CALLBACK = 3; // from client
-        TYPE_SERVER_CALLBACK = 4; // from server
+        TYPE_CALLBACK_MASK   = 0x04; // mask        bin(00100)
+        TYPE_CLIENT_CALLBACK = 0x05; // from client bin(00101)
+        TYPE_SERVER_CALLBACK = 0x06; // from server bin(00110)
 
-        TYPE_SERVICE         = 5; // internal
-        TYPE_INTERNAL        = 6; // internal
+        TYPE_SERVICE         = 0x08; // internal    bin(01000)
+        TYPE_INTERNAL        = 0x18; // internal    bin(11000)
 
     }
 
@@ -24,8 +25,8 @@ message call_info {
         FLAG_CALLBACK_ALONE  = 0x01;
     }
 
-    optional uint32 call_type    = 1; //[default = 0]; // @message_type_enum
-    optional uint32 call_flags   = 2; //[default = 0]; // @message_flags_enum
+    optional uint32 call_type    = 1; //[default = 0]; // @type_enum
+    optional uint32 call_flags   = 2; //[default = 0]; // @flags_enum
 
 }
 
