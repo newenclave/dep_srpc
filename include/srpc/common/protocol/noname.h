@@ -81,9 +81,20 @@ namespace srpc { namespace common { namespace protocol {
             srpc::uint32_t call_type = mess->info( ).call_type( )
                                 & ~srpc::rpc::call_info::TYPE_CALLBACK_MASK;
             if( callback ) {
-                //if(  )
+
             } else {
 
+            }
+        }
+
+        void setup_message( message_type &mess, srpc::uint64_t target )
+        {
+            mess->set_id( next_id( ) );
+            if( target ) {
+                mess->set_target_id( target );
+                mess->mutable_info( )->set_call_type( callback_type_ );
+            } else {
+                mess->mutable_info( )->set_call_type( call_type_ );
             }
         }
 
