@@ -32,13 +32,6 @@ namespace srpc { namespace common { namespace protocol {
                           : srpc::rpc::call_info::TYPE_CLIENT_CALL;
         }
 
-        static
-        srpc::uint32_t get_callback_type( bool server )
-        {
-            return server ? srpc::rpc::call_info::TYPE_SERVER_CALLBACK
-                          : srpc::rpc::call_info::TYPE_CLIENT_CALLBACK;
-        }
-
     public:
 
         typedef typename parent_type::message_type       message_type;
@@ -65,7 +58,6 @@ namespace srpc { namespace common { namespace protocol {
         noname( bool server, size_t max_length )
             :parent_type(server ? 100 : 101, max_length)
             ,call_type_(get_call_type(server))
-            ,callback_type_(get_callback_type(server))
         { }
 
     protected:
@@ -80,10 +72,14 @@ namespace srpc { namespace common { namespace protocol {
 
             srpc::uint32_t call_type = mess->info( ).call_type( )
                                 & ~srpc::rpc::call_info::TYPE_CALLBACK_MASK;
-            if( callback ) {
-
+            if( call_type == call_type_ ) {
+                push_to_slot( mess->id( ), mess );
             } else {
-
+                if( callback ) {
+                    push_to_slot( mess->target_id( ), mess );
+                } else {
+                    //execute_call( mess );
+                }
             }
         }
 
@@ -92,7 +88,8 @@ namespace srpc { namespace common { namespace protocol {
             mess->set_id( next_id( ) );
             if( target ) {
                 mess->set_target_id( target );
-                mess->mutable_info( )->set_call_type( callback_type_ );
+                mess->mutable_info( )->set_call_type( callback_type_ |
+                                    srpc::rpc::call_info::TYPE_CALLBACK_MASK  );
             } else {
                 mess->mutable_info( )->set_call_type( call_type_ );
             }
@@ -159,7 +156,6 @@ namespace srpc { namespace common { namespace protocol {
         message_cache_type  mess_cache_;
         cache_type          buffer_cache_;
         srpc::uint32_t      call_type_;
-        srpc::uint32_t      callback_type_;
     };
 
 }}}
