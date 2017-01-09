@@ -15,15 +15,17 @@
 
 namespace srpc { namespace common { namespace protocol {
 
+    template <typename SizePackPolicy = sizepack::varint<srpc::uint32_t> >
     class noname: public binary< srpc::shared_ptr<srpc::rpc::lowlevel>,
-                                 sizepack::none,
-                                 sizepack::varint<srpc::uint32_t>,
+                                 sizepack::none, SizePackPolicy,
                                  srpc::uint64_t >
     {
+
         typedef binary< srpc::shared_ptr<srpc::rpc::lowlevel>,
-                        sizepack::none,
-                        sizepack::varint<srpc::uint32_t>,
+                        sizepack::none, SizePackPolicy,
                         srpc::uint64_t > parent_type;
+
+        typedef noname<SizePackPolicy> this_type;
 
         typedef srpc::function<void (void)> empty_call;
 
@@ -43,11 +45,13 @@ namespace srpc { namespace common { namespace protocol {
 
     public:
 
+        typedef SizePackPolicy sizepack_polisy;
         typedef srpc::function<void (bool)> on_ready_type;
 
         typedef srpc::rpc::lowlevel                      lowlevel_message_type;
         typedef typename parent_type::message_type       message_type;
         typedef typename parent_type::tag_type           tag_type;
+        typedef typename parent_type::tag_policy         tag_policy;
         typedef typename parent_type::buffer_type        buffer_type;
         typedef typename parent_type::const_buffer_slice const_buffer_slice;
         typedef typename parent_type::buffer_slice       buffer_slice;
@@ -78,7 +82,7 @@ namespace srpc { namespace common { namespace protocol {
 
         void setup_message( lowlevel_message_type &mess, srpc::uint64_t target )
         {
-            mess.set_id( next_id( ) );
+            mess.set_id( this->next_id( ) );
             if( target ) {
                 mess.set_target_id( target );
                 mess.mutable_info( )
@@ -104,8 +108,8 @@ namespace srpc { namespace common { namespace protocol {
                     srpc::bind( &noname::push_cache_back, this, ph::_1,
                                 buff, cb );
 
-            get_transport( )->write( slice.data( ), slice.size( ),
-                                     cb_type::post( post_callback ) );
+            this->get_transport( )->write( slice.data( ), slice.size( ),
+                                           cb_type::post( post_callback ) );
             return true;
         }
 
@@ -224,12 +228,12 @@ namespace srpc { namespace common { namespace protocol {
                                 & ~srpc::rpc::call_info::TYPE_CALLBACK_MASK;
 
             if( call_type == call_type_ ) {
-                push_to_slot( mess->id( ), mess );
+                this->push_to_slot( mess->id( ), mess );
             } else {
                 if( callback ) {
-                    push_to_slot( mess->target_id( ), mess );
+                    this->push_to_slot( mess->target_id( ), mess );
                 } else {
-                    execute_call( mess );
+                    this->execute_call( mess );
                 }
             }
         }
@@ -247,7 +251,7 @@ namespace srpc { namespace common { namespace protocol {
             buf->resize( size_policy::max_length );
 
             const size_t old_len    = buf->size( );
-            const size_t hash_size  = hash( )->length( );
+            const size_t hash_size  = this->hash( )->length( );
 
             tag_policy::append( tag, *buf );
 
@@ -255,16 +259,16 @@ namespace srpc { namespace common { namespace protocol {
 
             buf->resize( buf->size( ) + hash_size );
 
-            hash( )->get( buf->c_str( ) + old_len,
-                          buf->size( )  - old_len - hash_size,
-                          &(*buf)[buf->size( )    - hash_size]);
+            this->hash( )->get( buf->c_str( ) + old_len,
+                                buf->size( )  - old_len - hash_size,
+                             &(*buf)[buf->size( )    - hash_size]);
 
             buffer_slice res( &(*buf)[old_len],
-                              buf->size( ) - old_len );
+                                 buf->size( ) - old_len );
 
-            buffer_slice packed = pack_message( buf, res );
+            buffer_slice packed = this->pack_message( buf, res );
 
-            return insert_size_prefix( buf, packed );
+            return this->insert_size_prefix( buf, packed );
         }
 
         static void default_cb( )

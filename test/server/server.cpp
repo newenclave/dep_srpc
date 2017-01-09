@@ -36,7 +36,7 @@ namespace spb = srpc::common::protobuf;
 using message_sptr = srpc::shared_ptr<gpb::Message>;
 
 using size_policy     = common::sizepack::varint<size_t>;
-using client_delegate = common::protocol::noname;
+using client_delegate = common::protocol::noname<>;
 
 using service_wrapper = spb::service;
 
