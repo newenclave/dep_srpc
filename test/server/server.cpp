@@ -40,6 +40,17 @@ using client_delegate = common::protocol::noname;
 
 using service_wrapper = spb::service;
 
+class test_service: public test::test_service {
+
+};
+
+srpc::shared_ptr<spb::service> create_svc( )
+{
+    srpc::shared_ptr<test_service> svc = srpc::make_shared<test_service>( );
+    return srpc::make_shared<spb::service>(svc);
+}
+
+
 class protocol_client: public client_delegate {
 
     typedef typename client_delegate::tag_type           tag_type;
@@ -74,7 +85,7 @@ public:
     service_sptr get_service( const message_type & )
     {
         std::cout << "request service!\n";
-        return service_sptr( );
+        return create_svc( );
     }
 
     io_service &ios_;
@@ -195,16 +206,6 @@ using factory  = common::factory<std::string, srpc::shared_ptr<spb::service> >;
 
 //using listener = lister<server::acceptor::async::tcp>;
 
-class test_service: public test::test_service {
-
-};
-
-srpc::shared_ptr<spb::service> create( )
-{
-    srpc::shared_ptr<test_service> svc = srpc::make_shared<test_service>( );
-    return srpc::make_shared<spb::service>(svc);
-}
-
 int main( int argc, char *argv[ ] )
 {
     try {
@@ -226,7 +227,7 @@ int main( int argc, char *argv[ ] )
         auto l = listener::create( ios, "0.0.0.0", port );
 
         factory fac;
-        fac.assign( "test", &create );
+        fac.assign( "test", &create_svc );
 
         auto rrr = fac.create( "test" );
 

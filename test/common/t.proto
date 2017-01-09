@@ -17,4 +17,5 @@ service test_service {
     rpc last_call(empty) returns (empty) { };
     rpc call3(empty) returns (empty) { };
     rpc call4(empty) returns (empty) { };
+    rpc call6(run) returns (run) { };
 }

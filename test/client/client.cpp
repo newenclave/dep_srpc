@@ -145,7 +145,9 @@ int main( int argc, char *argv[] )
 
         srpc::rpc::lowlevel ll;
         ctr.setup_message( ll, 0 );
+
         ll.set_request( test );
+        ll.mutable_call( )->set_method_id( "call6" );
         ctr.send_message( ll );
 
         while( !std::cin.eof( ) ) {
