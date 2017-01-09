@@ -14,16 +14,18 @@
 namespace srpc { namespace common { namespace queues {
 
     template<typename KeyType, typename ValueType,
-             typename QueueTrait = traits::simple<ValueType> >
+             typename QueueTrait = traits::simple<ValueType>,
+             typename MutexType  = srpc::mutex >
     class condition {
 
-        typedef srpc::lock_guard<srpc::mutex>  locker;
-        typedef srpc::unique_lock<srpc::mutex> unique_lock;
+        typedef srpc::lock_guard<MutexType>  locker;
+        typedef srpc::unique_lock<MutexType> unique_lock;
 
     public:
 
-        typedef QueueTrait queue_trait;
-        typedef typename   queue_trait::queue_type queue_type;
+        typedef MutexType   mutex_type;
+        typedef QueueTrait  queue_trait;
+        typedef typename    queue_trait::queue_type queue_type;
 
         enum result_enum {
             OK       = 0,
@@ -34,7 +36,8 @@ namespace srpc { namespace common { namespace queues {
 
         struct slot_type {
 
-            typedef condition<KeyType, ValueType, QueueTrait> parent_type;
+            typedef condition<KeyType, ValueType,
+                              QueueTrait, MutexType>  parent_type;
             typedef typename parent_type::result_enum result_enum;
 
         public:
@@ -133,13 +136,6 @@ namespace srpc { namespace common { namespace queues {
         };
 
         typedef srpc::shared_ptr<slot_type> slot_ptr;
-
-    private:
-
-        typedef std::map<size_t, slot_ptr> map_type;
-
-        map_type     map_;
-        srpc::mutex  map_lock_;
 
     public:
 
@@ -251,6 +247,12 @@ namespace srpc { namespace common { namespace queues {
             return slot->read_for( result, td );
         }
 
+    private:
+
+        typedef std::map<size_t, slot_ptr> map_type;
+
+        map_type    map_;
+        mutex_type  map_lock_;
     };
 
 
