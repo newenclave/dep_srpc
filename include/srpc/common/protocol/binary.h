@@ -173,7 +173,7 @@ namespace srpc { namespace common { namespace protocol {
             }
 
             on_message_ready( tag, unpacked,
-                              const_buffer_slice(m, (end - m) - hash_size) );
+                              const_buffer_slice(m, mess_len - hash_size) );
         }
 
         static

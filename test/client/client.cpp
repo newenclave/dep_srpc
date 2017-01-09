@@ -132,7 +132,6 @@ int main( int argc, char *argv[] )
         for( int i=0; i<100000; ++i ) {
 
             ctr.setup_message( ll, 0 );
-            ll.set_request( d );
             auto slot = ctr.add_slot( ll.id( ) );
             ctr.send_message( ll );
             srpc::shared_ptr<srpc::rpc::lowlevel> mess;

@@ -111,9 +111,9 @@ namespace srpc { namespace common { namespace protocol {
         void clear_message( message_type &msg )
         {
             msg->clear_call( );
+            msg->clear_opt( );
             msg->clear_request( );
             msg->clear_response( );
-            msg->clear_opt( );
         }
 
         void execute_default( message_type msg )
@@ -226,7 +226,7 @@ namespace srpc { namespace common { namespace protocol {
                           buf->size( )  - old_len - hash_size,
                           &(*buf)[buf->size( )    - hash_size]);
 
-            buffer_slice res( &(*buf)[0]   + old_len,
+            buffer_slice res( &(*buf)[old_len],
                               buf->size( ) - old_len );
 
             buffer_slice packed = pack_message( buf, res );
