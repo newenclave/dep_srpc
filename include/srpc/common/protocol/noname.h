@@ -38,7 +38,12 @@ namespace srpc { namespace common { namespace protocol {
 
         };
 
+        static void default_on_ready( bool )
+        { }
+
     public:
+
+        typedef srpc::function<void (bool)> on_ready_type;
 
         typedef srpc::rpc::lowlevel                      lowlevel_message_type;
         typedef typename parent_type::message_type       message_type;
@@ -65,6 +70,8 @@ namespace srpc { namespace common { namespace protocol {
         noname( bool server, size_t max_length )
             :parent_type(server ? 100 : 101, max_length)
             ,call_type_(get_call_type(server))
+            ,on_ready_(&noname::default_on_ready)
+            ,ready_(false)
         { }
 
         void setup_message( lowlevel_message_type &mess, srpc::uint64_t target )
@@ -80,9 +87,13 @@ namespace srpc { namespace common { namespace protocol {
             }
         }
 
-        void send_message( const message_lite &mess, empty_call cb )
+        bool send_message( const message_lite &mess, empty_call cb )
         {
             namespace ph = srpc::placeholders;
+
+            if( !ready( ) ) {
+                return false;
+            }
 
             buffer_type  buff  = buffer_cache_.get( );
             buffer_slice slice = prepare_message( buff, 0, mess );
@@ -93,15 +104,34 @@ namespace srpc { namespace common { namespace protocol {
 
             get_transport( )->write( slice.data( ), slice.size( ),
                                      cb_type::post( post_callback ) );
-
+            return true;
         }
 
-        void send_message( const message_lite &mess )
+        bool send_message( const message_lite &mess )
         {
-            send_message( mess, &noname::default_cb );
+            return send_message( mess, &noname::default_cb );
+        }
+
+        void assign_on_ready( on_ready_type value )
+        {
+            if( value ) {
+                on_ready_ = value;
+            } else {
+                on_ready_ = &noname::default_on_ready;
+            }
+        }
+
+        bool ready(  )
+        {
+            return ready_;
         }
 
     protected:
+
+        void set_ready( bool value )
+        {
+            on_ready_(value);
+        }
 
         void push_message_to_cache( message_type msg )
         {
@@ -257,6 +287,8 @@ namespace srpc { namespace common { namespace protocol {
         srpc::uint32_t      call_type_;
         message_cache_type  mess_cache_;
         cache_type          buffer_cache_;
+        on_ready_type       on_ready_;
+        bool                ready_;
     };
 
 }}}
