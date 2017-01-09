@@ -122,33 +122,28 @@ int main( int argc, char *argv[] )
         connector ctr(ios, "127.0.0.1", 23456);
         ctr.start( );
 
-        std::this_thread::sleep_for( std::chrono::milliseconds(100));
-
-        std::string test;
-        for( int i=0; i<3000; i++ ) {
-            test.push_back( (char)((i % 10) + '0') );
-        }
+        std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 
         srpc::rpc::lowlevel ll;
-        ctr.setup_message( ll, 0 );
-
-        ll.set_request( test );
+        ll.set_request( "!!!!!!!!!!!!!!" );
         ll.mutable_call( )->set_method_id( "call6" );
-        ctr.send_message( ll );
 
-        while( !std::cin.eof( ) ) {
-            std::string d;
-            std::cin >> d;
+        std::string d = "!!!!!!!!!!!!!!";
+        for( int i=0; i<100000; ++i ) {
+
             ctr.setup_message( ll, 0 );
             ll.set_request( d );
             auto slot = ctr.add_slot( ll.id( ) );
             ctr.send_message( ll );
             srpc::shared_ptr<srpc::rpc::lowlevel> mess;
             auto res = slot->read_for( mess, srpc::chrono::seconds(1) );
-            if(mess) {
-                std::cout << res << ": " << mess->DebugString( ) << "\n";
+            if( 0 != res ) {
+                break;
             }
+            ctr.erase_slot( slot );
         }
+
+        ios.stop( );
 
         t.join( );
 

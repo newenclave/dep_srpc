@@ -34,6 +34,10 @@ namespace srpc { namespace common { namespace protocol {
                           : srpc::rpc::call_info::TYPE_CLIENT_CALL;
         }
 
+        struct call_keeper {
+
+        };
+
     public:
 
         typedef srpc::rpc::lowlevel                      lowlevel_message_type;
@@ -148,6 +152,13 @@ namespace srpc { namespace common { namespace protocol {
             req->ParseFromString( msg->request( ) );
 
             svc->call( call, NULL, req, res, NULL );
+            msg->clear_call( );
+            msg->clear_opt( );
+            msg->clear_request( );
+            res->AppendPartialToString(msg->mutable_response( ));
+
+            send_message( *msg );
+            mess_cache_.push( msg );
         }
 
         virtual void execute_call( message_type msg )

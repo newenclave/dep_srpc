@@ -40,12 +40,15 @@ using client_delegate = common::protocol::noname;
 
 using service_wrapper = spb::service;
 
+srpc::atomic<srpc::uint64_t> g_counter(0);
+
 class test_service: public test::test_service {
     void call6(::google::protobuf::RpcController* controller,
                const ::test::run* request,
                ::test::run* response,
                ::google::protobuf::Closure* done )
     {
+        g_counter++;
         response->set_name( "!!!!?????" );
         if(done) done->Run( );
     }
@@ -78,7 +81,7 @@ public:
     protocol_client( io_service &ios, key )
         :client_delegate(true, 44000)
         ,ios_(ios)
-        ,cache_(10)
+        ,svc_(create_svc( ))
     { }
 
     static
@@ -92,12 +95,13 @@ public:
     virtual
     service_sptr get_service( const message_type & )
     {
-        std::cout << "request service!\n";
-        return create_svc( );
+        //std::cout << "request service!\n";
+        return svc_;// create_svc( );
     }
 
     io_service &ios_;
-    cache_type cache_;
+    service_sptr svc_;
+
 };
 
 using protocol_client_sptr = srpc::shared_ptr<protocol_client>;
@@ -223,14 +227,16 @@ int main( int argc, char *argv[ ] )
             port = atoi(argv[1]);
         }
 
+        std::uint64_t last_calls = 0;
+
         listener::io_service ios;
 
         common::timers::periodical tt(ios);
 
-//        tt.call( [&ios, &tt](...) {
-//            ios.stop( );
-//            tt.cancel( );
-//        }, srpc::chrono::milliseconds(20000) );
+        tt.call( [&ios, &tt, &last_calls](...) {
+            std::cerr << g_counter - last_calls << "\n";
+            last_calls = g_counter;
+        }, srpc::chrono::milliseconds(1000) );
 
         auto l = listener::create( ios, "0.0.0.0", port );
 
@@ -262,6 +268,12 @@ int main( int argc, char *argv[ ] )
             } );
 
         l->start( );
+
+//        std::thread([&ios]( ) { ios.run( ); }).detach( );
+//        std::thread([&ios]( ) { ios.run( ); }).detach( );
+//        std::thread([&ios]( ) { ios.run( ); }).detach( );
+//        std::thread([&ios]( ) { ios.run( ); }).detach( );
+//        std::thread([&ios]( ) { ios.run( ); }).detach( );
 
         ios.run( );
 
