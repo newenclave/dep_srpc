@@ -72,7 +72,9 @@ namespace srpc { namespace common { namespace protocol {
             ,call_type_(get_call_type(server))
             ,on_ready_(&noname::default_on_ready)
             ,ready_(false)
-        { }
+        {
+            set_ready( true );
+        }
 
         void setup_message( lowlevel_message_type &mess, srpc::uint64_t target )
         {
@@ -130,7 +132,8 @@ namespace srpc { namespace common { namespace protocol {
 
         void set_ready( bool value )
         {
-            on_ready_(value);
+            ready_ = value;
+            on_ready_(ready_);
         }
 
         void push_message_to_cache( message_type msg )

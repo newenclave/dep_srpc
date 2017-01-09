@@ -213,10 +213,10 @@ private:
     acceptor_sptr                     acceptor_;
 };
 
-using listener = lister<server::acceptor::async::udp>;
+//using listener = lister<server::acceptor::async::udp>;
 using factory  = common::factory<std::string, srpc::shared_ptr<spb::service> >;
 
-//using listener = lister<server::acceptor::async::tcp>;
+using listener = lister<server::acceptor::async::tcp>;
 
 int main( int argc, char *argv[ ] )
 {
@@ -269,11 +269,11 @@ int main( int argc, char *argv[ ] )
 
         l->start( );
 
-//        std::thread([&ios]( ) { ios.run( ); }).detach( );
-//        std::thread([&ios]( ) { ios.run( ); }).detach( );
-//        std::thread([&ios]( ) { ios.run( ); }).detach( );
-//        std::thread([&ios]( ) { ios.run( ); }).detach( );
-//        std::thread([&ios]( ) { ios.run( ); }).detach( );
+        std::thread([&ios]( ) { ios.run( ); }).detach( );
+        std::thread([&ios]( ) { ios.run( ); }).detach( );
+        std::thread([&ios]( ) { ios.run( ); }).detach( );
+        std::thread([&ios]( ) { ios.run( ); }).detach( );
+        std::thread([&ios]( ) { ios.run( ); }).detach( );
 
         ios.run( );
 
