@@ -9,7 +9,7 @@
 
 #include "protocol/t.pb.h"
 
-#include "srpc/common/protocol/binary.h"
+#include "srpc/common/protocol/noname.h"
 
 using namespace srpc;
 namespace gpb = google::protobuf;
@@ -22,11 +22,9 @@ using connector_type  = client::connector::async::udp;
 using connector_sptr  = srpc::shared_ptr<connector_type>;
 using size_policy     = common::sizepack::varint<size_t>;
 
-using client_delegate = common::protocol::binary<message_sptr,
-                                    common::sizepack::fixint<srpc::uint16_t>,
-                                    common::sizepack::fixint<srpc::uint32_t> >;
+using client_delegate = common::protocol::noname;
 
-class connector: private client_delegate {
+class connector: public client_delegate {
 
     using io_service     = common::transport::io_service;
     using error_code     = common::transport::error_code;
@@ -77,7 +75,7 @@ class connector: private client_delegate {
 public:
 
     connector( io_service &ios, const std::string &addr, srpc::uint16_t svc )
-        :client_delegate(101, 44000)
+        :client_delegate(false, 44000)
     {
 
         connector_type::endpoint ep(
@@ -95,61 +93,6 @@ public:
         connector_->connect( );
     }
 
-    void append_message( buffer_type buf, const message_type &m )
-    {
-        m->AppendToString( buf.get( ) );
-    }
-
-    void on_message_ready( tag_type tag, buffer_type buff,
-                           const_buffer_slice slice )
-    {
-        std::cout << "Got message " << slice.size( )
-                  << " with tag " << tag
-                  << " buf alocated " << (buff ? "true" : "false")
-                  << "\n";
-        if( buff ) {
-            cache_.push( buff );
-        }
-    }
-
-    buffer_type unpack_message( const_buffer_slice &slice )
-    {
-        buffer_type r = get_str( );
-        r->resize( slice.size( ) );
-        for( size_t i=0; i<slice.size( ); i++ ) {
-            (*r)[i] = slice.data( )[i] ^ 0xE4;
-        }
-        slice = const_buffer_slice(r->c_str( ), r->size( ));
-        return r;
-    }
-
-    buffer_slice pack_message( buffer_type, buffer_slice slice )
-    {
-        char *p = slice.begin( );
-        while( p != slice.end( ) ) {
-            *p = *p ^ 0xE4;
-            p++;
-        }
-        return slice;
-    }
-
-    void send_message( const std::string &data )
-    {
-        srpc::shared_ptr<test::run> msg = srpc::make_shared<test::run>( );
-        buffer_type buff = get_str( );
-        msg->set_name( data );
-
-        buff->resize( 4 );
-
-        buffer_slice slice = prepare_buffer( buff, 666, msg );
-        slice = insert_size_prefix( buff, slice );
-
-        get_transport( )->write( slice.begin( ), slice.size( ),
-            cb_type::post( [this, buff](...) {
-                cache_.push( buff );
-            } ));
-    }
-
     srpc::shared_ptr<std::string> get_str( )
     {
         if(cache_.empty( )) {
@@ -160,6 +103,19 @@ public:
             return n;
         }
     }
+
+    virtual
+    service_sptr get_service( const message_type & )
+    {
+        std::cout << "request service!\n";
+        return service_sptr( );
+    }
+
+    void execute_call( message_type msg )
+    {
+        std::cout << msg->DebugString( ) << "\n";
+    }
+
 
 private:
     client_sptr         client_;
@@ -177,7 +133,7 @@ int main( int argc, char *argv[] )
 
         std::thread t([&ios]( ){ ios.run( ); });
 
-        connector ctr(ios, "212.24.104.31", 53);
+        connector ctr(ios, "127.0.0.1", 23456);
         ctr.start( );
 
         std::this_thread::sleep_for( std::chrono::milliseconds(100));
@@ -187,12 +143,21 @@ int main( int argc, char *argv[] )
             test.push_back( (char)((i % 10) + '0') );
         }
 
-        ctr.send_message( test );
+        srpc::rpc::lowlevel ll;
+        ctr.setup_message( ll, 0 );
+        ll.set_request( test );
+        ctr.send_message( ll );
 
         while( !std::cin.eof( ) ) {
             std::string d;
             std::cin >> d;
-            ctr.send_message( d );
+            ctr.setup_message( ll, 0 );
+            ll.set_request( d );
+            auto slot = ctr.add_slot( ll.id( ) );
+            ctr.send_message( ll );
+            srpc::shared_ptr<srpc::rpc::lowlevel> mess;
+            auto res = slot->read_for( mess, srpc::chrono::seconds(1) );
+            std::cout << res << ": " << mess->DebugString( ) << "\n";
         }
 
         t.join( );

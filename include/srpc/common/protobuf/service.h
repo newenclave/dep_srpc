@@ -62,12 +62,12 @@ namespace srpc { namespace common { namespace protobuf {
             call_default( method, controller, request, response, done );
         }
 
-    protected:
-
-        const method_type *find_method ( const std::string &name ) const
+        virtual const method_type *find_method ( const std::string &name ) const
         {
             return service_->GetDescriptor( )->FindMethodByName( name );
         }
+
+    protected:
 
         void call_default( const method_type *method,
                            google::protobuf::RpcController* controller,

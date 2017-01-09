@@ -56,6 +56,7 @@ namespace srpc { namespace common { namespace protocol {
             :next_id_(init_id)
             ,hash_(new hash::crc32)
             ,max_length_(max_length)
+            ,transport_(nullptr)
         { }
 
         virtual ~binary( )
@@ -80,6 +81,7 @@ namespace srpc { namespace common { namespace protocol {
         void assign_transport( transport_ptr t )
         {
             transport_ = t->shared_from_this( );
+            transport_->resize_buffer( max_length_ );
         }
 
         transport_ptr get_transport( )
@@ -95,6 +97,16 @@ namespace srpc { namespace common { namespace protocol {
         void max_length( ) const
         {
             return max_length_;
+        }
+
+        hash::interface_ptr hash( )
+        {
+            return hash_.get( );
+        }
+
+        const hash::interface_ptr hash( ) const
+        {
+            return hash_.get( );
         }
 
     protected:
@@ -235,7 +247,7 @@ namespace srpc { namespace common { namespace protocol {
             return len <= max_length_;
         }
 
-        virtual void on_error( const char * )
+        virtual void on_error( const char *mess )
         {
             transport_->close( );
         }
@@ -280,9 +292,9 @@ namespace srpc { namespace common { namespace protocol {
 
         srpc::atomic<key_type>  next_id_;
         queue_type              queues_;
-        transport_sptr          transport_;
         hash::interface_uptr    hash_;
         size_t                  max_length_;
+        transport_sptr          transport_;
 
     };
 

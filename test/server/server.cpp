@@ -22,7 +22,7 @@
 #include "srpc/common/transport/delegates/message.h"
 #include "srpc/common/cache/simple.h"
 
-#include "srpc/common/protocol/binary.h"
+#include "srpc/common/protocol/noname.h"
 
 #include "srpc/common/observers/define.h"
 #include "srpc/common/protobuf/service.h"
@@ -36,9 +36,7 @@ namespace spb = srpc::common::protobuf;
 using message_sptr = srpc::shared_ptr<gpb::Message>;
 
 using size_policy     = common::sizepack::varint<size_t>;
-using client_delegate = common::protocol::binary<message_sptr,
-                                    common::sizepack::fixint<srpc::uint16_t>,
-                                    common::sizepack::fixint<srpc::uint32_t> >;
+using client_delegate = common::protocol::noname;
 
 using service_wrapper = spb::service;
 
@@ -59,7 +57,7 @@ protected:
 public:
 
     protocol_client( io_service &ios, key )
-        :client_delegate(100, 44000)
+        :client_delegate(true, 44000)
         ,ios_(ios)
         ,cache_(10)
     { }
@@ -67,79 +65,16 @@ public:
     static
     srpc::shared_ptr<protocol_client> create( io_service &ios )
     {
-        srpc::make_shared<protocol_client>( srpc::ref(ios), key( ) );
-    }
-
-    void append_message( buffer_type buf, const message_type &m )
-    {
-        m->AppendToString( buf.get( ) );
-    }
-
-    void on_message_ready( tag_type tag, buffer_type buff,
-                           const_buffer_slice slice )
-    {
-        namespace ph = srpc::placeholders;
-
-        srpc::shared_ptr<test::run> msg = srpc::make_shared<test::run>( );
-
-        msg->ParseFromArray( slice.data( ), slice.size( ) );
-
-        std::cout << msg->DebugString( )
-                  << "^---- " << slice.size( )
-                  << " Tag: " << tag << "\n";
-
-        if( !buff ) {
-            buff = cache_.get( );
-        } else {
-            buff->clear( );
-        }
-
-        buff->resize( 4 );
-
-        buffer_slice sl = prepare_buffer( buff, 0, msg );
-        sl = insert_size_prefix( buff, sl );
-
-        cb_type::post_call_type callback =
-                srpc::bind( &protocol_client::cache_back, this,
-                             ph::_1, buff );
-
-        get_transport( )->write( sl.begin( ), sl.size( ),
-                                 cb_type::post( callback ) );
-    }
-
-    buffer_type unpack_message( const_buffer_slice &slice )
-    {
-        buffer_type r = cache_.get( );
-        r->resize( slice.size( ) );
-        for( size_t i=0; i<slice.size( ); i++ ) {
-            (*r)[i] = slice.data( )[i] ^ 0xE4;
-        }
-        slice = const_buffer_slice(r->c_str( ), r->size( ));
-        return r;
-    }
-
-    buffer_slice pack_message( buffer_type, buffer_slice slice )
-    {
-        char *p = slice.begin( );
-        while( p != slice.end( ) ) {
-            *p = *p ^ 0xE4;
-            p++;
-        }
-        return slice;
+        return srpc::make_shared<protocol_client>( srpc::ref(ios), key( ) );
     }
 
     void on_close( );
-    void on_error( const char *mess )
-    {
-        std::cerr << "Proto error: " << mess << "\n";
-        get_transport( )->close( );
-    }
 
-private:
-
-    void cache_back( const error_code &err, buffer_type buf )
+    virtual
+    service_sptr get_service( const message_type & )
     {
-        cache_.push( buf );
+        std::cout << "request service!\n";
+        return service_sptr( );
     }
 
     io_service &ios_;

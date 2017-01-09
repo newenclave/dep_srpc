@@ -32,6 +32,10 @@ namespace srpc { namespace common { namespace cache {
             :maximum_(maximum)
         { }
 
+        simple( )
+            :maximum_(0)
+        { }
+
         ~simple( )
         {
             clear_unsafe( );

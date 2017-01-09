@@ -26,8 +26,8 @@ namespace srpc { namespace common { namespace queues {
         typedef typename   queue_trait::queue_type queue_type;
 
         enum result_enum {
-            CANCELED = 0,
-            OK       = 1,
+            OK       = 0,
+            CANCELED = 1,
             TIMEOUT  = 2,
             NOTFOUND = 3,
         };
@@ -43,19 +43,19 @@ namespace srpc { namespace common { namespace queues {
             typedef typename parent_type::key_type   key_type;
 
             enum flags {
-                NONE      = 0x00,
-                CANCELED  = 0x01,
+                FLAG_NONE      = 0x00,
+                FLAG_CANCELED  = 0x01,
             };
 
             slot_type( const key_type &key )
                 :key_(key)
-                ,flag_(NONE)
+                ,flag_(FLAG_NONE)
             { }
 
             void cancel( )
             {
                 locker l(lock_);
-                flag_ |= CANCELED;
+                flag_ |= FLAG_CANCELED;
                 cond_.notify_all( );
             }
 
@@ -91,7 +91,7 @@ namespace srpc { namespace common { namespace queues {
 
             bool canceled( ) const
             {
-                return ( flag_ & CANCELED );
+                return ( flag_ & FLAG_CANCELED );
             }
 
             const key_type &key( ) const

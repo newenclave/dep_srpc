@@ -38,7 +38,7 @@ namespace srpc { namespace common { namespace protobuf {
 
         void set_flag( srpc::uint32_t flag )
         {
-            options_ |= value;
+            options_ |= flag;
         }
 
         void reset_flag( srpc::uint32_t flag )

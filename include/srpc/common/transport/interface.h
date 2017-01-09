@@ -88,6 +88,7 @@ namespace srpc { namespace common { namespace transport {
         virtual void read( ) = 0;
         virtual void set_delegate( delegate *val ) = 0;
         virtual srpc::handle_type native_handle( ) = 0;
+        virtual void resize_buffer( size_t ) = 0;
 
         virtual ~interface( ) { }
     };

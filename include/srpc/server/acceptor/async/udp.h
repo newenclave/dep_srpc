@@ -46,9 +46,7 @@ namespace async {
                 ,delegate_(NULL)
                 ,max_cache_(max_cache)
                 ,cache_(max_cache)
-            {
-
-            }
+            { }
 
             static
             srpc::shared_ptr<client_type> create( udp *p, endpoint ep,
@@ -61,6 +59,9 @@ namespace async {
             {
 
             }
+
+            void resize_buffer( size_t )
+            { }
 
             void close( )
             {
