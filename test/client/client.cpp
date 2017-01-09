@@ -86,22 +86,10 @@ public:
         connector_->set_delegate( &delegate_ );
     }
 
-
     void start( )
     {
         connector_->open( );
         connector_->connect( );
-    }
-
-    srpc::shared_ptr<std::string> get_str( )
-    {
-        if(cache_.empty( )) {
-            return srpc::make_shared<std::string>( );
-        } else {
-            srpc::shared_ptr<std::string> n = cache_.front( );
-            cache_.pop( );
-            return n;
-        }
     }
 
     virtual
@@ -121,8 +109,6 @@ private:
     client_sptr         client_;
     connector_sptr      connector_;
     connector_delegate  delegate_;
-
-    std::queue<buffer_type> cache_;
 };
 
 int main( int argc, char *argv[] )
@@ -159,7 +145,9 @@ int main( int argc, char *argv[] )
             ctr.send_message( ll );
             srpc::shared_ptr<srpc::rpc::lowlevel> mess;
             auto res = slot->read_for( mess, srpc::chrono::seconds(1) );
-            std::cout << res << ": " << mess->DebugString( ) << "\n";
+            if(mess) {
+                std::cout << res << ": " << mess->DebugString( ) << "\n";
+            }
         }
 
         t.join( );

@@ -41,6 +41,14 @@ using client_delegate = common::protocol::noname;
 using service_wrapper = spb::service;
 
 class test_service: public test::test_service {
+    void call6(::google::protobuf::RpcController* controller,
+               const ::test::run* request,
+               ::test::run* response,
+               ::google::protobuf::Closure* done )
+    {
+        response->set_name( "!!!!?????" );
+        if(done) done->Run( );
+    }
 
 };
 
