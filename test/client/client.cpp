@@ -86,6 +86,17 @@ public:
         connector_->set_delegate( &delegate_ );
     }
 
+    static
+    srpc::shared_ptr<connector> create( io_service &ios,
+                                        const std::string &addr,
+                                        srpc::uint16_t svc)
+    {
+        srpc::shared_ptr<connector> inst
+                = srpc::make_shared<connector>(srpc::ref(ios), addr, svc);
+        inst->init( );
+        return inst;
+    }
+
     void start( )
     {
         connector_->open( );

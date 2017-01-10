@@ -87,7 +87,10 @@ public:
     static
     srpc::shared_ptr<protocol_client> create( io_service &ios )
     {
-        return srpc::make_shared<protocol_client>( srpc::ref(ios), key( ) );
+        srpc::shared_ptr<protocol_client> inst
+            = srpc::make_shared<protocol_client>( srpc::ref(ios), key( ) );
+        inst->init( );
+        return inst;
     }
 
     void on_close( );

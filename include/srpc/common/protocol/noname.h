@@ -18,7 +18,8 @@ namespace srpc { namespace common { namespace protocol {
     template <typename SizePackPolicy = sizepack::varint<srpc::uint32_t> >
     class noname: public binary< srpc::shared_ptr<srpc::rpc::lowlevel>,
                                  sizepack::none, SizePackPolicy,
-                                 srpc::uint64_t >
+                                 srpc::uint64_t >,
+                  public srpc::enable_shared_from_this<noname<SizePackPolicy> >
     {
 
         typedef binary< srpc::shared_ptr<srpc::rpc::lowlevel>,
@@ -37,12 +38,26 @@ namespace srpc { namespace common { namespace protocol {
         }
 
         struct call_keeper {
-
+            srpc::unique_ptr<protobuf::controller> controller;
+            srpc::unique_ptr<google::protobuf::Message> request;
+            srpc::unique_ptr<google::protobuf::Message> response;
         };
+
+        struct closure: public google::protobuf::Closure {
+            call_keeper call;
+            void Run()
+            { }
+        };
+
 
         static void default_on_ready( bool )
         { }
 
+        static void default_write_cb( )
+        { }
+
+    protected:
+        struct key { };
     public:
 
         typedef SizePackPolicy sizepack_polisy;
@@ -56,26 +71,29 @@ namespace srpc { namespace common { namespace protocol {
         typedef typename parent_type::const_buffer_slice const_buffer_slice;
         typedef typename parent_type::buffer_slice       buffer_slice;
         typedef typename parent_type::error_code         error_code;
-
-        typedef common::cache::simple<std::string>          cache_type;
-        typedef common::cache::simple<srpc::rpc::lowlevel>  message_cache_type;
-
         typedef google::protobuf::MessageLite            message_lite;
 
         typedef SRPC_ASIO::io_service io_service;
-        typedef common::transport::interface::write_callbacks cb_type;
-
-        typedef srpc::common::protobuf::service::shared_type service_sptr;
+        typedef common::transport::interface::write_callbacks   cb_type;
+        typedef srpc::common::protobuf::service::shared_type    service_sptr;
 
         typedef srpc::common::factory< std::string,
                                        service_sptr,
                                        srpc::mutex > service_factory;
+
+        typedef common::cache::simple<std::string>          cache_type;
+        typedef common::cache::simple<srpc::rpc::lowlevel>  message_cache_type;
 
         noname( bool server, size_t max_length )
             :parent_type(server ? 100 : 101, max_length)
             ,call_type_(get_call_type(server))
             ,on_ready_(&noname::default_on_ready)
             ,ready_(false)
+        {
+            init( );
+        }
+
+        void init( )
         {
             set_ready( true );
         }
@@ -115,7 +133,7 @@ namespace srpc { namespace common { namespace protocol {
 
         bool send_message( const message_lite &mess )
         {
-            return send_message( mess, &noname::default_cb );
+            return send_message( mess, &noname::default_write_cb );
         }
 
         void assign_on_ready( on_ready_type value )
@@ -127,7 +145,7 @@ namespace srpc { namespace common { namespace protocol {
             }
         }
 
-        bool ready(  )
+        bool ready(  ) const
         {
             return ready_;
         }
@@ -270,9 +288,6 @@ namespace srpc { namespace common { namespace protocol {
 
             return this->insert_size_prefix( buf, packed );
         }
-
-        static void default_cb( )
-        { }
 
         void push_cache_back( const error_code &err,
                               buffer_type buff, empty_call cb )

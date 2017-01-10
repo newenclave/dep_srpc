@@ -197,7 +197,7 @@ namespace srpc { namespace common { namespace observers {
             { }
 
             typename parent_type::impl_wptr parent_list_;
-            size_t                           me_;
+            size_t                          me_;
 
         public:
 
