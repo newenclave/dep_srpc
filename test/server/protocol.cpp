@@ -1,4 +1,5 @@
 #include <iostream>
+#include <thread>
 
 
 #include "srpc/common/protocol/binary.h"
@@ -11,6 +12,7 @@
 #include "srpc/common/observers/simple.h"
 #include "srpc/common/observers/subscription.h"
 #include "srpc/common/observers/scoped-subscription.h"
+#include "srpc/common/config/mutex.h"
 
 #include "boost/signals2.hpp"
 
@@ -18,42 +20,54 @@ using namespace srpc::common;
 namespace gpb = google::protobuf;
 namespace bs = boost::signals2;
 
+using my_mutex = srpc::mutex;
+
 namespace o1 {
-    using os        = observers::simple<void (int), srpc::mutex>;
+    std::string callname = "my observer";
+    using os        = observers::simple<void (int), my_mutex>;
     using conn      = observers::subscription;
     using scop_conn = observers::scoped_subscription;
 }
 
 namespace o2 {
+    std::string callname = "boost signals";
     using os        = bs::signal_type <void (int),
-                                bs::keywords::mutex_type<srpc::mutex> >::type;
+                                bs::keywords::mutex_type<my_mutex> >::type;
     using conn      = bs::connection;
-    using scop_conn = bs::connection;
+    using scop_conn = bs::scoped_connection;
 }
 
 namespace myos = o1;
 
 std::atomic<std::uint64_t> gcounter(0);
+myos::os o;
+const auto factor = 1000;
+
+void vvv(  )
+{
+    auto call = [](int i) { gcounter += i; };
+    for( auto i=0; i<factor; i++ ) {
+        o.connect( call );
+        myos::scop_conn scon(o.connect( call ));
+        o(1);
+    }
+}
 
 int main( int argc, char *argv[ ] )
 {
 
-    myos::os o;
-    auto call = [](int i) { gcounter += i; };
+    std::thread t1(vvv);
+    std::thread t2(vvv);
+    std::thread t3(vvv);
 
-    for( int i=0; i<100; i++ ) {
-        o.connect( call );
-        o(1);
-    }
+    vvv(  );
 
-    std::cout << "counter " << gcounter << "\n";
+    t1.join( );
+    t2.join( );
+    t3.join( );
+
+    std::cout << "counter " << gcounter << " for "
+              << myos::callname << "\n";
 
     return 0;
-
-    try {
-
-
-    } catch ( const std::exception &ex ) {
-        std::cout << "Error " << ex.what( ) << "\n";
-    }
 }

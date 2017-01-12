@@ -8,13 +8,10 @@
 #define SRPC_OBSERVER_DEFINE_COMMON( Name, Sig, Visible, Mutex )            \
     public:                                                                 \
         typedef srpc::common::observers::simple<Sig, Mutex> Name##_type;    \
-        typedef typename Name##_type::subscription                          \
-                         Name##_subscription;                               \
         typedef typename Name##_type::slot_type                             \
                          Name##_slot_type;                                  \
-        typedef typename Name##_type::scoped_subscription                   \
-                         Name##_scoped_subscription;                        \
-        Name##_subscription subscribe_##Name( Name##_slot_type slot )       \
+        srpc::common::observers::subscription                               \
+        subscribe_##Name( Name##_slot_type slot )                           \
         {                                                                   \
             return Name.subscribe( slot );                                  \
         }                                                                   \
@@ -23,10 +20,10 @@
 
 
 #define SRPC_OBSERVER_DEFINE_SAFE( Name, Sig ) \
-    SRPC_OBSERVER_DEFINE_COMMON( Name, Sig, protected, srpc::recursive_mutex )
+      SRPC_OBSERVER_DEFINE_COMMON( Name, Sig, protected, srpc::recursive_mutex )
 
 #define SRPC_OBSERVER_DEFINE_UNSAFE( Name, Sig ) \
-    SRPC_OBSERVER_DEFINE_COMMON( Name, Sig, protected, srpc::dummy_mutex )
+        SRPC_OBSERVER_DEFINE_COMMON( Name, Sig, protected, srpc::dummy_mutex )
 
 #define SRPC_OBSERVER_DEFINE SRPC_OBSERVER_DEFINE_SAFE
 

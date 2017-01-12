@@ -29,8 +29,6 @@ namespace srpc { namespace common { namespace observers {
 
     public:
 
-        typedef size_t key_type;
-
         template<typename T, typename KeyType>
         subscription( srpc::shared_ptr<T> &parent, KeyType key )
         {
