@@ -31,6 +31,11 @@ namespace srpc { namespace common { namespace observers {
             :unsubscriber_(us)
         { }
 
+        void reset( )
+        {
+            unsubscriber_ = &subscription::unsubscribe_dummy;
+        }
+
     public:
 
         template<typename T, typename KeyType>
@@ -45,13 +50,13 @@ namespace srpc { namespace common { namespace observers {
         subscription( subscription &&o )
             :unsubscriber_(std::move(o.unsubscriber_))
         {
-            o.unsubscriber_ = &subscription::unsubscribe_dummy;
+            o.reset( );
         }
 
         subscription &operator = ( subscription &&o )
         {
-            unsubscriber_   = o.unsubscriber_;
-            o.unsubscriber_ = &subscription::unsubscribe_dummy;
+            unsubscriber_ = o.unsubscriber_;
+            o.reset( );
             return *this;
         }
 

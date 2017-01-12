@@ -26,39 +26,39 @@ namespace srpc { namespace common { namespace observers {
             :unsubscriber_(&scoped_subscription::unsubscribe_dummy)
         {
             unsubscriber_   = o.unsubscriber_;
-            o.unsubscriber_ = &scoped_subscription::unsubscribe_dummy;
+            o.reset( );
         }
 
         scoped_subscription &operator = ( scoped_subscription &&o )
         {
             unsubscriber_   = o.unsubscriber_;
-            o.unsubscriber_ = &scoped_subscription::unsubscribe_dummy;
+            o.reset( );
             return          *this;
         }
 
         scoped_subscription( observers::subscription &&o )
         {
             unsubscriber_   = o.unsubscriber_;
-            o.unsubscriber_ = &scoped_subscription::unsubscribe_dummy;
+            o.reset( );
         }
 
         scoped_subscription & operator = ( subscription &&o )
         {
             unsubscriber_   = o.unsubscriber_;
-            o.unsubscriber_ = &scoped_subscription::unsubscribe_dummy;
+            o.reset( );
             return          *this;
         }
 #endif
         scoped_subscription( scoped_subscription &o )
             :unsubscriber_(&scoped_subscription::unsubscribe_dummy)
         {
-            o.unsubscriber_ = &scoped_subscription::unsubscribe_dummy;
+            o.reset( );
         }
 
         scoped_subscription &operator = ( scoped_subscription &o )
         {
             unsubscriber_   = o.unsubscriber_;
-            o.unsubscriber_ = &scoped_subscription::unsubscribe_dummy;
+            o.reset( );
             return          *this;
         }
 
