@@ -27,10 +27,6 @@ namespace srpc { namespace common { namespace observers {
         static void unsubscribe_dummy( )
         { }
 
-        subscription( void_call us )
-            :unsubscriber_(us)
-        { }
-
         void reset( )
         {
             unsubscriber_ = &subscription::unsubscribe_dummy;
