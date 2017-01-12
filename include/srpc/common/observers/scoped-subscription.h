@@ -13,37 +13,40 @@ namespace srpc { namespace common { namespace observers {
 
         void reset( )
         {
-            unsubscriber_ = &subscription::unsubscribe_dummy;
+            void_call tmp = &subscription::unsubscribe_dummy;
+            unsubscriber_( );
+            unsubscriber_.swap(tmp);
         }
 
     public:
 
+        /// C-tors
 #if CXX11_ENABLED
         scoped_subscription( scoped_subscription &&o )
             :unsubscriber_(&subscription::unsubscribe_dummy)
         {
-            unsubscriber_   = o.unsubscriber_;
+            unsubscriber_.swap(o.unsubscriber_);
             o.reset( );
         }
 
         scoped_subscription &operator = ( scoped_subscription &&o )
         {
-            unsubscriber_   = o.unsubscriber_;
-            o.reset( );
-            return          *this;
+            if( this != &o ) {
+                unsubscriber_.swap(o.unsubscriber_);
+                o.reset( );
+            }
+            return *this;
         }
 
         scoped_subscription( observers::subscription &&o )
-        {
-            unsubscriber_   = o.unsubscriber_;
-            o.reset( );
-        }
+            :unsubscriber_(std::move(o.unsubscriber_))
+        { }
 
         scoped_subscription & operator = ( subscription &&o )
         {
-            unsubscriber_   = o.unsubscriber_;
-            o.reset( );
-            return          *this;
+            unsubscribe( );
+            unsubscriber_.swap(o.unsubscriber_);
+            return *this;
         }
 #endif
         scoped_subscription( scoped_subscription &o )
@@ -54,27 +57,34 @@ namespace srpc { namespace common { namespace observers {
 
         scoped_subscription &operator = ( scoped_subscription &o )
         {
-            unsubscriber_   = o.unsubscriber_;
-            o.reset( );
-            return          *this;
+            if( this != &o ) {
+                unsubscribe( );
+                unsubscriber_   = o.unsubscriber_;
+                o.reset( );
+            }
+            return *this;
         }
 
         scoped_subscription & operator = ( const subscription &o )
         {
-            unsubscriber_   = o.unsubscriber_;
+            unsubscribe( );
+            unsubscriber_ = o.unsubscriber_;
+            return *this;
         }
 
         scoped_subscription( )
             :unsubscriber_(&subscription::unsubscribe_dummy)
         { }
 
+        scoped_subscription( const subscription &o )
+            :unsubscriber_(o.unsubscriber_)
+        { }
+
+        /// D-tor
         ~scoped_subscription( )
         {
             unsubscribe( );
         }
-
-        scoped_subscription( const subscription &ss )
-        { }
 
         void unsubscribe(  )
         {
@@ -93,10 +103,11 @@ namespace srpc { namespace common { namespace observers {
             return tmp;
         }
 
-        void swap( subscription &other )
+        void swap( scoped_subscription &other )
         {
             unsubscriber_.swap( other.unsubscriber_ );
         }
+
     private:
         void_call   unsubscriber_;
     };
