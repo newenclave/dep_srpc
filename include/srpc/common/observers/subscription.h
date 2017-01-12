@@ -12,7 +12,7 @@ namespace srpc { namespace common { namespace observers {
 
         friend class srpc::common::observers::scoped_subscription;
 
-        typedef srpc::function<void( )> void_call;
+        typedef srpc::function<void ( )> void_call;
 
         template <typename T, typename KeyType>
         static
@@ -39,10 +39,9 @@ namespace srpc { namespace common { namespace observers {
 
 #if CXX11_ENABLED
         subscription( subscription &&o )
+            :unsubscriber_(std::move(o.unsubscriber_))
         {
-            unsubscriber_   = o.unsubscriber_;
-            unsubscriber_   = &subscription::unsubscribe_dummy;
-
+            o.unsubscriber_ = &subscription::unsubscribe_dummy;
         }
 
         subscription &operator = ( subscription &&o )

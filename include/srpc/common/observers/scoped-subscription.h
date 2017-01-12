@@ -9,7 +9,7 @@ namespace srpc { namespace common { namespace observers {
 
     class scoped_subscription {
 
-        typedef srpc::function<void( )> void_call;
+        typedef srpc::function<void ( )> void_call;
 
         static void unsubscribe_dummy( )
         { }

@@ -19,5 +19,6 @@ namespace srpc { namespace common { namespace observers {
         typedef typename parent_type::connection connection;
     };
 #endif
+
 }}}
 #endif // SIMPLE_H
