@@ -9,21 +9,18 @@ namespace srpc { namespace common { namespace observers {
 
     class scoped_subscription {
 
-        typedef srpc::function<void ( )> void_call;
-
-        static void unsubscribe_dummy( )
-        { }
+        typedef subscription::void_call void_call;
 
         void reset( )
         {
-            unsubscriber_ = &scoped_subscription::unsubscribe_dummy;
+            unsubscriber_ = &subscription::unsubscribe_dummy;
         }
 
     public:
 
 #if CXX11_ENABLED
         scoped_subscription( scoped_subscription &&o )
-            :unsubscriber_(&scoped_subscription::unsubscribe_dummy)
+            :unsubscriber_(&subscription::unsubscribe_dummy)
         {
             unsubscriber_   = o.unsubscriber_;
             o.reset( );
@@ -50,7 +47,7 @@ namespace srpc { namespace common { namespace observers {
         }
 #endif
         scoped_subscription( scoped_subscription &o )
-            :unsubscriber_(&scoped_subscription::unsubscribe_dummy)
+            :unsubscriber_(&subscription::unsubscribe_dummy)
         {
             o.reset( );
         }
@@ -68,7 +65,7 @@ namespace srpc { namespace common { namespace observers {
         }
 
         scoped_subscription( )
-            :unsubscriber_(&scoped_subscription::unsubscribe_dummy)
+            :unsubscriber_(&subscription::unsubscribe_dummy)
         { }
 
         ~scoped_subscription( )
@@ -91,8 +88,8 @@ namespace srpc { namespace common { namespace observers {
 
         subscription release( )
         {
-            subscription tmp(unsubscriber_);
-            reset( );
+            subscription tmp;
+            unsubscriber_.swap( tmp.unsubscriber_ );
             return tmp;
         }
 
