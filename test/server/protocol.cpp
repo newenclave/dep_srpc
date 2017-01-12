@@ -20,7 +20,7 @@ using namespace srpc::common;
 namespace gpb = google::protobuf;
 namespace bs = boost::signals2;
 
-using my_mutex = srpc::mutex;
+using my_mutex = srpc::dummy_mutex;
 
 namespace o1 {
     std::string callname = "my observer";
@@ -41,7 +41,9 @@ namespace myos = o1;
 
 std::atomic<std::uint64_t> gcounter(0);
 myos::os o;
-const auto factor = 1000;
+
+const auto factor  = 5000;
+const auto threads = 0;
 
 void vvv(  )
 {
@@ -56,15 +58,19 @@ void vvv(  )
 int main( int argc, char *argv[ ] )
 {
 
-    std::thread t1(vvv);
-    std::thread t2(vvv);
-    std::thread t3(vvv);
+    std::vector<std::thread> tds;
+
+    for( auto i = 0; i < threads; i++ ) {
+        tds.emplace_back( vvv );
+    }
 
     vvv(  );
 
-    t1.join( );
-    t2.join( );
-    t3.join( );
+    for( auto &a: tds ) {
+        if( a.joinable( ) ) {
+            a.join( );
+        }
+    }
 
     std::cout << "counter " << gcounter << " for "
               << myos::callname << "\n";
