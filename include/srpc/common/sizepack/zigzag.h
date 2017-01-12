@@ -5,6 +5,17 @@
 
 namespace srpc { namespace common { namespace sizepack {
 
+    template <typename SignType>
+    struct zigzag;
+
+    template <>
+    struct zigzag<float> { };
+
+    template <>
+    struct zigzag<double> { };
+
+    template <>
+    struct zigzag<long double> { };
 
     template <typename SignType>
     struct zigzag {
