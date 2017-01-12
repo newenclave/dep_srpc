@@ -12,18 +12,6 @@ namespace srpc { namespace common { namespace observers {
 
         friend class srpc::common::observers::scoped_subscription;
 
-        typedef srpc::function<void ( )> void_call;
-
-        template <typename T, typename KeyType>
-        static
-        void unsubscribe_impl( srpc::weak_ptr<T> parent, KeyType key )
-        {
-            srpc::shared_ptr<T> lock(parent.lock( ));
-            if( lock ) {
-                lock->unsubscribe( key );
-            }
-        }
-
         static void unsubscribe_dummy( )
         { }
 
@@ -34,13 +22,11 @@ namespace srpc { namespace common { namespace observers {
 
     public:
 
-        template<typename T, typename KeyType>
-        subscription( srpc::shared_ptr<T> &parent, KeyType key )
-        {
-            unsubscriber_ =
-                srpc::bind( &subscription::unsubscribe_impl<T, KeyType>,
-                             srpc::weak_ptr<T>(parent), key );
-        }
+        typedef srpc::function<void ( )> void_call;
+
+        subscription( void_call call )
+            :unsubscriber_(call)
+        { }
 
 #if CXX11_ENABLED
         subscription( subscription &&o )

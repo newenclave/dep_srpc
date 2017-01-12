@@ -16,6 +16,9 @@ namespace srpc { namespace common { namespace observers {
 
     template <typename SlotType, typename MutexType>
     class base {
+
+        typedef base<SlotType, MutexType> this_type;
+
     public:
 
         typedef SlotType slot_traits;
@@ -27,6 +30,8 @@ namespace srpc { namespace common { namespace observers {
         typedef srpc::lock_guard<mutex_type>  guard_type;
 
         struct impl {
+
+            typedef base<SlotType, MutexType> parent_type;
 
             struct slot_info {
                 slot_info( const slot_type &slot, size_t id )
@@ -184,6 +189,15 @@ namespace srpc { namespace common { namespace observers {
         typedef srpc::shared_ptr<impl>   impl_sptr;
         typedef srpc::weak_ptr<impl>     impl_wptr;
 
+        static
+        void unsubscribe_impl( impl_wptr parent, size_t key )
+        {
+            impl_sptr lock(parent.lock( ));
+            if( lock ) {
+                lock->unsubscribe( key );
+            }
+        }
+
     public:
 
         typedef common::observers::subscription subscription;
@@ -225,11 +239,15 @@ namespace srpc { namespace common { namespace observers {
         { }
 #endif
 
-
         subscription subscribe( slot_type call )
         {
             size_t next = impl_->connect( call );
-            return subscription( impl_, next );
+
+            subscription::void_call unsubscriber =
+                    srpc::bind( &this_type::unsubscribe_impl,
+                                 impl_wptr(impl_), next );
+
+            return subscription( unsubscriber );
         }
 
         subscription connect( slot_type call )
