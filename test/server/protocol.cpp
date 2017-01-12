@@ -37,7 +37,7 @@ namespace o2 {
     using scop_conn = bs::scoped_connection;
 }
 
-namespace myos = o2;
+namespace myos = o1;
 
 std::atomic<std::uint64_t> gcounter(0);
 myos::os o;
