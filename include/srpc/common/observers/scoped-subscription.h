@@ -9,8 +9,6 @@ namespace srpc { namespace common { namespace observers {
 
     class scoped_subscription {
 
-        typedef srpc::shared_ptr<void>  void_sptr;
-        typedef srpc::weak_ptr<void>    void_wptr;
         typedef srpc::function<void( )> void_call;
 
         static void unsubscribe_dummy( )

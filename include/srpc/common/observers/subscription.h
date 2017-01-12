@@ -12,17 +12,15 @@ namespace srpc { namespace common { namespace observers {
 
         friend class srpc::common::observers::scoped_subscription;
 
-        typedef srpc::shared_ptr<void>  void_sptr;
-        typedef srpc::weak_ptr<void>    void_wptr;
         typedef srpc::function<void( )> void_call;
 
         template <typename T, typename KeyType>
         static
-        void unsubscribe_impl( void_wptr parent, KeyType key )
+        void unsubscribe_impl( srpc::weak_ptr<T> parent, KeyType key )
         {
-            void_sptr lock(parent.lock( ));
+            srpc::shared_ptr<T> lock(parent.lock( ));
             if( lock ) {
-                reinterpret_cast<T *>(lock.get( ))->unsubscribe( key );
+                lock->unsubscribe( key );
             }
         }
 
@@ -38,7 +36,7 @@ namespace srpc { namespace common { namespace observers {
         {
             unsubscriber_ =
                 srpc::bind( &subscription::unsubscribe_impl<T, KeyType>,
-                             parent, key );
+                             srpc::weak_ptr<T>(parent), key );
         }
 
 #if CXX11_ENABLED
