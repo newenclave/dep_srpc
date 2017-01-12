@@ -12,14 +12,13 @@ namespace srpc { namespace common {
               typename MutexType = srpc::dummy_mutex>
     class factory {
 
-        typedef srpc::lock_guard<MutexType> locker_type;
+        typedef srpc::lock_guard<MutexType>     locker_type;
 
     public:
 
-        typedef KeyType                          key_type;
-        typedef ObjectType                       object_type;
-        typedef MutexType                        mutex_type;
-
+        typedef KeyType                         key_type;
+        typedef ObjectType                      object_type;
+        typedef MutexType                       mutex_type;
         typedef srpc::function<object_type ( )> producer_type;
 
     private:
