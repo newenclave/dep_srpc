@@ -14,8 +14,8 @@ namespace srpc { namespace common { namespace observers {
         void reset( )
         {
             void_call tmp = &subscription::unsubscribe_dummy;
-            unsubscriber_( );
             unsubscriber_.swap(tmp);
+            tmp( );
         }
 
     public:

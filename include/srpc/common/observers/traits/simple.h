@@ -11,6 +11,16 @@ namespace traits {
     struct simple {
         typedef srpc::function<SigType> value_type;
 
+        static
+        void erase( value_type & )
+        { }
+
+        static
+        bool expired( value_type & )
+        {
+            return false;
+        }
+
 #if CXX11_ENABLED
 
         template <typename ...Args>
@@ -19,19 +29,6 @@ namespace traits {
         {
             self( args... );
         }
-
-        static
-        bool expired( value_type & )
-        {
-            return false;
-        }
-
-        static
-        void erase( value_type & )
-        {
-            //std::cout << "Erase!!!!\n";
-        }
-
 #else
 
         static
@@ -168,6 +165,7 @@ namespace traits {
         }
 
 #endif
+
     };
 
 }
