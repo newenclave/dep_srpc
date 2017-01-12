@@ -221,7 +221,7 @@ using factory  = common::factory<std::string, srpc::shared_ptr<spb::service> >;
 
 using listener = lister<server::acceptor::async::tcp>;
 
-int main( int argc, char *argv[ ] )
+int mains( int argc, char *argv[ ] )
 {
     try {
 

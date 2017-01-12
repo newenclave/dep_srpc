@@ -9,6 +9,9 @@
 #include "srpc/common/details/list.h"
 #include "srpc/common/observers/traits/simple.h"
 
+#include "srpc/common/observers/scoped-subscription.h"
+#include "srpc/common/observers/subscription.h"
+
 namespace srpc { namespace common { namespace observers {
 
     template <typename SlotType, typename MutexType>
@@ -71,7 +74,7 @@ namespace srpc { namespace common { namespace observers {
                 return lst.rerase( itr );
             }
 
-            void add_remove( size_t itr )
+            void unsubscribe( size_t itr )
             {
                 guard_type lck(tmp_lock_);
                 removed_.insert( itr );
@@ -183,160 +186,11 @@ namespace srpc { namespace common { namespace observers {
 
     public:
 
-        class subscription {
+        typedef common::observers::subscription subscription;
+        typedef common::observers::scoped_subscription scoped_subscription;
 
-            friend class observers::base<SlotType, MutexType>;
-            friend class scoped_subscription;
-
-            typedef observers::base<SlotType, MutexType> parent_type;
-
-            subscription( const typename parent_type::impl_sptr &parent,
-                          size_t me )
-                :parent_list_(parent)
-                ,me_(me)
-            { }
-
-            typename parent_type::impl_wptr parent_list_;
-            size_t                          me_;
-
-        public:
-
-#if CXX11_ENABLED
-            subscription( subscription &&o )
-            {
-                parent_list_ = o.parent_list_;
-                me_ = o.me_;
-                o.me_ = 0;
-            }
-
-            subscription &operator = ( subscription &&o )
-            {
-                parent_list_ = o.parent_list_;
-                me_ = o.me_;
-                o.me_ = 0;
-                return *this;
-            }
-
-            subscription( const subscription &o ) = default;
-            subscription &operator = ( const subscription &o ) = default;
-#endif
-            subscription( )
-                :me_(0)
-            { }
-
-            void unsubscribe(  )
-            {
-                parent_type::impl_sptr lck(parent_list_.lock( ));
-                if( lck ) {
-                    lck->add_remove( me_ );
-                    parent_list_.reset( );
-                }
-            }
-
-            void disconnect(  )
-            {
-                unsubscribe( );
-            }
-
-            void swap( subscription &other )
-            {
-                parent_list_.swap( other.parent_list_ );
-            }
-        };
-
-        class scoped_subscription {
-            friend class observers::base<SlotType, MutexType>;
-            typedef observers::base<SlotType, MutexType> parent_type;
-
-            typename parent_type::impl_wptr parent_list_;
-            size_t                           me_;
-
-        public:
-
-#if CXX11_ENABLED
-            scoped_subscription( scoped_subscription &&o )
-                :parent_list_(o.parent_list_)
-            {
-                me_             = o.me_;
-                o.me_           = 0;
-            }
-
-            scoped_subscription &operator = ( scoped_subscription &&o )
-            {
-                parent_list_    = o.parent_list_;
-                me_             = o.me_;
-                o.me_           = 0;
-                return          *this;
-            }
-
-            scoped_subscription( subscription &&o )
-            {
-                parent_list_    = o.parent_list_;
-                me_             = o.me_;
-                o.me_           = 0;
-            }
-
-            scoped_subscription & operator = ( subscription &&o )
-            {
-                parent_list_    = o.parent_list_;
-                me_             = o.me_;
-                o.me_           = 0;
-                return          *this;
-            }
-#endif
-            scoped_subscription( scoped_subscription &o )
-                :parent_list_(o.parent_list_)
-
-            {
-                me_             = o.me_;
-                o.me_           = 0;
-            }
-
-            scoped_subscription &operator = ( scoped_subscription &o )
-            {
-                parent_list_    = o.parent_list_;
-                me_             = o.me_;
-                o.me_           = 0;
-                return          *this;
-            }
-
-            scoped_subscription & operator = ( const subscription &ss )
-            {
-                me_             = ss.me_;
-            }
-
-            scoped_subscription( )
-                :me_(0)
-            { }
-
-            ~scoped_subscription( )
-            {
-                unsubscribe( );
-            }
-
-            scoped_subscription( const subscription &ss )
-                :me_(ss.me_)
-            { }
-
-            void unsubscribe(  )
-            {
-                parent_type::impl_sptr lck(parent_list_.lock( ));
-                if( me_ && lck ) {
-                    lck->add_remove( me_ );
-                    me_ = 0;
-                }
-            }
-
-            void disconnect(  )
-            {
-                unsubscribe( );
-            }
-
-            void swap( subscription &other )
-            {
-                parent_list_.swap( other.parent_list_ );
-            }
-        };
+        friend class common::observers::subscription;
+        friend class common::observers::scoped_subscription;
 
         typedef subscription connection;
 
@@ -385,11 +239,7 @@ namespace srpc { namespace common { namespace observers {
 
         void unsubscribe( subscription &cc )
         {
-            impl_sptr lck(cc.parent_list_.lock( ));
-            if( lck == impl_ ) {
-                impl_->add_remove( cc.me_ );
-                cc.parent_list_.reset( );
-            }
+            cc.unsubscribe( );
         }
 
         void disconnect( subscription &cc )
