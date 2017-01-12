@@ -14,6 +14,11 @@ namespace srpc { namespace common { namespace observers {
         static void unsubscribe_dummy( )
         { }
 
+        void reset( )
+        {
+            unsubscriber_ = &scoped_subscription::unsubscribe_dummy;
+        }
+
     public:
 
 #if CXX11_ENABLED
@@ -82,6 +87,13 @@ namespace srpc { namespace common { namespace observers {
         void disconnect(  )
         {
             unsubscribe( );
+        }
+
+        subscription release( )
+        {
+            subscription tmp(unsubscriber_);
+            reset( );
+            return tmp;
         }
 
         void swap( subscription &other )

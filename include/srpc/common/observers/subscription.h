@@ -27,6 +27,10 @@ namespace srpc { namespace common { namespace observers {
         static void unsubscribe_dummy( )
         { }
 
+        subscription( void_call us )
+            :unsubscriber_(us)
+        { }
+
     public:
 
         template<typename T, typename KeyType>
