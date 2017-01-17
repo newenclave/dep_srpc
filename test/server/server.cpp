@@ -62,7 +62,6 @@ srpc::shared_ptr<spb::service> create_svc( )
     return srpc::make_shared<spb::service>(svc);
 }
 
-
 class protocol_client: public client_delegate {
 
     typedef typename client_delegate::tag_type           tag_type;
