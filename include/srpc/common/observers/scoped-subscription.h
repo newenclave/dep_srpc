@@ -11,19 +11,11 @@ namespace srpc { namespace common { namespace observers {
 
         typedef subscription::unsubscriber_sptr unsubscriber_sptr;
 
-        void reset( )
-        {
-            if( unsubscriber_ ) {
-                unsubscriber_sptr tmp;
-                unsubscriber_.swap(tmp);
-                tmp->run( );
-            }
-        }
-
     public:
 
         /// C-tors
 #if CXX11_ENABLED
+
         scoped_subscription( scoped_subscription &&o )
         {
             unsubscriber_.swap(o.unsubscriber_);
@@ -56,23 +48,6 @@ namespace srpc { namespace common { namespace observers {
             o.reset( );
         }
 
-        scoped_subscription &operator = ( scoped_subscription &o )
-        {
-            if( this != &o ) {
-                unsubscribe( );
-                unsubscriber_   = o.unsubscriber_;
-                o.reset( );
-            }
-            return *this;
-        }
-
-        scoped_subscription & operator = ( const subscription &o )
-        {
-            unsubscribe( );
-            unsubscriber_ = o.unsubscriber_;
-            return *this;
-        }
-
         scoped_subscription( )
         { }
 
@@ -84,6 +59,23 @@ namespace srpc { namespace common { namespace observers {
         ~scoped_subscription( )
         {
             unsubscribe( );
+        }
+
+        /// O-tor
+        scoped_subscription &operator = ( scoped_subscription &o )
+        {
+            if( this != &o ) {
+                unsubscriber_.swap( o.unsubscriber_ );
+                o.reset( );
+            }
+            return *this;
+        }
+
+        scoped_subscription & operator = ( const subscription &o )
+        {
+            unsubscribe( );
+            unsubscriber_ = o.unsubscriber_;
+            return *this;
         }
 
         void unsubscribe(  )
@@ -103,6 +95,15 @@ namespace srpc { namespace common { namespace observers {
             subscription tmp;
             unsubscriber_.swap( tmp.unsubscriber_ );
             return tmp;
+        }
+
+        void reset( )
+        {
+            if( unsubscriber_ ) {
+                unsubscriber_sptr tmp;
+                unsubscriber_.swap(tmp);
+                tmp->run( );
+            }
         }
 
         void swap( scoped_subscription &other )
