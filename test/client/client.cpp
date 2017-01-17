@@ -124,7 +124,7 @@ public:
     void wait_ready(  )
     {
         srpc::unique_lock<srpc::mutex> l(ready_mtx_);
-        ready_var_.wait( l );
+        ready_var_.wait( l, [this]( ) { return !ready( ); } );
     }
 
 private:

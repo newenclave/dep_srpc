@@ -102,7 +102,7 @@ namespace srpc { namespace common { namespace protocol {
 
         void init( )
         {
-            set_ready( true );
+            //set_ready( true );
         }
 
         void setup_message( lowlevel_message_type &mess, srpc::uint64_t target )
