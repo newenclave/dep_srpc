@@ -100,7 +100,7 @@ namespace srpc { namespace common { namespace protocol {
             ,ready_(false)
         { }
 
-        void init( )
+        virtual void init( )
         {
             //set_ready( true );
         }
@@ -210,14 +210,6 @@ namespace srpc { namespace common { namespace protocol {
             msg->mutable_error( )->set_code( code );
             msg->mutable_error( )->set_category( CATEGORY_PROTOCOL );
             msg->mutable_error( )->set_additional( add );
-        }
-
-        srpc::function<void ( )> create_cb( call_sptr c, bool wait )
-        {
-            srpc::function<void ( )> call =
-                    srpc::bind( &this_type::call_closure, this,
-                                call_wptr(c), wait );
-            return call;
         }
 
         void remove_call( call_sptr call )
