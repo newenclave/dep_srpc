@@ -52,6 +52,7 @@ namespace srpc { namespace common { namespace observers {
 #endif
         scoped_subscription( scoped_subscription &o )
         {
+            unsubscriber_.swap( o.unsubscriber_ );
             o.reset( );
         }
 
