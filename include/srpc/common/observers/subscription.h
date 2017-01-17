@@ -36,14 +36,11 @@ namespace srpc { namespace common { namespace observers {
 #if CXX11_ENABLED
         subscription( subscription &&o )
             :unsubscriber_(std::move(o.unsubscriber_))
-        {
-            o.reset( );
-        }
+        { }
 
         subscription &operator = ( subscription &&o )
         {
             unsubscriber_ = o.unsubscriber_;
-            o.reset( );
             return *this;
         }
 
