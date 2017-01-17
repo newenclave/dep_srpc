@@ -31,7 +31,7 @@ namespace srpc { namespace common { namespace observers {
             return *this;
         }
 
-        scoped_subscription( observers::subscription &&o )
+        scoped_subscription( subscription &&o )
             :unsubscriber_(std::move(o.unsubscriber_))
         { }
 
@@ -71,7 +71,7 @@ namespace srpc { namespace common { namespace observers {
             return *this;
         }
 
-        scoped_subscription & operator = ( const subscription &o )
+        scoped_subscription &operator = ( const subscription &o )
         {
             unsubscribe( );
             unsubscriber_ = o.unsubscriber_;
