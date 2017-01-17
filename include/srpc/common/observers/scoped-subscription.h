@@ -2,7 +2,6 @@
 #define SRPC_COMMON_OBSERVERS_SCOPED_SUBSCRIPTION_H
 
 #include "srpc/common/config/memory.h"
-#include "srpc/common/config/functional.h"
 #include "srpc/common/observers/subscription.h"
 
 namespace srpc { namespace common { namespace observers {
