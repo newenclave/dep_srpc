@@ -9,13 +9,15 @@ namespace srpc { namespace common { namespace observers {
 
     class scoped_subscription {
 
-        typedef subscription::void_call void_call;
+        typedef subscription::unsubscriber_sptr unsubscriber_sptr;
 
         void reset( )
         {
-            void_call tmp = &subscription::unsubscribe_dummy;
-            unsubscriber_.swap(tmp);
-            tmp( );
+            if( unsubscriber_ ) {
+                unsubscriber_sptr tmp;
+                unsubscriber_.swap(tmp);
+                tmp->run( );
+            }
         }
 
     public:
@@ -23,7 +25,6 @@ namespace srpc { namespace common { namespace observers {
         /// C-tors
 #if CXX11_ENABLED
         scoped_subscription( scoped_subscription &&o )
-            :unsubscriber_(&subscription::unsubscribe_dummy)
         {
             unsubscriber_.swap(o.unsubscriber_);
             o.reset( );
@@ -50,7 +51,6 @@ namespace srpc { namespace common { namespace observers {
         }
 #endif
         scoped_subscription( scoped_subscription &o )
-            :unsubscriber_(&subscription::unsubscribe_dummy)
         {
             o.reset( );
         }
@@ -73,7 +73,6 @@ namespace srpc { namespace common { namespace observers {
         }
 
         scoped_subscription( )
-            :unsubscriber_(&subscription::unsubscribe_dummy)
         { }
 
         scoped_subscription( const subscription &o )
@@ -88,7 +87,9 @@ namespace srpc { namespace common { namespace observers {
 
         void unsubscribe(  )
         {
-            unsubscriber_( );
+            if( unsubscriber_ ) {
+                unsubscriber_->run( );
+            }
         }
 
         void disconnect(  )
@@ -109,7 +110,7 @@ namespace srpc { namespace common { namespace observers {
         }
 
     private:
-        void_call   unsubscriber_;
+        unsubscriber_sptr unsubscriber_;
     };
 
 }}}

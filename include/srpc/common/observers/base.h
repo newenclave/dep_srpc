@@ -189,14 +189,29 @@ namespace srpc { namespace common { namespace observers {
         typedef srpc::shared_ptr<impl>   impl_sptr;
         typedef srpc::weak_ptr<impl>     impl_wptr;
 
-        static
-        void unsubscribe_impl( impl_wptr parent, size_t key )
-        {
-            impl_sptr lock(parent.lock( ));
-            if( lock ) {
-                lock->unsubscribe( key );
+        struct unsubscriber: public subscription::unsubscriber {
+
+            typedef base<SlotType, MutexType> base_type;
+
+            typedef typename base_type::impl_sptr impl_sptr;
+            typedef typename base_type::impl_wptr impl_wptr;
+
+            unsubscriber( impl_wptr p, size_t k )
+                :parent(p)
+                ,key(k)
+            { }
+
+            void run( )
+            {
+                impl_sptr lock(parent.lock( ));
+                if( lock ) {
+                    lock->unsubscribe( key );
+                }
             }
-        }
+
+            impl_wptr parent;
+            size_t    key;
+        };
 
     public:
 
@@ -243,11 +258,10 @@ namespace srpc { namespace common { namespace observers {
         {
             size_t next = impl_->connect( call );
 
-            subscription::void_call unsubscriber =
-                    srpc::bind( &this_type::unsubscribe_impl,
-                                 impl_wptr(impl_), next );
+            subscription::unsubscriber_sptr us =
+                    srpc::make_shared<unsubscriber>(impl_wptr(impl_), next);
 
-            return subscription( unsubscriber );
+            return subscription( us );
         }
 
         subscription connect( slot_type call )

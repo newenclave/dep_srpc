@@ -17,14 +17,19 @@ namespace srpc { namespace common { namespace observers {
 
         void reset( )
         {
-            unsubscriber_ = &subscription::unsubscribe_dummy;
+            unsubscriber_.reset( );
         }
 
     public:
 
-        typedef srpc::function<void ( )> void_call;
+        struct unsubscriber {
+            virtual ~unsubscriber( ) { }
+            virtual void run( ) = 0;
+        };
 
-        subscription( void_call call )
+        typedef srpc::shared_ptr<unsubscriber> unsubscriber_sptr;
+
+        subscription( unsubscriber_sptr call )
             :unsubscriber_(call)
         { }
 
@@ -46,12 +51,13 @@ namespace srpc { namespace common { namespace observers {
         subscription &operator = ( const subscription &o ) = default;
 #endif
         subscription( )
-            :unsubscriber_(&subscription::unsubscribe_dummy)
         { }
 
         void unsubscribe(  )
         {
-            unsubscriber_( );
+            if( unsubscriber_ ) {
+                unsubscriber_->run( );
+            }
         }
 
         void disconnect(  )
@@ -64,7 +70,7 @@ namespace srpc { namespace common { namespace observers {
             unsubscriber_.swap( other.unsubscriber_ );
         }
     private:
-        void_call   unsubscriber_;
+        unsubscriber_sptr unsubscriber_;
     };
 
 }}}
