@@ -242,7 +242,7 @@ int main( int argc, char *argv[ ] )
             std::cerr << g_counter - last_calls << "\n";
             last_calls = g_counter;
             g_counter_total++;
-            if( g_counter_total >= 1000000 ) {
+            if( g_counter_total >= 10000 ) {
                 ios.stop( );
             }
         }, srpc::chrono::milliseconds(1000) );

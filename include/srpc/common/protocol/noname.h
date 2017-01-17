@@ -55,8 +55,8 @@ namespace srpc { namespace common { namespace protocol {
             }
         };
 
-        typedef srpc::shared_ptr<call_keeper>   call_sptr;
-        typedef srpc::weak_ptr<call_keeper>     call_wptr;
+        typedef srpc::shared_ptr<call_keeper>       call_sptr;
+        typedef srpc::weak_ptr<call_keeper>         call_wptr;
         typedef std::map<srpc::uint64_t, call_sptr> call_map;
 
         static void default_on_ready( bool )
@@ -164,6 +164,25 @@ namespace srpc { namespace common { namespace protocol {
 
     protected:
 
+        struct proto_closure: public google::protobuf::Closure {
+
+            srpc::shared_ptr<call_keeper> call;
+            void_wptr                     lck;
+            this_type                    *parent;
+
+            void Run( )
+            {
+                void_sptr lock(lck.lock( ));
+                if( lock ) {
+                    parent->call_closure( call, true );
+                    lck.reset( );
+                    call.reset( );
+                }
+            }
+        };
+
+        friend struct proto_closure;
+
         void set_ready( bool value )
         {
             ready_ = value;
@@ -224,24 +243,6 @@ namespace srpc { namespace common { namespace protocol {
             }
             mess_cache_.push( call->message );
         }
-
-        struct proto_closure: public google::protobuf::Closure {
-            srpc::shared_ptr<call_keeper> call;
-            void_wptr                     lck;
-            this_type                    *parent;
-
-            void Run( )
-            {
-                void_sptr lock(lck.lock( ));
-                if( lock ) {
-                    parent->call_closure( call, true );
-                    call.reset( );
-                    lck.reset( );
-                }
-            }
-        };
-
-        friend struct proto_closure;
 
         void execute_default( message_type msg )
         {

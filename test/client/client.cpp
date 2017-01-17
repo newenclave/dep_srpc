@@ -47,8 +47,13 @@ class connector: public client_delegate {
 
         void on_connect( iface_ptr i )
         {
+            std::cout << "ready!\n";
             parent_->assign_transport( i );
             i->set_delegate( parent_ );
+
+            parent_->set_ready( true );
+            parent_->ready_var_.notify_all( );
+
             i->read( );
         }
 
@@ -116,11 +121,19 @@ public:
         std::cout << msg->DebugString( ) << "\n";
     }
 
+    void wait_ready(  )
+    {
+        srpc::unique_lock<srpc::mutex> l(ready_mtx_);
+        ready_var_.wait( l );
+    }
 
 private:
     client_sptr         client_;
     connector_sptr      connector_;
     connector_delegate  delegate_;
+
+    srpc::condition_variable ready_var_;
+    srpc::mutex              ready_mtx_;
 };
 
 int main( int argc, char *argv[] )
@@ -132,7 +145,9 @@ int main( int argc, char *argv[] )
         std::thread t([&ios]( ){ ios.run( ); });
 
         auto ctr = connector::create( ios, "127.0.0.1", 23456);
+
         ctr->start( );
+        ctr->wait_ready( );
 
         srpc::rpc::lowlevel ll;
         ll.mutable_opt( )->set_wait( true );
@@ -152,8 +167,9 @@ int main( int argc, char *argv[] )
             }
             ctr->erase_slot( slot );
         }
-
         ios.stop( );
+
+        //ios.run( );
 
         t.join( );
 
