@@ -40,13 +40,14 @@ namespace srpc { namespace common { namespace protocol {
                           : srpc::rpc::call_info::TYPE_CLIENT_CALL;
         }
 
-        struct call_keeper: enable_shared_from_this<call_keeper> {
+        struct call_keeper {
 
             srpc::unique_ptr<protobuf::controller>       controller;
             srpc::unique_ptr<google::protobuf::Message>  request;
             srpc::unique_ptr<google::protobuf::Message>  response;
             srpc::unique_ptr<google::protobuf::Closure>  closure;
             srpc::shared_ptr<srpc::rpc::lowlevel>        message;
+
             static
             srpc::shared_ptr<call_keeper> create( )
             {
