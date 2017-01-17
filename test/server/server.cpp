@@ -41,6 +41,7 @@ using client_delegate = common::protocol::noname<>;
 using service_wrapper = spb::service;
 
 srpc::atomic<srpc::uint64_t> g_counter(0);
+srpc::atomic<srpc::uint64_t> g_counter_total(0);
 
 class test_service: public test::test_service {
     void call6(::google::protobuf::RpcController* controller,
@@ -221,7 +222,7 @@ using factory  = common::factory<std::string, srpc::shared_ptr<spb::service> >;
 
 using listener = lister<server::acceptor::async::tcp>;
 
-int mains( int argc, char *argv[ ] )
+int main( int argc, char *argv[ ] )
 {
     try {
 
@@ -239,6 +240,10 @@ int mains( int argc, char *argv[ ] )
         tt.call( [&ios, &tt, &last_calls](...) {
             std::cerr << g_counter - last_calls << "\n";
             last_calls = g_counter;
+            g_counter_total++;
+            if( g_counter_total >= 1000000 ) {
+                ios.stop( );
+            }
         }, srpc::chrono::milliseconds(1000) );
 
         auto l = listener::create( ios, "0.0.0.0", port );

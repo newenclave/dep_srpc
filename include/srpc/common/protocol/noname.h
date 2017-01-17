@@ -37,18 +37,24 @@ namespace srpc { namespace common { namespace protocol {
                           : srpc::rpc::call_info::TYPE_CLIENT_CALL;
         }
 
-        struct call_keeper {
-            srpc::unique_ptr<protobuf::controller> controller;
-            srpc::unique_ptr<google::protobuf::Message> request;
-            srpc::unique_ptr<google::protobuf::Message> response;
+        struct call_keeper: enable_shared_from_this<call_keeper> {
+
+            srpc::unique_ptr<protobuf::controller>       controller;
+            srpc::unique_ptr<google::protobuf::Message>  request;
+            srpc::unique_ptr<google::protobuf::Message>  response;
+            srpc::unique_ptr<google::protobuf::Closure>  closure;
+            srpc::function<void ( )>                     done;
+            srpc::shared_ptr<srpc::rpc::lowlevel>        message;
+            static
+            srpc::shared_ptr<call_keeper> create( )
+            {
+                return srpc::make_shared<call_keeper>( );
+            }
         };
 
-        struct closure: public google::protobuf::Closure {
-            call_keeper call;
-            void Run()
-            { }
-        };
-
+        typedef srpc::shared_ptr<call_keeper>   call_sptr;
+        typedef srpc::weak_ptr<call_keeper>     call_wptr;
+        typedef std::map<srpc::uint64_t, call_sptr> call_map;
 
         static void default_on_ready( bool )
         { }
@@ -150,6 +156,11 @@ namespace srpc { namespace common { namespace protocol {
             return ready_;
         }
 
+        void track( srpc::shared_ptr<void> t )
+        {
+            track_ = t;
+        }
+
     protected:
 
         void set_ready( bool value )
@@ -171,6 +182,51 @@ namespace srpc { namespace common { namespace protocol {
             msg->clear_response( );
         }
 
+        void set_message_error( message_type &msg, int code,
+                                const std::string &add )
+        {
+            using namespace srpc::rpc::errors;
+            clear_message( msg );
+            msg->mutable_error( )->set_code( code );
+            msg->mutable_error( )->set_category( CATEGORY_PROTOCOL );
+            msg->mutable_error( )->set_additional( add );
+        }
+
+        srpc::function<void ( )> create_cb( call_sptr c, bool wait )
+        {
+            srpc::function<void ()> call =
+                    srpc::bind( &this_type::call_closure, this,
+                                call_wptr(c), wait );
+            return call;
+        }
+
+        void remove_call( call_sptr call )
+        {
+            srpc::lock_guard<srpc::mutex> lg(calls_lock_);
+            calls_.erase( call->message->id( ) );
+        }
+
+        void call_closure( call_wptr call, bool wait )
+        {
+            using namespace srpc::rpc::errors;
+            call_sptr lock( call.lock( ) );
+            if( lock ) {
+
+                remove_call( lock );
+
+                if( wait ) {
+                    if( lock->controller->IsCanceled( ) ) {
+                        set_message_error( lock->message, ERR_CANCELED,
+                                           "Call canceled" );
+                    } else {
+                        clear_message( lock->message );
+                    }
+                    send_message( *lock->message );
+                }
+                mess_cache_.push( lock->message );
+            }
+        }
+
         void execute_default( message_type msg )
         {
             using namespace srpc::rpc::errors;
@@ -178,11 +234,9 @@ namespace srpc { namespace common { namespace protocol {
             typedef srpc::common::protobuf::service::method_type method_type;
             service_sptr svc = get_service( msg );
             if( !svc ) {
-                clear_message( msg );
-                msg->mutable_error( )->set_code( ERR_NOT_FOUND );
-                msg->mutable_error( )->set_category( CATEGORY_PROTOCOL );
-                msg->mutable_error( )->set_additional( "Service not found");
+                set_message_error( msg, ERR_NOT_FOUND, "Service not found" );
                 send_message( *msg );
+                mess_cache_.push( msg );
                 return;
             }
 
@@ -190,30 +244,56 @@ namespace srpc { namespace common { namespace protocol {
                     svc->find_method( msg->call( ).method_id( ) );
 
             if( !call ) {
-                clear_message( msg );
-                msg->mutable_error( )->set_code( ERR_NO_FUNC );
-                msg->mutable_error( )->set_category( CATEGORY_PROTOCOL );
-                msg->mutable_error( )->set_additional( "Method not found");
+                set_message_error( msg, ERR_NO_FUNC, "Method not found" );
                 send_message( *msg );
+                mess_cache_.push( msg );
                 return;
             }
 
-            gpb::Message *req = svc->get( )
-                    ->GetRequestPrototype( call ).New( );
+            struct proto_closure: public google::protobuf::Closure {
+                srpc::weak_ptr<call_keeper> call;
+                void Run( )
+                {
+                    srpc::shared_ptr<call_keeper> lck(call.lock( ));
+                    if( lck ) {
+                        lck->done( );
+                    }
+                }
+            };
 
-            gpb::Message *res = svc->get( )
-                    ->GetResponsePrototype( call ).New( );;
+            bool wait = msg->opt( ).wait( );
 
-            req->ParseFromString( msg->request( ) );
+            call_sptr call_k = call_keeper::create( );
 
-            svc->call( call, NULL, req, res, NULL );
-            msg->clear_call( );
-            msg->clear_opt( );
-            msg->clear_request( );
-            res->AppendPartialToString(msg->mutable_response( ));
+            call_k->message = msg;
+            call_k->request.reset( svc->get( )
+                                      ->GetRequestPrototype( call ).New( ));
 
-            send_message( *msg );
-            mess_cache_.push( msg );
+            call_k->response.reset(svc->get( )
+                                      ->GetResponsePrototype( call ).New( ));
+
+            call_k->controller.reset( new protobuf::controller );
+
+            call_k->request->ParseFromString( msg->request( ) );
+
+            srpc::unique_ptr<proto_closure> cp(new proto_closure);
+            cp->call = call_k;
+
+            call_k->closure.reset( cp.release( ) );
+
+            call_k->done = create_cb( call_k, wait );
+
+            if( wait ) {
+                calls_.insert( std::make_pair( msg->id( ), call_k ) );
+            } else {
+
+            }
+
+            svc->call( call, call_k->controller.get( ),
+                       call_k->request.get( ),
+                       call_k->response.get( ),
+                       call_k->closure.get( ) );
+
         }
 
         virtual void execute_call( message_type msg )
@@ -245,13 +325,17 @@ namespace srpc { namespace common { namespace protocol {
             srpc::uint32_t call_type = mess->info( ).call_type( )
                                 & ~srpc::rpc::call_info::TYPE_CALLBACK_MASK;
 
+            //// answer
             if( call_type == call_type_ ) {
                 this->push_to_slot( mess->id( ), mess );
             } else {
+                /// callback
                 if( callback ) {
                     this->push_to_slot( mess->target_id( ), mess );
-                } else {
+                } else if( call_type != 0 ) { /// call
                     this->execute_call( mess );
+                } else {
+                    /// invalid message type
                 }
             }
         }
@@ -306,11 +390,14 @@ namespace srpc { namespace common { namespace protocol {
 
     private:
 
-        srpc::uint32_t      call_type_;
-        message_cache_type  mess_cache_;
-        cache_type          buffer_cache_;
-        on_ready_type       on_ready_;
-        bool                ready_;
+        srpc::uint32_t       call_type_;
+        message_cache_type   mess_cache_;
+        cache_type           buffer_cache_;
+        on_ready_type        on_ready_;
+        bool                 ready_;
+        call_map             calls_;
+        srpc::mutex          calls_lock_;
+        srpc::weak_ptr<void> track_;
     };
 
 }}}
