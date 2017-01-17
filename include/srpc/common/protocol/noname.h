@@ -26,6 +26,9 @@ namespace srpc { namespace common { namespace protocol {
                         sizepack::none, SizePackPolicy,
                         srpc::uint64_t > parent_type;
 
+        typedef srpc::shared_ptr<void>  void_sptr;
+        typedef srpc::weak_ptr<void>    void_wptr;
+
         typedef noname<SizePackPolicy> this_type;
 
         typedef srpc::function<void (void)> empty_call;
@@ -43,7 +46,6 @@ namespace srpc { namespace common { namespace protocol {
             srpc::unique_ptr<google::protobuf::Message>  request;
             srpc::unique_ptr<google::protobuf::Message>  response;
             srpc::unique_ptr<google::protobuf::Closure>  closure;
-            srpc::function<void ( )>                     done;
             srpc::shared_ptr<srpc::rpc::lowlevel>        message;
             static
             srpc::shared_ptr<call_keeper> create( )
@@ -156,7 +158,7 @@ namespace srpc { namespace common { namespace protocol {
             return ready_;
         }
 
-        void track( srpc::shared_ptr<void> t )
+        void track( void_sptr t )
         {
             track_ = t;
         }
@@ -194,7 +196,7 @@ namespace srpc { namespace common { namespace protocol {
 
         srpc::function<void ( )> create_cb( call_sptr c, bool wait )
         {
-            srpc::function<void ()> call =
+            srpc::function<void ( )> call =
                     srpc::bind( &this_type::call_closure, this,
                                 call_wptr(c), wait );
             return call;
@@ -206,26 +208,41 @@ namespace srpc { namespace common { namespace protocol {
             calls_.erase( call->message->id( ) );
         }
 
-        void call_closure( call_wptr call, bool wait )
+        void call_closure( call_sptr call, bool wait )
         {
             using namespace srpc::rpc::errors;
-            call_sptr lock( call.lock( ) );
-            if( lock ) {
 
-                remove_call( lock );
+            remove_call( call );
 
-                if( wait ) {
-                    if( lock->controller->IsCanceled( ) ) {
-                        set_message_error( lock->message, ERR_CANCELED,
-                                           "Call canceled" );
-                    } else {
-                        clear_message( lock->message );
-                    }
-                    send_message( *lock->message );
+            if( wait ) {
+                if( call->controller->IsCanceled( ) ) {
+                    set_message_error( call->message, ERR_CANCELED,
+                                       "Call canceled" );
+                } else {
+                    clear_message( call->message );
                 }
-                mess_cache_.push( lock->message );
+                send_message( *call->message );
             }
+            mess_cache_.push( call->message );
         }
+
+        struct proto_closure: public google::protobuf::Closure {
+            srpc::shared_ptr<call_keeper> call;
+            void_wptr                     lck;
+            this_type                    *parent;
+
+            void Run( )
+            {
+                void_sptr lock(lck.lock( ));
+                if( lock ) {
+                    parent->call_closure( call, true );
+                    call.reset( );
+                    lck.reset( );
+                }
+            }
+        };
+
+        friend struct proto_closure;
 
         void execute_default( message_type msg )
         {
@@ -250,17 +267,6 @@ namespace srpc { namespace common { namespace protocol {
                 return;
             }
 
-            struct proto_closure: public google::protobuf::Closure {
-                srpc::weak_ptr<call_keeper> call;
-                void Run( )
-                {
-                    srpc::shared_ptr<call_keeper> lck(call.lock( ));
-                    if( lck ) {
-                        lck->done( );
-                    }
-                }
-            };
-
             bool wait = msg->opt( ).wait( );
 
             call_sptr call_k = call_keeper::create( );
@@ -277,11 +283,11 @@ namespace srpc { namespace common { namespace protocol {
             call_k->request->ParseFromString( msg->request( ) );
 
             srpc::unique_ptr<proto_closure> cp(new proto_closure);
-            cp->call = call_k;
+            cp->call    = call_k;
+            cp->lck     = track_;
+            cp->parent  = this;
 
             call_k->closure.reset( cp.release( ) );
-
-            call_k->done = create_cb( call_k, wait );
 
             if( wait ) {
                 calls_.insert( std::make_pair( msg->id( ), call_k ) );
@@ -397,7 +403,7 @@ namespace srpc { namespace common { namespace protocol {
         bool                 ready_;
         call_map             calls_;
         srpc::mutex          calls_lock_;
-        srpc::weak_ptr<void> track_;
+        void_wptr            track_;
     };
 
 }}}

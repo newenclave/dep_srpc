@@ -94,6 +94,7 @@ public:
         srpc::shared_ptr<connector> inst
                 = srpc::make_shared<connector>(srpc::ref(ios), addr, svc);
         inst->init( );
+        inst->track( inst );
         return inst;
     }
 
@@ -130,8 +131,8 @@ int main( int argc, char *argv[] )
 
         std::thread t([&ios]( ){ ios.run( ); });
 
-        connector ctr(ios, "127.0.0.1", 23456);
-        ctr.start( );
+        auto ctr = srpc::make_shared<connector>(std::ref(ios), "127.0.0.1", 23456);
+        ctr->start( );
 
         std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 
@@ -143,15 +144,15 @@ int main( int argc, char *argv[] )
         std::string d = "!!!!!!!!!!!!!!";
         for( int i=0; i<100000; ++i ) {
 
-            ctr.setup_message( ll, 0 );
-            auto slot = ctr.add_slot( ll.id( ) );
-            ctr.send_message( ll );
+            ctr->setup_message( ll, 0 );
+            auto slot = ctr->add_slot( ll.id( ) );
+            ctr->send_message( ll );
             srpc::shared_ptr<srpc::rpc::lowlevel> mess;
             auto res = slot->read_for( mess, srpc::chrono::seconds(1) );
             if( 0 != res ) {
                 break;
             }
-            ctr.erase_slot( slot );
+            ctr->erase_slot( slot );
         }
 
         ios.stop( );

@@ -90,6 +90,7 @@ public:
     {
         srpc::shared_ptr<protocol_client> inst
             = srpc::make_shared<protocol_client>( srpc::ref(ios), key( ) );
+        inst->track( inst );
         inst->init( );
         return inst;
     }
