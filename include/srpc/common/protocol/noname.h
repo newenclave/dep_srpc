@@ -97,9 +97,7 @@ namespace srpc { namespace common { namespace protocol {
             ,call_type_(get_call_type(server))
             ,on_ready_(&noname::default_on_ready)
             ,ready_(false)
-        {
-            init( );
-        }
+        { }
 
         void init( )
         {

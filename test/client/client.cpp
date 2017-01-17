@@ -131,10 +131,8 @@ int main( int argc, char *argv[] )
 
         std::thread t([&ios]( ){ ios.run( ); });
 
-        auto ctr = srpc::make_shared<connector>(std::ref(ios), "127.0.0.1", 23456);
+        auto ctr = connector::create( ios, "127.0.0.1", 23456);
         ctr->start( );
-
-        std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 
         srpc::rpc::lowlevel ll;
         ll.mutable_opt( )->set_wait( true );
