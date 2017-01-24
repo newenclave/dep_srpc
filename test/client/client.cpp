@@ -187,6 +187,7 @@ int main( int argc, char *argv[] )
             }
             ctr->erase_slot( slot );
         }
+
         ios.stop( );
 
         //ios.run( );
@@ -196,5 +197,6 @@ int main( int argc, char *argv[] )
     } catch( const std::exception &ex ) {
         std::cerr << "Error " << ex.what( ) << "\n";
     }
+    google::protobuf::ShutdownProtobufLibrary( );
     return 0;
 }
