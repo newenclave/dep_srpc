@@ -54,7 +54,6 @@ class test_service: public test::test_service {
         //std::cout << "Call!\n";
         if(done) done->Run( );
     }
-
 };
 
 srpc::shared_ptr<spb::service> create_svc( )

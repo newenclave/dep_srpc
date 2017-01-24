@@ -2,6 +2,7 @@
 #define SRPC_COMMON_OBSERVERS_SUBSCRIPTION_H
 
 #include "srpc/common/config/memory.h"
+#include "srpc/common/config/stdint.h"
 #include "srpc/common/observers/scoped-subscription.h"
 
 namespace srpc { namespace common { namespace observers {
@@ -22,6 +23,7 @@ namespace srpc { namespace common { namespace observers {
     public:
 
         struct unsubscriber {
+            virtual srpc::uintptr_t data( ) { return 0; }
             virtual ~unsubscriber( ) { }
             virtual void run( ) = 0;
         };

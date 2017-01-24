@@ -201,6 +201,11 @@ namespace srpc { namespace common { namespace observers {
                 ,key(k)
             { }
 
+            srpc::uintptr_t data( )
+            {
+                return parent.lock( ).get( );
+            }
+
             void run( )
             {
                 impl_sptr lock(parent.lock( ));
