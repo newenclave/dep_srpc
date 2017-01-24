@@ -32,6 +32,5 @@ macro( srpc_all_headers_path OUT_LIST PREFIX_PATH )
         ${PREFIX_PATH}/srpc/client/connector
         ${PREFIX_PATH}/srpc/client/connector/async
         ${PREFIX_PATH}/srpc/client/connector/async/impl
-
     )
 endmacro( )

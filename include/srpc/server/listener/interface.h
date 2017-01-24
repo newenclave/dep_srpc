@@ -12,23 +12,29 @@
 #include "srpc/common/transport/types.h"
 
 namespace srpc { namespace server { namespace listener {
-    class interface: public srpc::enable_shared_from_this<interface> {
-    public:
-        typedef common::transport::error_code error_code;
-        typedef common::transport::io_service io_service;
-        typedef common::transport::interface transport_type;
 
-        SRPC_OBSERVER_DEFINE( on_accept,
-                              void ( transport_type *,
-                                     const std::string &addr,
-                                     srpc::uint16_t svc ) );
+    class interface: public srpc::enable_shared_from_this<interface> {
+
+    public:
+
+        typedef srpc::shared_ptr<interface>     shared_type;
+        typedef common::transport::error_code   error_code;
+        typedef common::transport::io_service   io_service;
+        typedef common::transport::interface    transport_type;
+
+        SRPC_OBSERVER_DEFINE( on_accept, void (transport_type *,
+                                               const std::string &,
+                                               srpc::uint16_t) );
         SRPC_OBSERVER_DEFINE( on_accept_error, void (const error_code &) );
         SRPC_OBSERVER_DEFINE( on_close, void ( ) );
 
-    protected:
-        interface( key )
-        { }
+    public:
+        virtual void start( ) = 0;
+        virtual void stop(  ) = 0;
+
     };
+
+
 }}}
 
 #endif // SRPC_SERVER_LISTENER_INTERFACE_H

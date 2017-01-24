@@ -3,6 +3,7 @@ set( lib_name ${SERVER_LIB_NAME} )
 list( APPEND src_dirs
       .
       ${INCLUDE_DIR}/srpc/server
+      ./listener
      )
 
 foreach( src_dir ${src_dirs} )
