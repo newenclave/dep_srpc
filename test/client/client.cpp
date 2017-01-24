@@ -18,7 +18,7 @@ using message_sptr = srpc::shared_ptr<gpb::Message>;
 
 using iface_ptr       = common::transport::interface *;
 using client_sptr     = srpc::shared_ptr<common::transport::interface>;
-using connector_type  = client::connector::async::udp;
+using connector_type  = client::connector::async::tcp;
 using connector_sptr  = srpc::shared_ptr<connector_type>;
 using size_policy     = common::sizepack::varint<size_t>;
 

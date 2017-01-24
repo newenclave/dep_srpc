@@ -131,6 +131,11 @@ namespace async {
             return acceptor_.native_handle( );
         }
 
+        io_acceptor_type &get_acceptor( )
+        {
+            return acceptor_;
+        }
+
     private:
 
         io_service       &ios_;

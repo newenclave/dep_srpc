@@ -29,6 +29,9 @@
 
 #include "protocol/t.pb.h"
 
+#include "srpc/server/listener/tcp.h"
+#include "srpc/server/listener/udp.h"
+
 using namespace srpc;
 namespace gpb = google::protobuf;
 namespace spb = srpc::common::protobuf;
@@ -125,110 +128,7 @@ void protocol_client::on_close( )
     g_clients.erase( get_transport( ) );
 }
 
-template <typename Acceptor>
-class lister: public srpc::enable_shared_from_this<lister<Acceptor> >
-{
-public:
-    using error_code  = common::transport::error_code;
-    using io_service  = common::transport::io_service;
-private:
-
-    SRPC_OBSERVER_DEFINE( on_accept,
-                          void (common::transport::interface *,
-                                const std::string &addr, srpc::uint16_t svc ) );
-    SRPC_OBSERVER_DEFINE( on_accept_error, void (const error_code &) );
-    SRPC_OBSERVER_DEFINE( on_close, void ( ) );
-
-    struct accept_delegate: public server::acceptor::interface::delegate {
-
-        typedef lister<Acceptor> parent_type;
-
-        accept_delegate( srpc::shared_ptr<parent_type> lst )
-            :lst_(lst)
-        { }
-
-        void on_accept_client( common::transport::interface *c,
-                               const std::string &addr, srpc::uint16_t svc )
-        {
-
-            srpc::shared_ptr<parent_type> lck(lst_.lock( ));
-            if( lck ) {
-                lck->on_accept( c, addr, svc );
-                lck->acceptor_->start_accept( );
-            }
-        }
-
-        void on_accept_error( const error_code &e )
-        {
-            srpc::shared_ptr<parent_type> lck(lst_.lock( ));
-            if( lck ) {
-                lck->on_accept_error( e );
-            }
-        }
-
-        void on_close( )
-        {
-            srpc::shared_ptr<parent_type> lck(lst_.lock( ));
-            if( lck ) {
-                lck->on_close( );
-            }
-        }
-
-        srpc::weak_ptr<parent_type> lst_;
-    };
-
-    friend class accept_delegate;
-
-    struct key { };
-
-public:
-
-    typedef Acceptor acceptor_type;
-    typedef srpc::shared_ptr<Acceptor> acceptor_sptr;
-
-
-    lister( io_service &ios, const std::string &addr, srpc::uint16_t svc, key )
-    {
-        typename acceptor_type::endpoint ep(
-                    SRPC_ASIO::ip::address::from_string(addr), svc );
-
-        acceptor_ = acceptor_type::create( ios, 45000, ep );
-    }
-
-    static
-    srpc::shared_ptr<lister> create( io_service &ios,
-                                     const std::string &addr,
-                                     srpc::uint16_t svc )
-    {
-        srpc::shared_ptr<lister> inst
-            = srpc::make_shared<lister>( srpc::ref(ios), addr, svc, key( ) );
-
-        inst->delegate_.reset( new accept_delegate(inst) );
-        inst->acceptor_->set_delegate( inst->delegate_.get( ) );
-        return inst;
-    }
-
-    void start( )
-    {
-        acceptor_->open( );
-        acceptor_->bind( );
-        acceptor_->start_accept( );
-    }
-
-    void stop( )
-    {
-        acceptor_->close( );
-    }
-
-private:
-    srpc::unique_ptr<accept_delegate> delegate_;
-    acceptor_sptr                     acceptor_;
-};
-
-using listener = lister<server::acceptor::async::udp>;
-using factory  = common::factory<std::string, srpc::shared_ptr<spb::service> >;
-
-//using listener = lister<server::acceptor::async::tcp>;
+namespace lister_ns = server::listener::tcp;
 
 int main( int argc, char *argv[ ] )
 {
@@ -241,7 +141,7 @@ int main( int argc, char *argv[ ] )
 
         std::uint64_t last_calls = 0;
 
-        listener::io_service ios;
+        SRPC_ASIO::io_service ios;
 
         common::timers::periodical tt(ios);
 
@@ -255,12 +155,7 @@ int main( int argc, char *argv[ ] )
             std::cout << "Total " << g_counter_total << "\n";
         }, srpc::chrono::milliseconds(1000) );
 
-        auto l = listener::create( ios, "0.0.0.0", port );
-
-        factory fac;
-        fac.assign( "test", &create_svc );
-
-        auto rrr = fac.create( "test" );
+        auto l = lister_ns::create( ios, "0.0.0.0", port, true );
 
         l->subscribe_on_accept_error(
             [](const SRPC_SYSTEM::error_code &e)

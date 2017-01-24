@@ -7,6 +7,7 @@ add_executable(${exe_name} ${src_dir})
 
 list( APPEND internal
       ${INTERNAL_PROJECT_NAME}_common_s
+      srpc_common
       srpc_server
       Boost
 )
@@ -16,7 +17,8 @@ include_directories( ${${INTERNAL_PROJECT_NAME}_common_s_INCLUDE_DIRS}  )
 message( "-- Seting up internal dependencies for " ${exe_name} )
 foreach( dep ${internal} )
 
-    message( "\tAdd dependence: " ${${dep}_LIBRARIES} )
+    message( "\tAdd dependence: " ${dep} )
+    message( "\tSERVER LIBRARY!: " ${${dep}_LIBRARIES} )
 
     add_dependencies(       ${exe_name} ${dep}      )
     add_definitions(        ${${dep}_DEFINITIONS}   )
