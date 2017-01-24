@@ -91,6 +91,22 @@ public:
         connector_->set_delegate( &delegate_ );
     }
 
+    void recv_ready( tag_type, buffer_type,
+                     const_buffer_slice slice )
+    {
+        set_ready( true );
+        set_default_call( );
+    }
+
+    void init( )
+    {
+        set_call( [this](tag_type t, buffer_type b,
+                         const_buffer_slice slice)
+        {
+            recv_ready( t, b, slice );
+        } );
+    }
+
     static
     srpc::shared_ptr<connector> create( io_service &ios,
                                         const std::string &addr,

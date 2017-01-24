@@ -91,10 +91,16 @@ public:
         srpc::shared_ptr<protocol_client> inst
             = srpc::make_shared<protocol_client>( srpc::ref(ios), key( ) );
         inst->track( inst );
-        inst->set_default_call( );
         inst->init( );
         inst->set_ready( true );
         return inst;
+    }
+
+    void init( )
+    {
+        test::run rr;
+        set_default_call( );
+        send_message( rr );
     }
 
     void on_close( );
@@ -244,7 +250,7 @@ int main( int argc, char *argv[ ] )
             std::cerr << g_counter - last_calls << " ";
             g_counter_total += (g_counter - last_calls);
             last_calls = g_counter;
-            if( g_counter_total >= 1000 ) {
+            if( g_counter_total >= 5000 ) {
                 ios.stop( );
             }
             std::cout << "Total " << g_counter_total << "\n";
