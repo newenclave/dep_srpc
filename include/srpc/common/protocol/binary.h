@@ -209,6 +209,7 @@ namespace srpc { namespace common { namespace protocol {
             }
         }
 
+#if 0
         buffer_slice prepare_buffer( buffer_type buf, tag_type tag,
                                      const message_type &mess )
         {
@@ -234,6 +235,7 @@ namespace srpc { namespace common { namespace protocol {
             return pack_message( buf, res );
 
         }
+#endif
 
         virtual void on_message_ready( tag_type, buffer_type,
                                        const_buffer_slice )
