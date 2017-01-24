@@ -93,6 +93,10 @@ namespace srpc { namespace common { namespace protocol {
         typedef common::cache::simple<std::string>          cache_type;
         typedef common::cache::simple<srpc::rpc::lowlevel>  message_cache_type;
 
+        typedef srpc::function<void (tag_type,
+                                     buffer_type,
+                                     const_buffer_slice)> call_function;
+
         noname( bool server, size_t max_length )
             :parent_type(server ? 100 : 101, max_length)
             ,call_type_(get_call_type(server))
@@ -118,6 +122,19 @@ namespace srpc { namespace common { namespace protocol {
             }
         }
 
+        void push_cache_back( const error_code &err,
+                              buffer_type buff, empty_call cb,
+                              void_wptr track )
+        {
+            if( !err ) {
+                void_sptr lck(track.lock( ));
+                if( lck ) {
+                    buffer_cache_.push( buff );
+                    cb( );
+                }
+            }
+        }
+
         bool send_message( const message_lite &mess, empty_call cb )
         {
             namespace ph = srpc::placeholders;
@@ -131,7 +148,7 @@ namespace srpc { namespace common { namespace protocol {
 
             cb_type::post_call_type post_callback =
                     srpc::bind( &noname::push_cache_back, this, ph::_1,
-                                buff, cb );
+                                buff, cb, track_ );
 
             this->get_transport( )->write( slice.data( ), slice.size( ),
                                            cb_type::post( post_callback ) );
@@ -185,8 +202,10 @@ namespace srpc { namespace common { namespace protocol {
 
         void set_ready( bool value )
         {
-            ready_ = value;
-            on_ready_(ready_);
+            if( ready_ != value ) {
+                ready_ = value;
+                on_ready_(ready_);
+            }
         }
 
         void push_message_to_cache( message_type msg )
@@ -197,7 +216,6 @@ namespace srpc { namespace common { namespace protocol {
         void clear_message( message_type &msg )
         {
             msg->clear_call( );
-            msg->clear_opt( );
             msg->clear_request( );
             msg->clear_response( );
         }
@@ -230,6 +248,10 @@ namespace srpc { namespace common { namespace protocol {
                                        "Call canceled" );
                 } else {
                     clear_message( call->message );
+                    if( call->message->opt( ).accept_response( ) ) {
+                        call->message->set_response(
+                                 call->response->SerializeAsString( ) );
+                    }
                 }
                 send_message( *call->message );
             }
@@ -264,14 +286,9 @@ namespace srpc { namespace common { namespace protocol {
             call_sptr call_k = call_keeper::create( );
 
             call_k->message = msg;
-            call_k->request.reset( svc->get( )
-                                      ->GetRequestPrototype( call ).New( ));
-
-            call_k->response.reset(svc->get( )
-                                      ->GetResponsePrototype( call ).New( ));
-
+            call_k->request.reset( svc->get_request_proto( call ).New( ) );
+            call_k->response.reset( svc->get_response_proto( call ).New( ) );
             call_k->controller.reset( new protobuf::controller );
-
             call_k->request->ParseFromString( msg->request( ) );
 
             srpc::unique_ptr<proto_closure> cp(new proto_closure);
@@ -287,7 +304,8 @@ namespace srpc { namespace common { namespace protocol {
 
             }
 
-            svc->call( call, call_k->controller.get( ),
+            svc->call( call,
+                       call_k->controller.get( ),
                        call_k->request.get( ),
                        call_k->response.get( ),
                        call_k->closure.get( ) );
@@ -311,31 +329,87 @@ namespace srpc { namespace common { namespace protocol {
             }
         }
 
-        void on_message_ready( tag_type, buffer_type,
-                               const_buffer_slice slice )
+        void process_internal( message_type )
+        {
+
+        }
+
+        void process_service( message_type )
+        {
+
+        }
+
+        void process_invalid( message_type )
+        {
+
+        }
+
+        void process_answer( message_type mess )
+        {
+            this->push_to_slot( mess->id( ), mess );
+        }
+
+        void process_callback( message_type mess )
+        {
+            this->push_to_slot( mess->target_id( ), mess );
+        }
+
+        void process_call( message_type mess )
+        {
+            this->execute_call( mess );
+        }
+
+        void rpc_ready( tag_type, buffer_type,
+                        const_buffer_slice slice )
         {
             message_type mess = mess_cache_.get( );
             mess->ParseFromArray( slice.data( ), slice.size( ) );
 
-            bool callback = !!( mess->info( ).call_type( ) &
-                                srpc::rpc::call_info::TYPE_CALLBACK_MASK );
+            static const srpc::uint32_t cb_mask =
+                            srpc::rpc::call_info::TYPE_CALLBACK_MASK;
 
-            srpc::uint32_t call_type = mess->info( ).call_type( )
-                                & ~srpc::rpc::call_info::TYPE_CALLBACK_MASK;
+            const bool callback = !!( mess->info( ).call_type( ) & cb_mask );
+            const srpc::uint32_t call_type = ( mess->info( ).call_type( )
+                                             & ~cb_mask );
 
-            //// answer
-            if( call_type == call_type_ ) {
-                this->push_to_slot( mess->id( ), mess );
-            } else {
-                /// callback
-                if( callback ) {
-                    this->push_to_slot( mess->target_id( ), mess );
-                } else if( call_type != 0 ) { /// call
-                    this->execute_call( mess );
+            switch( mess->info( ).call_type( ) ) {
+            case srpc::rpc::call_info::TYPE_INTERNAL:
+                process_internal( mess );
+                break;
+            case srpc::rpc::call_info::TYPE_SERVICE:
+                process_service( mess );
+                break;
+            default:
+                if( call_type == call_type_ ) {  //// answer
+                    process_answer( mess );
                 } else {
-                    /// invalid message type
+                    if( callback ) {
+                        process_callback( mess );
+                    } else if( (call_type & 3 ) != 0 ) { /// direct call
+                        process_call( mess );
+                    } else {
+                        process_invalid( mess );
+                    }
                 }
             }
+        }
+
+        void set_default_call( )
+        {
+            namespace ph = srpc::placeholders;
+            call_ = srpc::bind( &this_type::rpc_ready, this,
+                                ph::_1, ph::_2, ph::_3 );
+        }
+
+        void set_call( call_function call )
+        {
+            call_ = call;
+        }
+
+        void on_message_ready( tag_type t, buffer_type b,
+                               const_buffer_slice slice )
+        {
+            call_(t, b, slice);
         }
 
         void append_message( buffer_type buff, const message_type &mess )
@@ -350,8 +424,8 @@ namespace srpc { namespace common { namespace protocol {
 
             buf->resize( size_policy::max_length );
 
-            const size_t old_len    = buf->size( );
-            const size_t hash_size  = this->hash( )->length( );
+            const size_t old_len   = buf->size( );
+            const size_t hash_size = this->hash( )->length( );
 
             tag_policy::append( tag, *buf );
 
@@ -371,15 +445,6 @@ namespace srpc { namespace common { namespace protocol {
             return this->insert_size_prefix( buf, packed );
         }
 
-        void push_cache_back( const error_code &err,
-                              buffer_type buff, empty_call cb )
-        {
-            if( !err ) {
-                buffer_cache_.push( buff );
-                cb( );
-            }
-        }
-
         virtual
         service_sptr get_service( const message_type & )
         {
@@ -396,6 +461,7 @@ namespace srpc { namespace common { namespace protocol {
         call_map             calls_;
         srpc::mutex          calls_lock_;
         void_wptr            track_;
+        call_function        call_;
     };
 
 }}}

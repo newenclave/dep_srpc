@@ -24,9 +24,6 @@ namespace async {
 
     public:
 
-        static const bool is_stream = true;
-        static const bool is_safe   = true;
-
         typedef asio_tcp::endpoint              endpoint;
         typedef parent_type::delegate           delegate;
         typedef parent_type::native_handle_type native_handle_type;
@@ -55,6 +52,9 @@ namespace async {
         {
             return ep_;
         }
+
+        bool is_stream( ) const { return true; }
+        bool is_safe( )   const { return true; }
 
     private:
 

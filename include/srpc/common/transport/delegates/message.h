@@ -40,6 +40,7 @@ namespace delegates {
 
         void on_data( const char *data, size_t len )
         {
+            //std::cout << ".";
             unpacked_.insert( unpacked_.end( ), data, data + len );
 
             size_t pack_len = size_policy::size_length( unpacked_.begin( ),

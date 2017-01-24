@@ -60,6 +60,9 @@ namespace async {
 
             }
 
+            bool is_stream( ) const { return false; }
+            bool is_safe( )   const { return false; }
+
             void resize_buffer( size_t )
             { }
 

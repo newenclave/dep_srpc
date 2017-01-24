@@ -15,6 +15,7 @@ namespace srpc { namespace common { namespace protobuf {
         typedef srpc::shared_ptr<service_type>      service_sptr;
         typedef srpc::shared_ptr<service>           shared_type;
         typedef google::protobuf::MethodDescriptor  method_type;
+        typedef google::protobuf::Message           message_type;
 
         explicit service( service_sptr svc )
             :service_(svc)
@@ -65,6 +66,16 @@ namespace srpc { namespace common { namespace protobuf {
         virtual const method_type *find_method ( const std::string &name ) const
         {
             return service_->GetDescriptor( )->FindMethodByName( name );
+        }
+
+        const message_type &get_request_proto( const method_type *meth )
+        {
+            return service_->GetRequestPrototype( meth );
+        }
+
+        const message_type &get_response_proto( const method_type *meth )
+        {
+            return service_->GetResponsePrototype( meth );
         }
 
     protected:

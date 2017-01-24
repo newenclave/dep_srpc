@@ -90,6 +90,9 @@ namespace srpc { namespace common { namespace transport {
         virtual srpc::handle_type native_handle( ) = 0;
         virtual void resize_buffer( size_t ) = 0;
 
+        virtual bool is_stream( ) const = 0;
+        virtual bool is_safe( )   const = 0;
+
         virtual ~interface( ) { }
     };
 

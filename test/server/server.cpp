@@ -51,6 +51,7 @@ class test_service: public test::test_service {
     {
         g_counter++;
         response->set_name( "!!!!?????" );
+        //std::cout << "Call!\n";
         if(done) done->Run( );
     }
 
@@ -90,6 +91,7 @@ public:
         srpc::shared_ptr<protocol_client> inst
             = srpc::make_shared<protocol_client>( srpc::ref(ios), key( ) );
         inst->track( inst );
+        inst->set_default_call( );
         inst->init( );
         inst->set_ready( true );
         return inst;
@@ -239,12 +241,13 @@ int main( int argc, char *argv[ ] )
         common::timers::periodical tt(ios);
 
         tt.call( [&ios, &tt, &last_calls](...) {
-            std::cerr << g_counter - last_calls << "\n";
+            std::cerr << g_counter - last_calls << " ";
+            g_counter_total += (g_counter - last_calls);
             last_calls = g_counter;
-            g_counter_total++;
-            if( g_counter_total >= 10000 ) {
+            if( g_counter_total >= 1000 ) {
                 ios.stop( );
             }
+            std::cout << "Total " << g_counter_total << "\n";
         }, srpc::chrono::milliseconds(1000) );
 
         auto l = listener::create( ios, "0.0.0.0", port );
@@ -278,13 +281,19 @@ int main( int argc, char *argv[ ] )
 
         l->start( );
 
-        std::thread([&ios]( ) { ios.run( ); }).detach( );
-        std::thread([&ios]( ) { ios.run( ); }).detach( );
-        std::thread([&ios]( ) { ios.run( ); }).detach( );
-        std::thread([&ios]( ) { ios.run( ); }).detach( );
-        std::thread([&ios]( ) { ios.run( ); }).detach( );
+        std::thread t1([&ios]( ) { ios.run( ); });
+        std::thread t2([&ios]( ) { ios.run( ); });
+        std::thread t3([&ios]( ) { ios.run( ); });
+        std::thread t4([&ios]( ) { ios.run( ); });
+        std::thread t5([&ios]( ) { ios.run( ); });
 
         ios.run( );
+
+        t1.join( );
+        t2.join( );
+        t3.join( );
+        t4.join( );
+        t5.join( );
 
         l->stop( );
         g_clients.clear( );

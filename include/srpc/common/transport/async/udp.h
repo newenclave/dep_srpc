@@ -220,15 +220,15 @@ namespace async {
 
     public:
 
-        static const bool is_stream = false;
-        static const bool is_safe   = false;
-
         typedef asio_udp::endpoint    endpoint;
         typedef parent_type::delegate delegate;
 
         udp( io_service &ios, std::uint32_t buflen )
             :parent_type(ios, buflen)
         { }
+
+        bool is_stream( ) const { return false; }
+        bool is_safe( )   const { return false; }
 
         void open( )
         {

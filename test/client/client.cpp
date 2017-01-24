@@ -99,6 +99,7 @@ public:
         srpc::shared_ptr<connector> inst
                 = srpc::make_shared<connector>(srpc::ref(ios), addr, svc);
         inst->init( );
+        inst->set_default_call( );
         inst->track( inst );
         return inst;
     }
@@ -124,7 +125,7 @@ public:
     void wait_ready(  )
     {
         srpc::unique_lock<srpc::mutex> l(ready_mtx_);
-        ready_var_.wait( l, [this]( ) { return !ready( ); } );
+        ready_var_.wait( l, [this]( ) { return ready( ); } );
     }
 
 private:
@@ -149,6 +150,8 @@ int main( int argc, char *argv[] )
         ctr->start( );
         ctr->wait_ready( );
 
+        std::cout << "Ready! " << ctr->ready( ) << "\n";
+
         srpc::rpc::lowlevel ll;
         ll.mutable_opt( )->set_wait( true );
         ll.set_request( "!!!!!!!!!!!!!!" );
@@ -161,8 +164,9 @@ int main( int argc, char *argv[] )
             auto slot = ctr->add_slot( ll.id( ) );
             ctr->send_message( ll );
             srpc::shared_ptr<srpc::rpc::lowlevel> mess;
-            auto res = slot->read_for( mess, srpc::chrono::seconds(1) );
+            auto res = slot->read_for( mess, srpc::chrono::seconds(3) );
             if( 0 != res ) {
+                std::cout << "Timeout!\n";
                 break;
             }
             ctr->erase_slot( slot );
