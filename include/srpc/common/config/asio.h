@@ -1,7 +1,7 @@
 #ifndef CONFIG_ASIO_H
 #define CONFIG_ASIO_H
 
-#ifdef ASIO_STANALONE
+#ifdef ASIO_STANDALONE
 #include "asio.hpp"
 #else
 #include "boost/asio.hpp"

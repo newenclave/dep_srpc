@@ -1,7 +1,7 @@
 #ifndef CONFIG_SYSTEM_FORWARD_H
 #define CONFIG_SYSTEM_FORWARD_H
 
-#ifdef ASIO_STANALONE
+#ifdef ASIO_STANDALONE
 #define SRPC_SYSTEM_FORWARD( x ) namespace asio { x } }
 #define SRPC_SYSTEM ::asio
 #else

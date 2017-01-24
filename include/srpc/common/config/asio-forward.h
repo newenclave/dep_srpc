@@ -1,7 +1,7 @@
 #ifndef CONFIG_ASIO_FORWARD_H
 #define CONFIG_ASIO_FORWARD_H
 
-#ifdef ASIO_STANALONE
+#ifdef ASIO_STANDALONE
 #define SRPC_ASIO_FORWARD( x ) namespace asio { x }
 #define SRPC_ASIO ::asio
 #else

@@ -36,7 +36,7 @@ endif( )
 if( CXX11_ENABLED )
     if( ASIO_STANDALONE_DIR )
         include_directories( ${ASIO_STANDALONE_DIR} )
-        add_definitions( -DASIO_STANALONE=1 )
+        add_definitions( -DASIO_STANDALONE=1 )
     else( )
         find_package( Boost 1.53 COMPONENTS
                             system

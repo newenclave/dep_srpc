@@ -1,7 +1,7 @@
 #ifndef CONFIG_SYSTEM_H
 #define CONFIG_SYSTEM_H
 
-#ifdef ASIO_STANALONE
+#ifdef ASIO_STANDALONE
 #include "asio/system_error.hpp"
 #include "asio/error_code.hpp"
 #else
