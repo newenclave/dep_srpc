@@ -18,7 +18,6 @@ message( "-- Seting up internal dependencies for " ${exe_name} )
 foreach( dep ${internal} )
 
     message( "\tAdd dependence: " ${dep} )
-    message( "\tSERVER LIBRARY!: " ${${dep}_LIBRARIES} )
 
     add_dependencies(       ${exe_name} ${dep}      )
     add_definitions(        ${${dep}_DEFINITIONS}   )
