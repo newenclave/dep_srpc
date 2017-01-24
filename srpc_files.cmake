@@ -26,6 +26,7 @@ macro( srpc_all_headers_path OUT_LIST PREFIX_PATH )
         ${PREFIX_PATH}/srpc/common/config
         ${PREFIX_PATH}/srpc/server
         ${PREFIX_PATH}/srpc/server/acceptor
+        ${PREFIX_PATH}/srpc/server/listener
         ${PREFIX_PATH}/srpc/server/acceptor/async
         ${PREFIX_PATH}/srpc/client
         ${PREFIX_PATH}/srpc/client/connector
