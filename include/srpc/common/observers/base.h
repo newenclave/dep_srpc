@@ -189,7 +189,7 @@ namespace srpc { namespace common { namespace observers {
         typedef srpc::shared_ptr<impl>   impl_sptr;
         typedef srpc::weak_ptr<impl>     impl_wptr;
 
-        struct unsubscriber: public subscription::unsubscriber {
+        struct unsubscriber: subscription::unsubscriber {
 
             typedef base<SlotType, MutexType> base_type;
 
@@ -203,7 +203,7 @@ namespace srpc { namespace common { namespace observers {
 
             srpc::uintptr_t data( )
             {
-                return parent.lock( ).get( );
+                return reinterpret_cast<srpc::uintptr_t>(parent.lock( ).get( ));
             }
 
             void run( )
