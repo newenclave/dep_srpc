@@ -54,9 +54,12 @@ std::uint64_t ticks_now( )
     return tick::now( );
 }
 
-ba::io_service test_io;
-ba::io_service ios;
-ba::io_service ios2;
+
+namespace  {
+    ba::io_service test_io;
+    ba::io_service g_ios;
+    ba::io_service ios2;
+}
 
 template <typename StreamType>
 using common_transport = common::transport::async::base<StreamType>;
@@ -300,7 +303,7 @@ int main_( )
     data d;
     auto res = slot->read_for( d, srpc::chrono::seconds(1) );
 
-    period_timer dt(ios);
+    period_timer dt(g_ios);
     dt.call( [ ](...) {
         std::cout << messages << " ";
         std::cout << bytes << std::endl;
@@ -324,7 +327,7 @@ int main_( )
 
         udp_transport::endpoint uep(ba::ip::address::from_string("0.0.0.0"), 12347);
 
-        auto acc = udp_acceptor::create( ios, 4096, uep );
+        auto acc = udp_acceptor::create( g_ios, 4096, uep );
 
         udp_acceptor_del udeleg;
 
@@ -360,7 +363,7 @@ int main_( )
 //        std::thread([]( ){ ios.run( ); }).detach( );
 //        std::thread([]( ){ ios.run( ); }).detach( );
 
-        ios.run( );
+        g_ios.run( );
 
         return 0;
 

@@ -48,7 +48,9 @@ namespace srpc { namespace common { namespace protocol {
             channel( )
                 :parent_(NULL)
                 ,target_call_(0)
-            { }
+            {
+                set_timeout( 30 * 1000 * 1000 );
+            }
 
             channel( srpc::uint64_t target_call )
                 :parent_(NULL)
@@ -57,6 +59,7 @@ namespace srpc { namespace common { namespace protocol {
                 if( target_call_ != 0 ) {
                     set_flag( protobuf::channel::USE_CONTEXT_CALL );
                 }
+                set_timeout( 30 * 1000 * 1000 );
             }
 
             bool alive( ) const
@@ -77,8 +80,15 @@ namespace srpc { namespace common { namespace protocol {
                 typedef typename parent_type::queue_type::result_enum eresult;
 
                 typename parent_type::message_type answer;
+
+                srpc::uint64_t id = ll->id( );
+
+                //std::cout << "wait!...";
+
                 eresult res = sl->read_for( answer,
                                 srpc::chrono::microseconds( timeout( ) ) );
+
+                //std::cout << res << "\n";
 
                 const char *fail = "\0";
 
@@ -105,7 +115,11 @@ namespace srpc { namespace common { namespace protocol {
                         }
                     }
                 } else if( response != NULL ) {
-                    response->ParseFromString( ll->response( ) );
+                    if( (id == answer->id( ))
+                        && answer->info( ).call_type( ) == parent_->call_type_ )
+                    {
+                        response->ParseFromString( answer->response( ) );
+                    }
                 }
 
                 parent_->mess_cache_.push( answer );
@@ -113,10 +127,10 @@ namespace srpc { namespace common { namespace protocol {
             }
 
             void CallMethod( const google::protobuf::MethodDescriptor* method,
-                             google::protobuf::RpcController* controller,
-                             const google::protobuf::Message* request,
-                             google::protobuf::Message* response,
-                             google::protobuf::Closure* done)
+                             google::protobuf::RpcController     * controller,
+                             const google::protobuf::Message     * request,
+                             google::protobuf::Message           * response,
+                             google::protobuf::Closure           * done )
             {
 
                 typedef typename parent_type::slot_ptr slot_ptr;
@@ -153,7 +167,7 @@ namespace srpc { namespace common { namespace protocol {
                             process_answer( sl, ll, controller, response );
                         }
                     } else {
-                        if(controller) {
+                        if( controller ) {
                             controller->SetFailed( "Channel is not ready" );
                         }
                     }

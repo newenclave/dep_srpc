@@ -43,8 +43,11 @@ using client_delegate = common::protocol::noname<>;
 
 using service_wrapper = spb::service;
 
-srpc::atomic<srpc::uint64_t> g_counter(0);
-srpc::atomic<srpc::uint64_t> g_counter_total(0);
+namespace {
+    SRPC_ASIO::io_service g_ios;
+    srpc::atomic<srpc::uint64_t> g_counter(0);
+    srpc::atomic<srpc::uint64_t> g_counter_total(0);
+}
 
 class test_service: public test::test_service {
     void call6(::google::protobuf::RpcController* controller,
@@ -55,7 +58,7 @@ class test_service: public test::test_service {
         g_counter++;
         response->set_name( "!!!!?????" );
         //std::cout << "Call!\n";
-        if(done) done->Run( );
+        g_ios.post( [done]( ) { if(done) done->Run( ); } );
     }
 };
 
@@ -141,11 +144,9 @@ int main( int argc, char *argv[ ] )
 
         std::uint64_t last_calls = 0;
 
-        SRPC_ASIO::io_service ios;
+        common::timers::periodical tt(g_ios);
 
-        common::timers::periodical tt(ios);
-
-        tt.call( [&ios, &tt, &last_calls](...) {
+        tt.call( [&tt, &last_calls](...) {
             std::cerr << g_counter - last_calls << " ";
             g_counter_total += (g_counter - last_calls);
             last_calls = g_counter;
@@ -155,7 +156,7 @@ int main( int argc, char *argv[ ] )
             std::cout << "Total " << g_counter_total << "\n";
         }, srpc::chrono::milliseconds(1000) );
 
-        auto l = lister_ns::create( ios, "0.0.0.0", port, true );
+        auto l = lister_ns::create( g_ios, "0.0.0.0", port, true );
 
         l->subscribe_on_accept_error(
             [](const SRPC_SYSTEM::error_code &e)
@@ -164,13 +165,13 @@ int main( int argc, char *argv[ ] )
             } );
 
         l->subscribe_on_accept(
-            [&ios](common::transport::interface *c,
+            [ ](common::transport::interface *c,
                const std::string &addr, srpc::uint16_t svc)
             {
                 std::cout << "New client " << addr << ":" << svc << "\n";
 
                 protocol_client_sptr next
-                        = protocol_client::create( srpc::ref(ios) );
+                        = protocol_client::create( srpc::ref(g_ios) );
 
                 next->assign_transport( c );
                 next->get_transport( )->set_delegate( next.get( ) );
@@ -181,13 +182,13 @@ int main( int argc, char *argv[ ] )
 
         l->start( );
 
-        std::thread t1([&ios]( ) { ios.run( ); });
-        std::thread t2([&ios]( ) { ios.run( ); });
-        std::thread t3([&ios]( ) { ios.run( ); });
-        std::thread t4([&ios]( ) { ios.run( ); });
-        std::thread t5([&ios]( ) { ios.run( ); });
+        std::thread t1([ ]( ) { g_ios.run( ); });
+        std::thread t2([ ]( ) { g_ios.run( ); });
+        std::thread t3([ ]( ) { g_ios.run( ); });
+        std::thread t4([ ]( ) { g_ios.run( ); });
+        std::thread t5([ ]( ) { g_ios.run( ); });
 
-        ios.run( );
+        g_ios.run( );
 
         t1.join( );
         t2.join( );
