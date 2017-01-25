@@ -68,6 +68,8 @@ namespace srpc { namespace common { namespace protocol {
 #endif
             }
 
+
+
             void CallMethod( const google::protobuf::MethodDescriptor* method,
                              google::protobuf::RpcController* controller,
                              const google::protobuf::Message* request,
@@ -98,20 +100,19 @@ namespace srpc { namespace common { namespace protocol {
                     }
                     ll->mutable_opt( )->set_accept_response( response != NULL );
 
+                    slot_ptr sl;
+                    if( wait ) {
+                        sl = parent_->add_slot( ll->id( ) );
+                    }
+
                     bool sent = parent_->send_message( *ll );
 
                     if( sent ) {
                         if( wait ) {
-                            srpc::uint64_t id = ll->id( );
-
-                            slot_ptr sl = parent_->add_slot( id );
 
                             message_type answer;
-
                             eresult res = sl->read_for( answer,
                                     srpc::chrono::microseconds( timeout( ) ) );
-
-                            parent_->erase_slot( sl );
 
                             std::string fail;
 
@@ -147,6 +148,10 @@ namespace srpc { namespace common { namespace protocol {
                         if(controller) {
                             controller->SetFailed( "Channel is not ready" );
                         }
+                    }
+
+                    if( sl ) {
+                        parent_->erase_slot( sl );
                     }
                     parent_->mess_cache_.push( ll );
 
