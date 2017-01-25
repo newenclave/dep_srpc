@@ -68,7 +68,49 @@ namespace srpc { namespace common { namespace protocol {
 #endif
             }
 
+            void process_answer( typename parent_type::slot_ptr sl,
+                                 typename parent_type::message_type &ll,
+                                 google::protobuf::RpcController* controller,
+                                 google::protobuf::Message* response )
+            {
+                typedef typename parent_type::slot_ptr slot_ptr;
+                typedef typename parent_type::queue_type::result_enum eresult;
 
+                typename parent_type::message_type answer;
+                eresult res = sl->read_for( answer,
+                                srpc::chrono::microseconds( timeout( ) ) );
+
+                const char *fail = "\0";
+
+                switch( res ) {
+                case parent_type::queue_type::OK:
+                    break;
+                case parent_type::queue_type::CANCELED:
+                    fail = "Call canceled";
+                    break;
+                case parent_type::queue_type::TIMEOUT:
+                    fail = "Timeout";
+                    break;
+                case parent_type::queue_type::NOTFOUND:
+                    break;
+                };
+
+                if( res || answer->error( ).code( ) != 0 ) {
+                    if( controller ) {
+                        if( *fail == '\0' ) {
+                            controller->SetFailed(
+                                  answer->error( ).additional( ) );
+                        } else {
+                            controller->SetFailed( fail );
+                        }
+                    }
+                } else if( response != NULL ) {
+                    response->ParseFromString( ll->response( ) );
+                }
+
+                parent_->mess_cache_.push( answer );
+
+            }
 
             void CallMethod( const google::protobuf::MethodDescriptor* method,
                              google::protobuf::RpcController* controller,
@@ -109,40 +151,7 @@ namespace srpc { namespace common { namespace protocol {
 
                     if( sent ) {
                         if( wait ) {
-
-                            message_type answer;
-                            eresult res = sl->read_for( answer,
-                                    srpc::chrono::microseconds( timeout( ) ) );
-
-                            std::string fail;
-
-                            switch( res ) {
-                            case parent_type::queue_type::OK:
-                                break;
-                            case parent_type::queue_type::CANCELED:
-                                fail = "Call canceled";
-                                break;
-                            case parent_type::queue_type::TIMEOUT:
-                                fail = "Timeout";
-                                break;
-                            case parent_type::queue_type::NOTFOUND:
-                                break;
-                            };
-
-                            if( res || answer->error( ).code( ) != 0 ) {
-                                if( controller ) {
-                                    if( fail.empty( ) ) {
-                                        controller->SetFailed(
-                                              answer->error( ).additional( ) );
-                                    } else {
-                                        controller->SetFailed( fail );
-                                    }
-                                }
-                            } else if( response != NULL ) {
-                                response->ParseFromString( ll->response( ) );
-                            }
-
-                            parent_->mess_cache_.push( answer );
+                            process_answer( sl, ll, controller, response );
                         }
                     } else {
                         if(controller) {
