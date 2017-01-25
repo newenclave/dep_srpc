@@ -40,12 +40,80 @@ namespace srpc { namespace common { namespace protocol {
                           : srpc::rpc::call_info::TYPE_CLIENT_CALL;
         }
 
+        class call_controller: public google::protobuf::RpcController {
+        public:
+
+            call_controller( )
+                :failed_(false)
+                ,canceled_(false)
+                ,cancel_cl_(NULL)
+                ,parent_(NULL)
+            { }
+
+            void Reset( )
+            {
+                failed_      = false;
+                canceled_    = false;
+                cancel_cl_   = NULL;
+                error_string_.clear( );
+            }
+
+            bool Failed( ) const
+            {
+                return failed_;
+            }
+
+            std::string ErrorText( ) const
+            {
+                return error_string_;
+            }
+
+            void StartCancel( )
+            {
+                canceled_ = true;
+                if( cancel_cl_ ) {
+                    cancel_cl_->Run( );
+                    cancel_cl_ = NULL;
+                }
+            }
+
+            void SetFailed( const std::string& reason )
+            {
+                failed_ = true;
+                error_string_.assign( reason );
+            }
+
+            bool IsCanceled( ) const
+            {
+                return canceled_;
+            }
+
+            void NotifyOnCancel( google::protobuf::Closure* callback )
+            {
+                if( canceled_ ) {
+                    callback->Run( );
+                } else {
+                    cancel_cl_ = callback;
+                }
+            }
+            bool                        failed_;
+            std::string                 error_string_;
+            bool                        canceled_;
+            google::protobuf::Closure  *cancel_cl_;
+            void_wptr                   track_;
+            this_type                  *parent_;
+        };
+
+        friend class call_controller;
+
+        struct proto_closure;
+
         struct call_keeper {
 
-            srpc::unique_ptr<protobuf::controller>       controller;
+            srpc::unique_ptr<call_controller>            controller;
             srpc::unique_ptr<google::protobuf::Message>  request;
             srpc::unique_ptr<google::protobuf::Message>  response;
-            srpc::unique_ptr<google::protobuf::Closure>  closure;
+            srpc::unique_ptr<proto_closure>              closure;
             srpc::shared_ptr<srpc::rpc::lowlevel>        message;
 
             static
@@ -54,6 +122,25 @@ namespace srpc { namespace common { namespace protocol {
                 return srpc::make_shared<call_keeper>( );
             }
         };
+
+        struct proto_closure: public google::protobuf::Closure {
+
+            srpc::shared_ptr<call_keeper> call;
+            void_wptr                     lck;
+            this_type                    *parent;
+            bool                          wait;
+
+            void Run( )
+            {
+                void_sptr lock(lck.lock( ));
+                if( lock ) {
+                    parent->call_closure( call, wait );
+                    lck.reset( );
+                    call.reset( );
+                }
+            }
+        };
+        friend struct proto_closure;
 
         typedef srpc::shared_ptr<call_keeper>       call_sptr;
         typedef srpc::weak_ptr<call_keeper>         call_wptr;
@@ -181,25 +268,6 @@ namespace srpc { namespace common { namespace protocol {
 
     protected:
 
-        struct proto_closure: public google::protobuf::Closure {
-
-            srpc::shared_ptr<call_keeper> call;
-            void_wptr                     lck;
-            this_type                    *parent;
-
-            void Run( )
-            {
-                void_sptr lock(lck.lock( ));
-                if( lock ) {
-                    parent->call_closure( call, true );
-                    lck.reset( );
-                    call.reset( );
-                }
-            }
-        };
-
-        friend struct proto_closure;
-
         void set_ready( bool value )
         {
             if( ready_ != value ) {
@@ -309,15 +377,21 @@ namespace srpc { namespace common { namespace protocol {
             call_sptr call_k = call_keeper::create( );
 
             call_k->message = msg;
+
             call_k->request.reset( svc->get_request_proto( call ).New( ) );
-            call_k->response.reset( svc->get_response_proto( call ).New( ) );
-            call_k->controller.reset( new protobuf::controller );
             call_k->request->ParseFromString( msg->request( ) );
 
+            call_k->response.reset( svc->get_response_proto( call ).New( ) );
+
+            call_k->controller.reset( new call_controller );
+            call_k->controller->track_ = track_;
+            call_k->controller->parent_ = this;
+
             srpc::unique_ptr<proto_closure> cp(new proto_closure);
-            cp->call    = call_k;
-            cp->lck     = track_;
-            cp->parent  = this;
+            cp->call   = call_k;
+            cp->lck    = track_;
+            cp->parent = this;
+            cp->wait   = wait;
 
             call_k->closure.reset( cp.release( ) );
 
