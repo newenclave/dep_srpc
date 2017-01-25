@@ -10,6 +10,7 @@
 #include "srpc/common/protobuf/channel.h"
 #include "srpc/common/protobuf/controller.h"
 //#include "srpc/common/protobuf/stub.h"
+#include "srpc/common/protobuf/closure-holder.h"
 
 #include "srpc/common/config/asio.h"
 
@@ -39,6 +40,123 @@ namespace srpc { namespace common { namespace protocol {
             return server ? srpc::rpc::call_info::TYPE_SERVER_CALL
                           : srpc::rpc::call_info::TYPE_CLIENT_CALL;
         }
+
+        class channel: public protobuf::channel {
+
+        public:
+
+            channel( )
+                :parent_(NULL)
+                ,target_call_(0)
+            { }
+
+            channel( srpc::uint64_t target_call )
+                :parent_(NULL)
+                ,target_call_(target_call)
+            {
+                if( target_call_ != 0 ) {
+                    set_flag( protobuf::channel::USE_CONTEXT_CALL );
+                }
+            }
+
+            bool alive( ) const
+            {
+#ifdef CXX11_ENABLED
+                return track_.lock( ).get( ) != nullptr;
+#else
+                return track_.lock( ).get( ) != NULL;
+#endif
+            }
+
+            void CallMethod( const google::protobuf::MethodDescriptor* method,
+                             google::protobuf::RpcController* controller,
+                             const google::protobuf::Message* request,
+                             google::protobuf::Message* response,
+                             google::protobuf::Closure* done)
+            {
+
+                typedef typename parent_type::slot_ptr slot_ptr;
+                typedef typename parent_type::queue_type::result_enum eresult;
+
+                protobuf::closure_holder hold(done);
+                void_sptr lock(track_.lock( ));
+                if( lock ) {
+                    message_type ll = parent_->mess_cache_.get( );
+
+                    bool wait = !check( protobuf::channel::DISABLE_WAIT );
+
+                    ll->mutable_opt( )->set_wait( wait );
+                    parent_->setup_message( *ll, target_call_ );
+
+                    ll->mutable_call( )->set_service_id(
+                                method->service( )->full_name( ) );
+
+                    ll->mutable_call( )->set_method_id(
+                                method->name( ) );
+                    if( request ) {
+                        ll->set_request( request->SerializeAsString( ) );
+                    }
+                    ll->mutable_opt( )->set_accept_response( response != NULL );
+
+                    bool sent = parent_->send_message( *ll );
+
+                    if( sent ) {
+                        if( wait ) {
+                            srpc::uint64_t id = ll->id( );
+
+                            slot_ptr sl = parent_->add_slot( id );
+
+                            eresult res = sl->read_for( ll,
+                                    srpc::chrono::microseconds( timeout( ) ) );
+
+                            parent_->erase_slot( sl );
+
+                            std::string fail;
+
+                            switch( res ) {
+                            case parent_type::queue_type::OK:
+                                break;
+                            case parent_type::queue_type::CANCELED:
+                                fail = "Call canceled";
+                                break;
+                            case parent_type::queue_type::TIMEOUT:
+                                fail = "Timeout";
+                                break;
+                            case parent_type::queue_type::NOTFOUND:
+                                break;
+                            };
+
+                            if( res || ll->error( ).code( ) != 0 ) {
+                                if( controller ) {
+                                    if( fail.empty( ) ) {
+                                        controller->SetFailed(
+                                                 ll->error( ).additional( ) );
+                                    } else {
+                                        controller->SetFailed( fail );
+                                    }
+                                }
+                            } else if( response != NULL ) {
+                                response->ParseFromString( ll->response( ) );
+                            }
+                        }
+                    } else {
+                        if(controller) {
+                            controller->SetFailed( "Channel is not ready" );
+                        }
+                    }
+                    parent_->mess_cache_.push( ll );
+
+                } else {
+                    if( controller ) {
+                        controller->SetFailed( "Connection is lost." );
+                    }
+                }
+            }
+
+            this_type          *parent_;
+            mutable void_wptr   track_;
+            srpc::uint64_t      target_call_;
+        };
 
         class call_controller: public google::protobuf::RpcController {
         public:
@@ -96,12 +214,13 @@ namespace srpc { namespace common { namespace protocol {
                     cancel_cl_ = callback;
                 }
             }
+
             bool                        failed_;
-            std::string                 error_string_;
             bool                        canceled_;
             google::protobuf::Closure  *cancel_cl_;
-            void_wptr                   track_;
             this_type                  *parent_;
+            void_wptr                   track_;
+            std::string                 error_string_;
         };
 
         friend class call_controller;
@@ -264,6 +383,14 @@ namespace srpc { namespace common { namespace protocol {
         void track( void_sptr t )
         {
             track_ = t;
+        }
+
+        protobuf::channel * create_channel( )
+        {
+            srpc::unique_ptr<channel> inst(new channel);
+            inst->track_  = track_;
+            inst->parent_ = this;
+            return inst.release( );
         }
 
     protected:
@@ -551,6 +678,12 @@ namespace srpc { namespace common { namespace protocol {
         service_sptr get_service( const message_type & )
         {
             return service_sptr( );
+        }
+
+        void on_close( )
+        {
+            set_ready( false );
+            this->cancel_all(  );
         }
 
     private:

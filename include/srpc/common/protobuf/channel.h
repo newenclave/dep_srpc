@@ -13,13 +13,13 @@ namespace srpc { namespace common { namespace protobuf {
 
     public:
 
-//        enum flags {
-//             DEFAULT             = 0
-//            ,DISABLE_WAIT        = 1
-//            ,USE_CONTEXT_CALL    = 1 << 1
+        enum flags {
+             DEFAULT             = 0
+            ,DISABLE_WAIT        = 1
+            ,USE_CONTEXT_CALL    = 1 << 1
 //            ,USE_STATIC_CONTEXT  = 1 << 2 /// only with USE_CONTEXT_CALL
 //            ,CONTEXT_NOT_REQUIRE = 1 << 3 /// only with USE_CONTEXT_CALL
-//        };
+        };
 
         channel( )
             :options_(0)
@@ -29,6 +29,11 @@ namespace srpc { namespace common { namespace protobuf {
         virtual void set_flags( srpc::uint32_t flags )
         {
             options_ = flags;
+        }
+
+        bool check( srpc::uint32_t flag ) const
+        {
+            return ( options_ & flag ) == flag;
         }
 
         virtual srpc::uint32_t get_flags( ) const

@@ -280,6 +280,11 @@ namespace srpc { namespace common { namespace protocol {
             return queues_.push_to_slot( id, msg ) == result_enum::OK;
         }
 
+        void cancel_all(  )
+        {
+            return queues_.cancel_all( );
+        }
+
         queue_type &message_queue( )
         {
             return queues_;

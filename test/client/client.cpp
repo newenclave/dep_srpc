@@ -10,6 +10,7 @@
 #include "protocol/t.pb.h"
 
 #include "srpc/common/protocol/noname.h"
+#include "srpc/common/protobuf/stub.h"
 
 using namespace srpc;
 namespace gpb = google::protobuf;
@@ -163,29 +164,22 @@ int main( int argc, char *argv[] )
 
         auto ctr = connector::create( ios, "127.0.0.1", 23456);
 
+        srpc::unique_ptr<common::protobuf::channel> channel;
+
+        channel.reset(ctr->create_channel( ));
+        common::protobuf::stub<test::test_service_Stub> call( channel.get( ) );
+
         ctr->start( );
         ctr->wait_ready( );
 
-        std::cout << "Ready! " << ctr->ready( ) << "\n";
-
-        srpc::rpc::lowlevel ll;
-        ll.mutable_opt( )->set_wait( true );
-        ll.set_request( "!!!!!!!!!!!!!!" );
-        ll.mutable_call( )->set_method_id( "call6" );
+        call.call( &test::test_service_Stub::call6 );
 
         std::string d = "!!!!!!!!!!!!!!";
         for( int i=0; i<100000; ++i ) {
-
-            ctr->setup_message( ll, 0 );
-            auto slot = ctr->add_slot( ll.id( ) );
-            ctr->send_message( ll );
-            srpc::shared_ptr<srpc::rpc::lowlevel> mess;
-            auto res = slot->read_for( mess, srpc::chrono::seconds(3) );
-            if( 0 != res ) {
-                std::cout << "Timeout!\n";
+            call.call( &test::test_service_Stub::call6 );
+            if( !ctr->ready( ) ) {
                 break;
             }
-            ctr->erase_slot( slot );
         }
 
         ios.stop( );

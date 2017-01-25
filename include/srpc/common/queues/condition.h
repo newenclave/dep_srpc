@@ -189,9 +189,20 @@ namespace srpc { namespace common { namespace queues {
             }
         }
 
+
+
         result_enum erase_slot( slot_ptr slot )
         {
             return erase_slot( slot->key( ) );
+        }
+
+        void cancel_all(  )
+        {
+            locker l(map_lock_);
+            typename map_type::iterator b = map_.begin( );
+            for( ; b != map_.end( ); ++b ) {
+                b->second->cancel( );
+            }
         }
 
         result_enum cancel_slot( const key_type &index )
