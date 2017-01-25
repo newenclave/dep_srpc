@@ -149,9 +149,9 @@ int main( int argc, char *argv[ ] )
             std::cerr << g_counter - last_calls << " ";
             g_counter_total += (g_counter - last_calls);
             last_calls = g_counter;
-            if( g_counter_total >= 5000 ) {
-                ios.stop( );
-            }
+//            if( g_counter_total >= 5000 ) {
+//                ios.stop( );
+//            }
             std::cout << "Total " << g_counter_total << "\n";
         }, srpc::chrono::milliseconds(1000) );
 

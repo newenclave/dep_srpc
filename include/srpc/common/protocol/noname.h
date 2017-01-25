@@ -106,7 +106,9 @@ namespace srpc { namespace common { namespace protocol {
 
                             slot_ptr sl = parent_->add_slot( id );
 
-                            eresult res = sl->read_for( ll,
+                            message_type answer;
+
+                            eresult res = sl->read_for( answer,
                                     srpc::chrono::microseconds( timeout( ) ) );
 
                             parent_->erase_slot( sl );
@@ -126,11 +128,11 @@ namespace srpc { namespace common { namespace protocol {
                                 break;
                             };
 
-                            if( res || ll->error( ).code( ) != 0 ) {
+                            if( res || answer->error( ).code( ) != 0 ) {
                                 if( controller ) {
                                     if( fail.empty( ) ) {
                                         controller->SetFailed(
-                                                 ll->error( ).additional( ) );
+                                              answer->error( ).additional( ) );
                                     } else {
                                         controller->SetFailed( fail );
                                     }
@@ -138,6 +140,8 @@ namespace srpc { namespace common { namespace protocol {
                             } else if( response != NULL ) {
                                 response->ParseFromString( ll->response( ) );
                             }
+
+                            parent_->mess_cache_.push( answer );
                         }
                     } else {
                         if(controller) {

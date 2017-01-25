@@ -175,7 +175,7 @@ int main( int argc, char *argv[] )
         call.call( &test::test_service_Stub::call6 );
 
         std::string d = "!!!!!!!!!!!!!!";
-        for( int i=0; i<100000; ++i ) {
+        for( int i=0; i<1000000; ++i ) {
             call.call( &test::test_service_Stub::call6 );
             if( !ctr->ready( ) ) {
                 break;
