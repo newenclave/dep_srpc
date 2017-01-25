@@ -8,6 +8,7 @@
 #include "srpc/common/observers/define.h"
 #include "srpc/common/observers/simple.h"
 
+#include "srpc/server/acceptor/interface.h"
 #include "srpc/common/transport/interface.h"
 #include "srpc/common/transport/types.h"
 
@@ -21,6 +22,7 @@ namespace srpc { namespace server { namespace listener {
         typedef common::transport::error_code   error_code;
         typedef common::transport::io_service   io_service;
         typedef common::transport::interface    transport_type;
+        typedef server::acceptor::interface     acceptor_type;
 
         SRPC_OBSERVER_DEFINE( on_accept, void (transport_type *,
                                                const std::string &,
@@ -31,7 +33,7 @@ namespace srpc { namespace server { namespace listener {
     public:
         virtual void start( ) = 0;
         virtual void stop(  ) = 0;
-
+        virtual acceptor_type *acceptor( ) = 0;
     };
 
 

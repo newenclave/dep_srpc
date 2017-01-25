@@ -81,6 +81,11 @@ namespace base {
             acceptor_->close( );
         }
 
+        acceptor_type *acceptor( )
+        {
+            return acceptor_.get( );
+        }
+
         SRPC_ASIO::io_service  &ios_;
         endpoint                ep_;
         bool                    nowait_;

@@ -236,6 +236,27 @@ namespace srpc { namespace common { namespace protocol {
             calls_.erase( call->message->id( ) );
         }
 
+        void remove_call( srpc::uint64_t id )
+        {
+            srpc::lock_guard<srpc::mutex> lg(calls_lock_);
+            calls_.erase( id );
+        }
+
+        call_sptr get_call( srpc::uint64_t id )
+        {
+            srpc::lock_guard<srpc::mutex> lg(calls_lock_);
+            typename call_map::iterator f = calls_.find( id );
+            if( calls_.end( ) != f ) {
+                return f->second;
+            }
+        }
+
+        void add_call( call_sptr call )
+        {
+            srpc::lock_guard<srpc::mutex> lg(calls_lock_);
+            calls_.insert( std::make_pair( call->message->id( ), call ) );
+        }
+
         void call_closure( call_sptr call, bool wait )
         {
             using namespace srpc::rpc::errors;
@@ -263,7 +284,9 @@ namespace srpc { namespace common { namespace protocol {
             using namespace srpc::rpc::errors;
             namespace gpb = google::protobuf;
             typedef srpc::common::protobuf::service::method_type method_type;
+
             service_sptr svc = get_service( msg );
+
             if( !svc ) {
                 set_message_error( msg, ERR_NOT_FOUND, "Service not found" );
                 send_message( *msg );
@@ -299,16 +322,15 @@ namespace srpc { namespace common { namespace protocol {
             call_k->closure.reset( cp.release( ) );
 
             if( wait ) {
-                calls_.insert( std::make_pair( msg->id( ), call_k ) );
+                add_call( call_k );
             } else {
 
             }
 
-            svc->call( call,
-                       call_k->controller.get( ),
-                       call_k->request.get( ),
-                       call_k->response.get( ),
-                       call_k->closure.get( ) );
+            svc->call( call, call_k->controller.get( ),
+                             call_k->request.get( ),
+                             call_k->response.get( ),
+                             call_k->closure.get( ) );
 
         }
 
@@ -323,9 +345,15 @@ namespace srpc { namespace common { namespace protocol {
             try {
                 execute_default( msg );
             } catch( const std::exception &ex ) { /// std error
-
+                set_message_error( msg, ERR_CALL_FAILED, ex.what( ) );
             } catch( ... ) { /// all error
+                set_message_error( msg, ERR_CALL_FAILED, "..." );
+            }
 
+            if( msg->error( ).code( ) != 0 ) {
+                remove_call( msg->id( ) );
+                send_message( *msg );
+                mess_cache_.push( msg );
             }
         }
 
