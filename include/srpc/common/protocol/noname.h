@@ -132,11 +132,10 @@ namespace srpc { namespace common { namespace protocol {
                     ll->mutable_opt( )->set_wait( wait );
                     parent_->setup_message( *ll, target_call_ );
 
-                    ll->mutable_call( )->set_service_id(
-                                method->service( )->full_name( ) );
+                    ll->mutable_call( )->set_method_id( method->name( ) );
+                    ll->mutable_call( )->set_service_id( method->service( )
+                                                       ->full_name( ) );
 
-                    ll->mutable_call( )->set_method_id(
-                                method->name( ) );
                     if( request ) {
                         ll->set_request( request->SerializeAsString( ) );
                     }
