@@ -146,16 +146,26 @@ public:
     }
 
 private:
-    client_sptr         client_;
-    connector_sptr      connector_;
-    connector_delegate  delegate_;
+    client_sptr               client_;
+    connector_sptr            connector_;
+    connector_delegate        delegate_;
 
-    srpc::condition_variable ready_var_;
-    srpc::mutex              ready_mtx_;
+    srpc::condition_variable  ready_var_;
+    srpc::mutex               ready_mtx_;
 };
+
+//struct opt {
+//    opt( int ) { }
+//    opt &call( int )
+//    {
+//        return *this;
+//    }
+//};
 
 int main( int argc, char *argv[] )
 {
+    //opt p(1).call(1).call(2);
+
     try {
         SRPC_ASIO::io_service ios;
         SRPC_ASIO::io_service::work wrk(ios);
