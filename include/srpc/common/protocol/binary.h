@@ -17,8 +17,8 @@
 
 namespace srpc { namespace common { namespace protocol {
 
-    template < typename TagPolicy   = sizepack::none,
-               typename SizePolicy  = sizepack::varint<srpc::uint32_t>
+    template < typename SizePolicy  = sizepack::varint<srpc::uint32_t>,
+               typename TagPolicy   = sizepack::none
              >
     class binary: public transport::delegates::message<SizePolicy> {
 
