@@ -26,6 +26,7 @@
 
 #include "srpc/common/observers/define.h"
 #include "srpc/common/protobuf/service.h"
+#include "srpc/common/protocol/traits/lowlewel.h"
 
 #include "protocol/t.pb.h"
 
@@ -38,8 +39,9 @@ namespace spb = srpc::common::protobuf;
 
 using message_sptr = srpc::shared_ptr<gpb::Message>;
 
+using proto_raits = common::protocol::traits::lowlevel;
 using size_policy     = common::sizepack::varint<size_t>;
-using client_delegate = common::protocol::noname<>;
+using client_delegate = common::protocol::noname<proto_raits>;
 
 using service_wrapper = spb::service;
 

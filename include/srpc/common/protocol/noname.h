@@ -16,21 +16,22 @@
 
 namespace srpc { namespace common { namespace protocol {
 
-    template <typename SizePackPolicy = sizepack::varint<srpc::uint32_t> >
-    class noname: public binary< srpc::shared_ptr<srpc::rpc::lowlevel>,
+    template <typename MessageTraits,
+              typename SizePackPolicy = sizepack::varint<srpc::uint32_t> >
+    class noname: public binary< typename MessageTraits::shared_message_type,
                                  sizepack::none, SizePackPolicy,
-                                 srpc::uint64_t >,
-                  public srpc::enable_shared_from_this<noname<SizePackPolicy> >
+                                 srpc::uint64_t >
     {
 
-        typedef binary< srpc::shared_ptr<srpc::rpc::lowlevel>,
+        typedef MessageTraits message_traits;
+        typedef noname<MessageTraits, SizePackPolicy> this_type;
+
+        typedef binary< typename MessageTraits::shared_message_type,
                         sizepack::none, SizePackPolicy,
                         srpc::uint64_t > parent_type;
 
         typedef srpc::shared_ptr<void>  void_sptr;
         typedef srpc::weak_ptr<void>    void_wptr;
-
-        typedef noname<SizePackPolicy> this_type;
 
         typedef srpc::function<void (void)> empty_call;
 
@@ -81,7 +82,7 @@ namespace srpc { namespace common { namespace protocol {
 
                 typename parent_type::message_type answer;
 
-                srpc::uint64_t id = ll->id( );
+                srpc::uint64_t id = message_traits::id( *ll );
 
                 //std::cout << "wait!...";
 
@@ -105,20 +106,21 @@ namespace srpc { namespace common { namespace protocol {
                     break;
                 };
 
-                if( res || answer->error( ).code( ) != 0 ) {
+                if( res || message_traits::is_error( *answer ) != 0 ) {
                     if( controller ) {
                         if( *fail == '\0' ) {
                             controller->SetFailed(
-                                  answer->error( ).additional( ) );
+                                  message_traits::error_message( *answer ) );
                         } else {
                             controller->SetFailed( fail );
                         }
                     }
                 } else if( response != NULL ) {
-                    if( (id == answer->id( ))
-                        && answer->info( ).call_type( ) == parent_->call_type_ )
-                    {
-                        response->ParseFromString( answer->response( ) );
+                    srpc::uint64_t aid = message_traits::id( *answer );
+                    srpc::uint32_t act = message_traits::call_type(*answer );
+
+                    if( ( id == aid ) && (act == parent_->call_type_) ) {
+                        message_traits::parse_response( *answer, response );
                     }
                 }
 
@@ -143,17 +145,18 @@ namespace srpc { namespace common { namespace protocol {
 
                     bool wait = !check( protobuf::channel::DISABLE_WAIT );
 
-                    ll->mutable_opt( )->set_wait( wait );
+                    message_traits::set_wait( *ll, wait );
+                    message_traits::set_wait_response( *ll, response != NULL );
+
                     parent_->setup_message( *ll, target_call_ );
 
-                    ll->mutable_call( )->set_method_id( method->name( ) );
-                    ll->mutable_call( )->set_service_id( method->service( )
-                                                       ->full_name( ) );
+                    message_traits::set_call( *ll,
+                                              method->service( ) ->full_name( ),
+                                              method->name( ) );
 
                     if( request ) {
-                        ll->set_request( request->SerializeAsString( ) );
+                        message_traits::serialize_request( *ll, request );
                     }
-                    ll->mutable_opt( )->set_accept_response( response != NULL );
 
                     slot_ptr sl;
                     if( wait ) {
@@ -260,11 +263,13 @@ namespace srpc { namespace common { namespace protocol {
 
         struct call_keeper {
 
+            typedef typename message_traits::message_type message_type;
+
             srpc::unique_ptr<call_controller>            controller;
             srpc::unique_ptr<google::protobuf::Message>  request;
             srpc::unique_ptr<google::protobuf::Message>  response;
             srpc::unique_ptr<proto_closure>              closure;
-            srpc::shared_ptr<srpc::rpc::lowlevel>        message;
+            srpc::shared_ptr<message_type>               message;
 
             static
             srpc::shared_ptr<call_keeper> create( )
@@ -309,7 +314,9 @@ namespace srpc { namespace common { namespace protocol {
         typedef SizePackPolicy sizepack_polisy;
         typedef srpc::function<void (bool)> on_ready_type;
 
-        typedef srpc::rpc::lowlevel                      lowlevel_message_type;
+        typedef typename message_traits::message_type    lowlevel_message_type;
+        typedef typename message_traits::request_message_type message_lite;
+
         typedef typename parent_type::message_type       message_type;
         typedef typename parent_type::tag_type           tag_type;
         typedef typename parent_type::tag_policy         tag_policy;
@@ -317,7 +324,6 @@ namespace srpc { namespace common { namespace protocol {
         typedef typename parent_type::const_buffer_slice const_buffer_slice;
         typedef typename parent_type::buffer_slice       buffer_slice;
         typedef typename parent_type::error_code         error_code;
-        typedef google::protobuf::MessageLite            message_lite;
 
         typedef SRPC_ASIO::io_service io_service;
         typedef common::transport::interface::write_callbacks   cb_type;
@@ -348,14 +354,13 @@ namespace srpc { namespace common { namespace protocol {
 
         void setup_message( lowlevel_message_type &mess, srpc::uint64_t target )
         {
-            mess.set_id( this->next_id( ) );
+            message_traits::set_id( mess, this->next_id( ) );
             if( target ) {
-                mess.set_target_id( target );
-                mess.mutable_info( )
-                    ->set_call_type( call_type_
-                                   | srpc::rpc::call_info::TYPE_CALLBACK_MASK );
+                message_traits::set_target_id( mess, target );
+                message_traits::set_call_type( mess,
+                        call_type_ | srpc::rpc::call_info::TYPE_CALLBACK_MASK );
             } else {
-                mess.mutable_info( )->set_call_type( call_type_ );
+                message_traits::set_call_type( mess, call_type_ );
             }
         }
 
@@ -623,7 +628,7 @@ namespace srpc { namespace common { namespace protocol {
                         const_buffer_slice slice )
         {
             message_type mess = mess_cache_.get( );
-            mess->ParseFromArray( slice.data( ), slice.size( ) );
+            message_traits::parse_message(*mess, slice.data( ), slice.size( ) );
 
             static const srpc::uint32_t cb_mask =
                             srpc::rpc::call_info::TYPE_CALLBACK_MASK;
@@ -688,8 +693,7 @@ namespace srpc { namespace common { namespace protocol {
             const size_t hash_size = this->hash( )->length( );
 
             tag_policy::append( tag, *buf );
-
-            mess.AppendToString( buf.get( ) );
+            message_traits::pack_message( mess, *buf );
 
             buf->resize( buf->size( ) + hash_size );
 

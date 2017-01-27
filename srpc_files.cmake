@@ -17,6 +17,7 @@ macro( srpc_all_headers_path OUT_LIST PREFIX_PATH )
         ${PREFIX_PATH}/srpc/common/queues
         ${PREFIX_PATH}/srpc/common/protocol
         ${PREFIX_PATH}/srpc/common/protocol/default
+        ${PREFIX_PATH}/srpc/common/protocol/traits
         ${PREFIX_PATH}/srpc/common/protobuf
         ${PREFIX_PATH}/srpc/common/protobuf/service
         ${PREFIX_PATH}/srpc/common/queues/traits
