@@ -2,7 +2,7 @@
 #define SRPC_BUFFER_H
 
 #include "srpc/common/config/stdint.h"
-#include "stdint.h"
+#include "stdlib.h"
 
 namespace srpc { namespace common {
 
