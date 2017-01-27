@@ -9,13 +9,12 @@
 
 #include "protocol/t.pb.h"
 
-#include "srpc/common/protocol/traits/lowlewel.h"
-#include "srpc/common/protocol/noname.h"
 #include "srpc/common/protobuf/stub.h"
 
 using namespace srpc;
 namespace gpb = google::protobuf;
 
+#if 0
 using message_sptr = srpc::shared_ptr<gpb::Message>;
 
 using proto_raits = common::protocol::traits::lowlevel;
@@ -207,3 +206,5 @@ int main( int argc, char *argv[] )
     google::protobuf::ShutdownProtobufLibrary( );
     return 0;
 }
+
+#endif

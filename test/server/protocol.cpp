@@ -55,7 +55,7 @@ void vvv(  )
     }
 }
 
-int mainp( int argc, char *argv[ ] )
+int main( int argc, char *argv[ ] )
 {
 
     std::vector<std::thread> tds;
