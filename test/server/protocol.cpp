@@ -13,6 +13,7 @@
 #include "srpc/common/observers/subscription.h"
 #include "srpc/common/observers/scoped-subscription.h"
 #include "srpc/common/config/mutex.h"
+#include "srpc/common/config/atomic.h"
 
 #include "boost/signals2.hpp"
 

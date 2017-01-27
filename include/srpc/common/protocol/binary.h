@@ -14,13 +14,12 @@
 
 #include "srpc/common/config/memory.h"
 #include "srpc/common/config/stdint.h"
-#include "srpc/common/config/atomic.h"
 
 namespace srpc { namespace common { namespace protocol {
 
     template < typename TagPolicy   = sizepack::none,
-               typename SizePolicy  = sizepack::varint<srpc::uint32_t>,
-               typename QueueIdType = srpc::uint64_t >
+               typename SizePolicy  = sizepack::varint<srpc::uint32_t>
+             >
     class binary: public transport::delegates::message<SizePolicy> {
 
         typedef transport::delegates::message<SizePolicy>  parent_type;
@@ -39,23 +38,15 @@ namespace srpc { namespace common { namespace protocol {
         typedef SizePolicy                                 size_policy;
         typedef TagPolicy                                  tag_policy;
         typedef typename tag_policy::size_type             tag_type;
-        typedef QueueIdType                                key_type;
 
-        binary( key_type init_id, size_t max_length )
-            :next_id_(init_id)
-            ,hash_(new hash::crc32)
+        binary( size_t max_length )
+            :hash_(new hash::crc32)
             ,max_length_(max_length)
             ,transport_(nullptr)
         { }
 
         virtual ~binary( )
         { }
-
-        key_type next_id( )
-        {
-            srpc::uint64_t n = (next_id_ += 2);
-            return n - 2;
-        }
 
         void assign_transport( transport_ptr t )
         {
@@ -225,7 +216,6 @@ namespace srpc { namespace common { namespace protocol {
 
     private:
 
-        srpc::atomic<key_type>  next_id_;
         hash::interface_uptr    hash_;
         size_t                  max_length_;
         transport_sptr          transport_;
