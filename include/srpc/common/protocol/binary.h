@@ -18,8 +18,7 @@
 
 namespace srpc { namespace common { namespace protocol {
 
-    template < typename MessageType,
-               typename TagPolicy   = sizepack::none,
+    template < typename TagPolicy   = sizepack::none,
                typename SizePolicy  = sizepack::varint<srpc::uint32_t>,
                typename QueueIdType = srpc::uint64_t >
     class binary: public transport::delegates::message<SizePolicy> {
@@ -40,17 +39,7 @@ namespace srpc { namespace common { namespace protocol {
         typedef SizePolicy                                 size_policy;
         typedef TagPolicy                                  tag_policy;
         typedef typename tag_policy::size_type             tag_type;
-        typedef MessageType                                message_type;
         typedef QueueIdType                                key_type;
-
-        typedef srpc::common::queues::condition<
-                        key_type,
-                        message_type,
-                        queues::traits::simple<message_type>
-                > queue_type;
-
-        typedef typename queue_type::result_enum           result_enum;
-        typedef typename queue_type::slot_ptr              slot_ptr;
 
         binary( key_type init_id, size_t max_length )
             :next_id_(init_id)
@@ -66,16 +55,6 @@ namespace srpc { namespace common { namespace protocol {
         {
             srpc::uint64_t n = (next_id_ += 2);
             return n - 2;
-        }
-
-        slot_ptr add_slot( key_type id )
-        {
-            return queues_.add_slot( id );
-        }
-
-        void erase_slot( slot_ptr slot )
-        {
-            queues_.erase_slot( slot );
         }
 
         void assign_transport( transport_ptr t )
@@ -209,39 +188,8 @@ namespace srpc { namespace common { namespace protocol {
             }
         }
 
-#if 0
-        buffer_slice prepare_buffer( buffer_type buf, tag_type tag,
-                                     const message_type &mess )
-        {
-            typedef typename parent_type::size_policy size_policy;
-
-            //buf->resize( buf->size( ) + size_policy::max_length );
-
-            const size_t old_len = buf->size( );
-
-            tag_policy::append( tag, *buf );
-
-            append_message( buf, mess );
-
-            buf->resize( buf->size( ) + hash_->length( ) );
-
-            hash_->get( buf->c_str( ) + old_len,
-                        buf->size( )  - old_len - hash_->length( ),
-                        &(*buf)[buf->size( )    - hash_->length( )]);
-
-            buffer_slice res( &(*buf)[0]   + old_len,
-                              buf->size( ) - old_len );
-
-            return pack_message( buf, res );
-
-        }
-#endif
-
         virtual void on_message_ready( tag_type, buffer_type,
                                        const_buffer_slice )
-        { }
-
-        virtual void append_message( buffer_type, const message_type & )
         { }
 
         virtual bool validate_length( size_t len )
@@ -275,30 +223,9 @@ namespace srpc { namespace common { namespace protocol {
             /// transport_.reset( );
         }
 
-        bool push_to_slot( key_type id, const message_type &msg )
-        {
-            return queues_.push_to_slot( id, msg ) == result_enum::OK;
-        }
-
-        void cancel_all(  )
-        {
-            return queues_.cancel_all( );
-        }
-
-        queue_type &message_queue( )
-        {
-            return queues_;
-        }
-
-        const queue_type &message_queue( ) const
-        {
-            return queues_;
-        }
-
     private:
 
         srpc::atomic<key_type>  next_id_;
-        queue_type              queues_;
         hash::interface_uptr    hash_;
         size_t                  max_length_;
         transport_sptr          transport_;
