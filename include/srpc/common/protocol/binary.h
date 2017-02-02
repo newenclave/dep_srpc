@@ -181,7 +181,7 @@ namespace srpc { namespace common { namespace protocol {
             return len <= max_length_;
         }
 
-        virtual void on_error( const char *mess )
+        virtual void on_error( const char * )
         {
             transport_->close( );
         }
