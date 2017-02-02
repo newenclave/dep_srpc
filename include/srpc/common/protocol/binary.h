@@ -106,8 +106,6 @@ namespace srpc { namespace common { namespace protocol {
 
         void on_message( const char *m, size_t len )
         {
-            typedef typename parent_type::size_policy size_policy;
-
             const_buffer_slice slice( m, len );
             buffer_type unpacked = unpack_message( slice );
 
