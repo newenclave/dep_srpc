@@ -74,11 +74,6 @@ namespace srpc { namespace common { namespace protocol {
             return hash_.get( );
         }
 
-        const hash::interface_ptr hash( ) const
-        {
-            return hash_.get( );
-        }
-
     protected:
 
         template <typename Policy, typename Itr>

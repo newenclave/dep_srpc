@@ -38,12 +38,12 @@ namespace o2 {
     using scop_conn = bs::scoped_connection;
 }
 
-namespace myos = o2;
+namespace myos = o1;
 
 std::atomic<std::uint64_t> gcounter(0);
 myos::os o;
 
-const auto factor  = 2000;
+const auto factor  = 1000;
 const auto threads = 10;
 
 void vvv(  )
@@ -55,6 +55,7 @@ void vvv(  )
         o(1);
     }
 }
+
 
 int main( int argc, char *argv[ ] )
 {
