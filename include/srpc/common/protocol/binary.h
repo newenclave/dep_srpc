@@ -64,7 +64,7 @@ namespace srpc { namespace common { namespace protocol {
             max_length_ = len;
         }
 
-        void max_length( ) const
+        size_t max_length( ) const
         {
             return max_length_;
         }
